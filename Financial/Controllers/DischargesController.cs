@@ -179,7 +179,7 @@ namespace Financial.Controllers
                     var content = stream.ToArray();
 
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        string.Format("{0}.xlsx", string.Format("D/C_IPD_{0}-{1}", start, end)));
+                        string.Format("{0}.csv", string.Format("D/C_IPD_{0}-{1}", start, end)));
                 }
             }
 

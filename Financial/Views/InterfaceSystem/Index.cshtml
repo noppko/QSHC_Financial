@@ -1,0 +1,500 @@
+﻿@{
+    ViewData["Title"] = "File Upload";
+    
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Upload to Network Path</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+            .upload-area:hover, .upload-area.dragover {
+                border-color: #007bff;
+                background-color: #e3f2fd;
+            }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+
+        .status-success {
+            color: #28a745;
+        }
+
+        .status-error {
+            color: #dc3545;
+        }
+
+        .progress-container {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .connection-status {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-cloud-upload-alt"></i> File Upload to Network Path</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <!-- Destination Path -->
+                            <div class="mb-3">
+                                <label for="destinationPath" class="form-label">
+                                    <i class="fas fa-folder"></i> Destination Path
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="destinationPath"
+                                           placeholder="\\10.67.67.77\interface\CLAIM\EDC"
+                                           value="\\10.67.67.77\interface\CLAIM\EDC">
+                                    <button class="btn btn-outline-secondary" type="button" id="testConnection">
+                                        <i class="fas fa-network-wired"></i> Test
+                                    </button>
+                                </div>
+                                <div id="connectionStatus" class="connection-status"></div>
+                            </div>
+
+                            <!-- File Upload Area -->
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-file"></i> Select File</label>
+                                <div class="upload-area" id="uploadArea">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <h5>Click to select file or drag and drop</h5>
+                                    <p class="text-muted">Maximum file size: 50MB</p>
+                                    <input type="file" id="fileInput" class="d-none" accept="*/*">
+                                </div>
+                                <div id="fileInfo" class="file-info" style="display: none;">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span id="fileName"></span>
+                                    <span id="fileSize" class="text-muted"></span>
+                                </div>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div class="progress-container">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                         role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <span id="progressText">Uploading...</span>
+                                </div>
+                            </div>
+
+                            <!-- File Exists Warning -->
+                            <div id="fileExistsWarning" class="file-exists-warning" style="display:none">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                    <strong>ไฟล์นี้มีอยู่แล้ว!</strong>
+                                </div>
+                                <div id="existingFileDetails" class="existing-file-details"></div>
+                                <div class="overwrite-options">
+                                    <p class="mb-3">คุณต้องการทำอย่างไร?</p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-warning w-100" id="overwriteBtn">
+                                                <i class="fas fa-sync-alt"></i> เขียนทับไฟล์เดิม
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-secondary w-100" id="cancelBtn">
+                                                <i class="fas fa-times"></i> ยกเลิก
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload Button -->
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
+                                    <i class="fas fa-upload"></i> Upload File
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Result Display -->
+                        <div id="resultContainer" class="result-container">
+                            <div id="resultContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadForm = document.getElementById('uploadForm');
+            const destinationPath = document.getElementById('destinationPath');
+            const testConnectionBtn = document.getElementById('testConnection');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const progressContainer = document.querySelector('.progress-container');
+            const progressBar = document.querySelector('.progress-bar');
+            const progressText = document.getElementById('progressText');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            const fileExistsWarning = document.getElementById('fileExistsWarning');
+            const existingFileDetails = document.getElementById('existingFileDetails');
+            const overwriteBtn = document.getElementById('overwriteBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const overwriteOptions = document.querySelector('.overwrite-options');
+
+            let selectedFile = null;
+            let overwriteMode = false;
+
+            // Click to select file
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // Drag and drop functionality
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+
+            // Handle file selection
+            function handleFileSelect(file) {
+                selectedFile = file;
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.style.display = 'block';
+
+                // Hide previous results and warnings
+                resultContainer.style.display = 'none';
+                fileExistsWarning.style.display = 'none';
+                overwriteMode = false;
+
+                // Check if file exists
+                checkFileExists(file.name);
+            }
+
+            // Check if file exists in destination
+            function checkFileExists(fileName) {
+                const path = destinationPath.value.trim();
+                if (!path) {
+                    uploadBtn.disabled = false;
+                    return;
+                }
+
+                fetch('/InterfaceSystem/CheckFileExists', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        destinationPath: path,
+                        fileName: fileName
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showFileExistsWarning(data);
+                        uploadBtn.disabled = true;
+                    } else {
+                        uploadBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking file:', error);
+                    uploadBtn.disabled = false;
+                });
+            }
+
+            // Show file exists warning
+            function showFileExistsWarning(fileData) {
+                const details = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>ขนาดไฟล์:</strong> ${formatFileSize(fileData.fileSize)}<br>
+                            <strong>สร้างเมื่อ:</strong> ${new Date(fileData.createdDate).toLocaleString('th-TH')}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>แก้ไขล่าสุด:</strong> ${new Date(fileData.lastModified).toLocaleString('th-TH')}<br>
+                            <strong>ตำแหน่ง:</strong> ${fileData.filePath}
+                        </div>
+                    </div>
+                `;
+
+                existingFileDetails.innerHTML = details;
+                fileExistsWarning.style.display = 'block';
+                overwriteOptions.style.display = 'block';
+            }
+
+            // Format file size
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // Test connection
+            testConnectionBtn.addEventListener('click', function() {
+                const path = destinationPath.value.trim();
+                if (!path) {
+                    showConnectionStatus('กรุณาระบุ path', false);
+                    return;
+                }
+
+                testConnectionBtn.disabled = true;
+                showConnectionStatus('กำลังทดสอบการเชื่อมต่อ...', null);
+
+                fetch('/InterfaceSystem/TestConnection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: path })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showConnectionStatus(data.message, data.success);
+                })
+                .catch(error => {
+                    showConnectionStatus('เกิดข้อผิดพลาดในการทดสอบ', false);
+                })
+                .finally(() => {
+                    testConnectionBtn.disabled = false;
+                });
+            });
+
+            // Show connection status
+            function showConnectionStatus(message, success) {
+                connectionStatus.textContent = message;
+                connectionStatus.className = 'connection-status';
+
+                if (success === true) {
+                    connectionStatus.classList.add('alert', 'alert-success');
+                } else if (success === false) {
+                    connectionStatus.classList.add('alert', 'alert-danger');
+                } else {
+                    connectionStatus.classList.add('alert', 'alert-info');
+                }
+
+                connectionStatus.style.display = 'block';
+            }
+
+            // Overwrite button click
+            overwriteBtn.addEventListener('click', function() {
+                overwriteMode = true;
+                fileExistsWarning.style.display = 'none';
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-sync-alt"></i> เขียนทับไฟล์';
+                uploadBtn.classList.remove('btn-primary');
+                uploadBtn.classList.add('btn-warning');
+            });
+
+            // Cancel button click
+            cancelBtn.addEventListener('click', function() {
+                selectedFile = null;
+                overwriteMode = false;
+                fileInput.value = '';
+                fileInfo.style.display = 'none';
+                fileExistsWarning.style.display = 'none';
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload File';
+                uploadBtn.classList.remove('btn-warning');
+                uploadBtn.classList.add('btn-primary');
+            });
+
+            // Form submission
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const file = selectedFile || fileInput.files[0];
+                const path = destinationPath.value.trim();
+
+                if (!file) {
+                    showResult('กรุณาเลือกไฟล์', false);
+                    return;
+                }
+
+                if (!path) {
+                    showResult('กรุณาระบุ destination path', false);
+                    return;
+                }
+
+                // Show progress
+                progressContainer.style.display = 'block';
+                uploadBtn.disabled = true;
+                resultContainer.style.display = 'none';
+                fileExistsWarning.style.display = 'none';
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('destinationPath', path);
+                formData.append('overwrite', overwriteMode);
+
+                // Simulate progress
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                }, 200);
+
+                // Upload file
+                fetch('/InterfaceSystem/UploadFile', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+
+                        if (data.fileExists && !data.success) {
+                            showFileExistsWarning(data.existingFileInfo);
+                        } else {
+                            showResult(data, data.success);
+
+                            if (data.success) {
+                                // Reset form
+                                selectedFile = null;
+                                overwriteMode = false;
+                                fileInput.value = '';
+                                fileInfo.style.display = 'none';
+                                uploadBtn.disabled = true;
+                                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload File';
+                                uploadBtn.classList.remove('btn-warning');
+                                uploadBtn.classList.add('btn-primary');
+                            }
+                        }
+                    }, 500);
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+                    progressContainer.style.display = 'none';
+                    showResult('เกิดข้อผิดพลาดในการอัปโหลด', false);
+                })
+                .finally(() => {
+                    if (!overwriteMode) {
+                        uploadBtn.disabled = false;
+                    }
+                });
+            });
+
+            // Show result
+            function showResult(data, success) {
+                let content = '';
+
+                if (success) {
+                    content = `
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                            <div>
+                                <h5 class="mb-0 text-success">อัปโหลดสำเร็จ!</h5>
+                                <small class="text-muted">${data.message}</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>ชื่อไฟล์:</strong> ${data.fileName}<br>
+                                <strong>ขนาด:</strong> ${formatFileSize(data.fileSize)}<br>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>เวลา:</strong> ${new Date(data.uploadTime).toLocaleString('th-TH')}<br>
+                                <strong>ตำแหน่ง:</strong> ${data.filePath}
+                            </div>
+                        </div>
+                    `;
+                    resultContainer.className = 'result-container result-success';
+                } else {
+                    const message = typeof data === 'string' ? data : data.message;
+                    content = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger me-3"></i>
+                            <div>
+                                <h5 class="mb-0 text-danger">เกิดข้อผิดพลาด</h5>
+                                <p class="mb-0">${message}</p>
+                            </div>
+                        </div>
+                    `;
+                    resultContainer.className = 'result-container result-error';
+                }
+
+                resultContent.innerHTML = content;
+                resultContainer.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

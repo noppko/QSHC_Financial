@@ -4,3 +4,5 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>Use this page to detail your site's privacy policy.</p>
+<h5 class="mb-1 fs-3">@User.Claims.Where(c => c.Type == "FullName").FirstOrDefault().Value</h5>
+<span class="mb-1 d-block">@User.Claims.Where(c => c.Type == "JobPosition").FirstOrDefault().Value</span>

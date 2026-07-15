@@ -1,0 +1,256 @@
+﻿@model IEnumerable<Financial.Database.InterfaceSystem.Models.PatientEdcregister>
+
+@{
+    ViewData["Title"] = "EDCIndex";
+}
+
+<h1>EDCIndex</h1>
+
+<h2 class="text-center text-primary">Upload File & Recent Records</h2>
+
+<div class="container mt-4">
+    <div class="card p-4 shadow-sm">
+        <form  asp-action="UploadEDCFile"  enctype="multipart/form-data" class="mb-4">
+            <div class="input-group">
+                <input type="file" name="file" class="form-control" required>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+@* <h1>เลือก Path Directory</h1>
+<input type="file" id="fileInput" webkitdirectory mozdirectory />
+<br>
+<br>
+<button onclick="getDirectory()">แสดง Path Directory</button>
+<p id="directoryPath"></p> *@
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Code)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CompanyCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CompanyName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MerchantNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MerchantName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Htype)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TerminalId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TransactionDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PostDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PersonalId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Surname)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RefPid)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Pidcus)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CusName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CusSurname)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Paidtype1)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Paidtype2)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BirthDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.EditDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TranAmt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Batch)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Trace)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TxnsCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.AppCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TransRefId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UserId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cuser)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Muser)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cwhen)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Mwhen)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.StatusFlag)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Timestamp)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Code)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CompanyCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CompanyName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MerchantNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MerchantName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Htype)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TerminalId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TransactionDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PostDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PersonalId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Surname)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RefPid)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Pidcus)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CusName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CusSurname)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Paidtype1)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Paidtype2)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.BirthDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.EditDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TranAmt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Batch)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Trace)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TxnsCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AppCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TransRefId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.UserId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Cuser)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Muser)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Cwhen)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Mwhen)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StatusFlag)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Timestamp)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Uid">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Uid">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Uid">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        function getDirectory() {
+            const input = document.getElementById('fileInput');
+            const directoryPath = input.files.length > 0 ? input.files[0].webkitRelativePath.split('/')[0] : '';
+            document.getElementById('directoryPath').innerText = 'Path Directory: ' + directoryPath;
+        }
+    </script>
+}
