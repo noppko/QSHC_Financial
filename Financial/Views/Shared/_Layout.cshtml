@@ -344,6 +344,9 @@
     <div class="app">
         <!-- ================= NAVBAR ================= -->
         <header class="navbar">
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+                ☰
+            </button>
             <div class="brand">
                 <div class="brand-logo">
                     <svg viewBox="0 0 24 24" fill="none">
@@ -512,6 +515,8 @@
                 }
             });
     </script>
+
+    @await Component.InvokeAsync("SidebarMenu")
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

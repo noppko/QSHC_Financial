@@ -18,6 +18,12 @@ namespace Financial.Controllers
         {
             return View();
         }
+
+        public IActionResult SiteMap()
+        {
+            return View();
+        }
+
         [Authorize]
         public IActionResult Privacy()
         {

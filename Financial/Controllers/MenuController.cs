@@ -84,7 +84,23 @@ namespace Financial.Controllers
                 },
                 new MenuItem 
                 { 
-                    Name = "Discharges", 
+                    Name = "All Pages", 
+                    Url = "/Home/SiteMap", 
+                    Icon = "🗺️",
+                    Controller = "Home",
+                    Action = "SiteMap"
+                },
+                new MenuItem 
+                { 
+                    Name = "Privacy Policy", 
+                    Url = "/Home/Privacy", 
+                    Icon = "🔒",
+                    Controller = "Home",
+                    Action = "Privacy"
+                },
+                new MenuItem 
+                { 
+                    Name = "Discharges (IPD/OPD)", 
                     Url = "/Discharges", 
                     Icon = "🏥",
                     Controller = "Discharges",
@@ -100,15 +116,64 @@ namespace Financial.Controllers
                 },
                 new MenuItem 
                 { 
-                    Name = "Reports", 
-                    Url = "#", 
-                    Icon = "📊",
-                    Controller = "",
-                    Action = ""
+                    Name = "Interface EDC", 
+                    Url = "/InterfaceEDC", 
+                    Icon = "💳",
+                    Controller = "InterfaceEDC",
+                    Action = "Index"
                 }
             };
 
             return Json(menus);
+        }
+
+        public IActionResult GetAllPages()
+        {
+            var pages = new List<MenuItem>
+            {
+                new MenuItem 
+                { 
+                    Name = "Home", 
+                    Url = "/", 
+                    Icon = "🏠",
+                    Controller = "Home",
+                    Action = "Index"
+                },
+                new MenuItem 
+                { 
+                    Name = "Privacy Policy", 
+                    Url = "/Home/Privacy", 
+                    Icon = "🔒",
+                    Controller = "Home",
+                    Action = "Privacy"
+                },
+                new MenuItem 
+                { 
+                    Name = "Discharges - IPD", 
+                    Url = "/Discharges", 
+                    Icon = "🏥",
+                    Controller = "Discharges",
+                    Action = "Index"
+                },
+                new MenuItem 
+                { 
+                    Name = "Interface System", 
+                    Url = "/InterfaceSystem", 
+                    Icon = "🔗",
+                    Controller = "InterfaceSystem",
+                    Action = "Index"
+                },
+                new MenuItem 
+                { 
+                    Name = "Interface EDC", 
+                    Url = "/InterfaceEDC", 
+                    Icon = "💳",
+                    Controller = "InterfaceEDC",
+                    Action = "Index"
+                }
+            };
+
+            return Json(pages);
         }
     }
 }
