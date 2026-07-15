@@ -145,12 +145,12 @@
 
 ### Phase 3: Views & Frontend
 
-- [ ] ติดตั้ง Node.js และ Tailwind CSS (npm install)
-- [ ] ดาวน์โหลดฟอนต์ Kanit (.woff2) มาเก็บที่ wwwroot/fonts/kanit/
-- [ ] สร้าง `_Layout.cshtml` ใหม่ด้วย Tailwind CSS พร้อม sidebar, top bar, breadcrumb
-- [ ] ปรับ Views ทั้งหมด:
-  - [ ] Account/Login.cshtml
-  - [ ] Home/Index.cshtml
+- ✅ ติดตั้ง Node.js และ Tailwind CSS (npm install)
+- ⏳ ดาวน์โหลดฟอนต์ Kanit (.woff2) มาเก็บที่ wwwroot/fonts/kanit/ (ยังไม่ทำ - ใช้ fallback font ก่อน)
+- ✅ สร้าง `_Layout.cshtml` ใหม่ด้วย Tailwind CSS พร้อม sidebar, top bar, breadcrumb
+- ✅ ปรับ Views ทั้งหมด:
+  - ✅ Account/Login.cshtml
+  - ✅ Home/Index.cshtml
   - [ ] Home/Privacy.cshtml
   - [ ] Discharges/IPD.cshtml
   - [ ] Discharges/OPD.cshtml

@@ -42,3 +42,7 @@ appsettings.local.json
 # NuGet
 *.nupkg
 *.snupkg
+
+# Node.js
+node_modules/
+package-lock.json

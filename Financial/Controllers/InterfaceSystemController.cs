@@ -274,7 +274,7 @@ namespace Financial.Controllers
         }
         public async Task<IActionResult> EDCIndex()
         {
-            var patientEDCRegister = await _InterfaceSystemDbContext.PatientEdcregisters.OrderByDescending(o=>o.Uid).Take(50).ToListAsync();
+            var patientEDCRegister = await _InterfaceSystemDbContext.PatientEdcregisters.OrderByDescending(o => o.Uid).Take(50).ToListAsync();
             return View(patientEDCRegister);
         }
 

@@ -1,60 +1,139 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Financial</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+    <title>@ViewData["Title"] - ระบบบัญชี</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Financial.styles.css" asp-append-version="true" />
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Financial</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        @*<li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>*@
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Discharges" asp-action="IPD">D/C IPD</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Discharges" asp-action="OPD">D/C OPD</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="InterfaceSystem" asp-action="EDCIndex">EDC</a>
-                        </li>
-                    </ul>
-                    <partial name="_LoginPartial" />
+<body class="bg-gray-50">
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-primary-700 to-primary-900 text-white transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 shadow-2xl">
+        <div class="p-6">
+            <div class="flex items-center space-x-3 mb-8">
+                <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-line text-primary-600 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">ระบบบัญชี</h1>
+                    <p class="text-xs text-primary-200">Financial System</p>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+            <nav class="space-y-2">
+                <a asp-controller="Home" asp-action="Index" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all duration-200 group">
+                    <i class="fas fa-home text-lg group-hover:scale-110 transition-transform"></i>
+                    <span>หน้าหลัก</span>
+                </a>
+                <a asp-controller="Discharges" asp-action="IPD" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all duration-200 group">
+                    <i class="fas fa-bed text-lg group-hover:scale-110 transition-transform"></i>
+                    <span>D/C IPD</span>
+                </a>
+                <a asp-controller="Discharges" asp-action="OPD" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all duration-200 group">
+                    <i class="fas fa-user-injured text-lg group-hover:scale-110 transition-transform"></i>
+                    <span>D/C OPD</span>
+                </a>
+                <a asp-controller="InterfaceSystem" asp-action="EDCIndex" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all duration-200 group">
+                    <i class="fas fa-exchange-alt text-lg group-hover:scale-110 transition-transform"></i>
+                    <span>EDC Interface</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-white/10">
+            <div class="text-xs text-primary-200 text-center">
+                <p>&copy; @DateTime.Now.Year ศูนย์หัวใจสิริกิติ์ฯ</p>
+                <a href="http://10.67.67.169/" target="_blank" class="hover:text-white transition-colors">www.sirikit.go.th</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="lg:ml-64 min-h-screen flex flex-col">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-sm sticky top-0 z-30">
+            <div class="px-4 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 lg:ml-0 ml-12">
+                        <h2 class="text-2xl font-semibold text-gray-800">@ViewData["Title"]</h2>
+                        <nav class="flex mt-1 text-sm text-gray-600">
+                            <a asp-controller="Home" asp-action="Index" class="hover:text-primary-600">หน้าหลัก</a>
+                            @if (ViewData["Title"]?.ToString() != "หน้าหลัก")
+                            {
+                                <span class="mx-2">/</span>
+                                <span class="text-gray-800">@ViewData["Title"]</span>
+                            }
+                        </nav>
+                    </div>
+                    
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="flex items-center space-x-4">
+                            <div class="hidden md:block text-right">
+                                <p class="text-sm font-medium text-gray-800">@User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value</p>
+                                <p class="text-xs text-gray-500">@User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value</p>
+                            </div>
+                            <div class="relative group">
+                                <button class="flex items-center space-x-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-user text-white text-sm"></i>
+                                    </div>
+                                    <i class="fas fa-chevron-down text-xs text-gray-600"></i>
+                                </button>
+                                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 hidden group-hover:block">
+                                    <form asp-controller="Account" asp-action="Logout" method="post">
+                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                            <span>ออกจากระบบ</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 p-4 lg:p-8">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2566 - Financial - <a target="_blank" href="http://10.67.67.169/">เว็บไซค์ศูนย์หัวใจสิริกิติ์ฯ</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            if (window.innerWidth < 1024 && !sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+
+        // Active menu item highlighting
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('#sidebar nav a').forEach(link => {
+            if (link.getAttribute('href') === currentPath || currentPath.includes(link.getAttribute('href'))) {
+                link.classList.add('bg-white/20', 'font-semibold');
+            }
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
