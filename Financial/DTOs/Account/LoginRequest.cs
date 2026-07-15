@@ -2,17 +2,21 @@
 
 namespace Financial.DTOs.Account
 {
+    /// <summary>
+    /// DTO สำหรับรับข้อมูลการ Login จากฟอร์ม
+    /// </summary>
     public class LoginRequest
     {
-        [Required]
-        public string Username { get; set; }
+        [Required(ErrorMessage = "กรุณากรอกชื่อผู้ใช้")]
+        [Display(Name = "ชื่อผู้ใช้")]
+        public string Username { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "กรุณาใส่รหัสผ่าน")]
+        [Required(ErrorMessage = "กรุณากรอกรหัสผ่าน")]
         [DataType(DataType.Password)]
         [Display(Name = "รหัสผ่าน")]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
 
-        [Display(Name = "จดจำการเข้าสู่ระบบ")]
+        [Display(Name = "จดจำฉันไว้")]
         public bool RememberMe { get; set; }
 
         public string? ReturnUrl { get; set; }

@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.InkML;
-using Financial.Database.InterfaceSystem.Contexts;
+﻿using Financial.Database.InterfaceSystem.Contexts;
 using Financial.Database.InterfaceSystem.Models;
 using Financial.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -7,13 +6,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
-using System.Configuration;
 using System.Data;
 using System.Globalization;
 
 namespace Financial.Controllers
 {
+    /// <summary>
+    /// Controller สำหรับจัดการระบบ Interface (EDC, CSMBS, etc.)
+    /// </summary>
     [Authorize]
     public class InterfaceSystemController : Controller
     {

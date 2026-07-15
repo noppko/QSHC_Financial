@@ -1,26 +1,35 @@
-﻿
-using Financial.DTOs.Account;
-using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Financial.DTOs.Account;
+using Financial.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using Financial.Database.QSHC.Contexts;
-using Financial.Models.ViewModels;
-using Microsoft.Data.SqlClient;
-using System.Data;
 
 namespace Financial.Controllers
 {
+    /// <summary>
+    /// Controller สำหรับจัดการ Authentication (Login, Logout)
+    /// </summary>
     public class AccountController : Controller
     {
-        string connstr = "Server=10.67.67.64;user id=sa;password=Password@HO2021;Database=HealthObject;Trusted_Connection=False;TrustServerCertificate=True; " +
-                  " Max Pool Size=400;Connect Timeout=600;";
+        private readonly IAuthService _authService;
+        private readonly ILogger<AccountController> _logger;
 
-        private UserManager<IdentityUser> _userManager;
-        private RoleManager<IdentityRole> _roleManager;
-        private QSHCDb _dbQSHC;
-        public IActionResult Login(string returnUrl = null)
+        public AccountController(
+            IAuthService authService,
+            ILogger<AccountController> logger)
+        {
+            _authService = authService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// แสดงหน้า Login
+        /// </summary>
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Login(string? returnUrl = null)
         {
             var model = new LoginRequest
             {
@@ -28,96 +37,113 @@ namespace Financial.Controllers
             };
             return View(model);
         }
+
+        /// <summary>
+        /// ประมวลผล Login ผ่าน External Auth API
+        /// </summary>
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginRequest login)
         {
-            if (login == null)
+            if (!ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Login));
+                return View(login);
             }
 
-            SqlConnection conn = null;
-            SqlDataReader rdr = null;
-
-            conn = new SqlConnection(connstr);
-
-            conn.Open();
-            //string sql = "EXEC pRepQSHCVerifyLogin @P_Username='it010' @P_Password='2'";
-            //string sql = "EXEC pRepQSHCVerifyLoginRole @P_Username='it010' @P_Password='2'";
-            var _Profile = new List<UserProfile>();
-            string sql = "EXEC pRepQSHCVerifyLoginRole @P_Username  = '" + login.Username + "',  @P_Password  = '" + login.Password + "'";
-            SqlCommand cmdPatient = new SqlCommand(sql, conn);
-            cmdPatient.CommandType = CommandType.Text;
-            rdr = cmdPatient.ExecuteReader();
-
-            if (rdr.HasRows)
+            if (string.IsNullOrWhiteSpace(login.Username) || string.IsNullOrWhiteSpace(login.Password))
             {
-                while (rdr.Read())
-                {
-                    var Profile = new UserProfile();
-                    Profile.Id = Convert.ToInt32(rdr["LoginUID"].ToString());
-                    Profile.LoginName = rdr["LoginName"].ToString();
-                    Profile.FullName = rdr["FullName"].ToString();
-                    Profile.Gender = rdr["Gender"].ToString();
-                    Profile.JobPosition = rdr["JobPosition"].ToString();
-                    Profile.RoleName = rdr["RoleName"].ToString();
-                    _Profile.Add(Profile);
-                }
-                conn.Close();
-
-                var UserProfile = _Profile.First();
-
-                //----------- Claim 1 role --------------
-                //    var _claim = new ClaimsIdentity(new[]
-                //{
-                //        new Claim(ClaimTypes.Name, UserProfile.FullName),
-                //        new Claim("LoginName", UserProfile.LoginName ),
-                //        new Claim("FullName", UserProfile.FullName ),
-                //        new Claim("Gender", UserProfile.Gender ),
-                //        new Claim(ClaimTypes.Role, UserProfile.RoleName ),
-                //    }, CookieAuthenticationDefaults.AuthenticationScheme);
-
-                //----------- Claim Multi role --------------
-                var claims = new List<Claim>();
-                claims.Add(new Claim(ClaimTypes.Name, UserProfile.LoginName));
-                claims.Add(new Claim("LoginUID", UserProfile.Id.ToString()));
-                claims.Add(new Claim("LoginName", UserProfile.LoginName));
-                claims.Add(new Claim("FullName", UserProfile.FullName));
-                claims.Add(new Claim("Gender", UserProfile.Gender));
-                claims.Add(new Claim("JobPosition", UserProfile.JobPosition));
-                foreach (var role in _Profile)
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, role.RoleName));
-                }
-                var _claim = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-
-
-                var principal = new ClaimsPrincipal(_claim);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-                //return RedirectToAction("Index","Home");
-                return string.IsNullOrEmpty(login.ReturnUrl) ? RedirectToAction("Index", "Home") : LocalRedirect(login.ReturnUrl);
-
+                ModelState.AddModelError(string.Empty, "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+                return View(login);
             }
-            else
+
+            try
             {
-                ModelState.AddModelError("password", "UserName หรือ Password ไม่ถูกต้อง!");
-                return View();
+                // เรียก External Auth API
+                var authResponse = await _authService.AuthenticateAsync(login.Username, login.Password);
+
+                if (authResponse?.IsSuccess == true && authResponse.Data != null)
+                {
+                    var userData = authResponse.Data;
+
+                    // สร้าง Claims สำหรับ Cookie Authentication
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.Name, userData.LoginName),
+                        new Claim("LoginName", userData.LoginName),
+                        new Claim("FullName", userData.FullName),
+                        new Claim("Gender", userData.Gender),
+                        new Claim("JobPosition", userData.JobPosition),
+                        new Claim("Division", userData.Division),
+                        new Claim(ClaimTypes.Email, userData.Email)
+                    };
+
+                    // เพิ่ม Roles ทั้งหมด
+                    foreach (var role in userData.Roles)
+                    {
+                        claims.Add(new Claim(ClaimTypes.Role, role));
+                    }
+
+                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = login.RememberMe,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                    };
+
+                    await HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(claimsIdentity),
+                        authProperties);
+
+                    _logger.LogInformation("User {Username} logged in successfully", userData.LoginName);
+
+                    // Redirect ไปยังหน้าที่ต้องการหรือหน้า Home
+                    if (!string.IsNullOrEmpty(login.ReturnUrl) && Url.IsLocalUrl(login.ReturnUrl))
+                    {
+                        return Redirect(login.ReturnUrl);
+                    }
+
+                    return RedirectToAction("Index", "Home");
+                }
+                else
+                {
+                    _logger.LogWarning("Login failed for user: {Username}", login.Username);
+                    ModelState.AddModelError(string.Empty, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+                    return View(login);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login process for user: {Username}", login.Username);
+                ModelState.AddModelError(string.Empty, "เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง");
+                return View(login);
             }
         }
+
+        /// <summary>
+        /// Logout ออกจากระบบ
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout(string name)
+        public async Task<IActionResult> Logout()
         {
+            var username = User.Identity?.Name;
+
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            //return Redirect("https://sso.kku.ac.th/logout.php?callback_logout=https://webappqshc.kku.ac.th/sso");
+
+            _logger.LogInformation("User {Username} logged out", username ?? "Unknown");
+
             return RedirectToAction("Index", "Home");
         }
 
-        private async Task<List<string>> GetRolesList(IdentityUser user)
+        /// <summary>
+        /// หน้า Access Denied
+        /// </summary>
+        [HttpGet]
+        public IActionResult AccessDenied()
         {
-            return new List<string>(await _userManager.GetRolesAsync(user));
+            return View();
         }
     }
 }
