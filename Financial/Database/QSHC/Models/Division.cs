@@ -31,7 +31,7 @@ namespace Financial.Database.QSHC.Models
         [ForeignKey(nameof(DepartmentId))]
         public int? DepartmentId { get; set; }
 
-        
+
         //[InverseProperty(nameof(Departments.Divisions))]
         //public virtual Department Department { get; set; }
         //[InverseProperty("Division")]

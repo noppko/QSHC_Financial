@@ -4,17 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Finexy</title>
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-dark: #0f1419;
-            --secondary-dark: #1a1f2e;
-            --accent-orange: #ff7043;
-            --accent-orange-light: #ff8c5a;
-            --text-light: #f5f5f5;
-            --text-muted: #a0aec0;
-            --border-color: #2d3748;
+            --bg: #EDEDEB;
+            --surface: #F7F7F5;
+            --card: #FFFFFF;
+            --card-soft: #F5F5F3;
+            --ink: #1B1B19;
+            --ink-2: #4A4A47;
+            --muted: #8B8B87;
+            --line: #ECECEA;
+            --orange: #F4551F;
+            --orange-2: #FF7A3D;
+            --green: #22B573;
+            --red: #F04438;
+            --yellow: #F5C518;
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
         }
 
         * {
@@ -24,226 +33,249 @@
         }
 
         body {
-            background-color: var(--primary-dark);
-            color: var(--text-light);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .finexy-nav {
-            background-color: var(--secondary-dark);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .finexy-nav-container {
-            max-width: 1400px;
+        .app {
+            max-width: 1420px;
             margin: 0 auto;
-            padding: 0 1.5rem;
+            background: var(--surface);
+            border-radius: 32px;
+            padding: 20px 28px 28px;
+        }
+
+        /* ============ NAVBAR ============ */
+        .navbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 2rem;
+            gap: 16px;
+            margin-bottom: 22px;
         }
 
-        .finexy-logo {
+        .brand {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            min-width: max-content;
+            gap: 10px;
+            background: #fff;
+            border-radius: 999px;
+            padding: 10px 22px 10px 10px;
         }
 
-        .finexy-logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            color: white;
+        .brand-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--orange);
+            display: grid;
+            place-items: center;
         }
 
-        .finexy-logo-text {
-            font-size: 20px;
+        .brand-logo svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .brand-name {
             font-weight: 700;
-            color: var(--text-light);
+            font-size: 17px;
         }
 
-        .finexy-nav-links {
+        .nav-pill {
+            background: #fff;
+            border-radius: 999px;
+            padding: 6px;
             display: flex;
             align-items: center;
-            gap: 2rem;
-            flex: 1;
+            gap: 4px;
         }
 
-        .finexy-nav-link {
-            color: var(--text-muted);
+        .nav-pill a {
             text-decoration: none;
-            font-size: 14px;
+            color: var(--ink-2);
+            font-size: 14.5px;
             font-weight: 500;
-            transition: color 0.3s ease;
-            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 999px;
+            transition: background .15s;
         }
 
-        .finexy-nav-link:hover,
-        .finexy-nav-link.active {
-            color: var(--accent-orange);
+        .nav-pill a:hover {
+            background: var(--card-soft);
         }
 
-        .finexy-nav-right {
+        .nav-pill a.active {
+            background: var(--ink);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .nav-right {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            margin-left: auto;
+            gap: 14px;
         }
 
-        .finexy-nav-search {
+        .icon-group {
+            background: #fff;
+            border-radius: 999px;
+            padding: 6px;
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background-color: rgba(255, 112, 67, 0.1);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            color: var(--text-muted);
+            gap: 2px;
         }
 
-        .finexy-nav-search input {
-            background: transparent;
-            border: none;
-            color: var(--text-light);
-            outline: none;
-            width: 200px;
-            font-size: 13px;
-        }
-
-        .finexy-nav-search input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .finexy-nav-icon-btn {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-size: 16px;
-        }
-
-        .finexy-nav-icon-btn:hover {
-            background-color: rgba(255, 112, 67, 0.1);
-            color: var(--accent-orange);
-        }
-
-        .finexy-user-menu {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .finexy-user-avatar {
+        .icon-btn {
             width: 40px;
             height: 40px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%);
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            color: var(--ink-2);
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: var(--card-soft);
+        }
+
+        .icon-btn svg {
+            width: 19px;
+            height: 19px;
+        }
+
+        .dot {
+            position: absolute;
+            top: 9px;
+            right: 10px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--orange);
+            border: 1.5px solid #fff;
+        }
+
+        .profile {
+            background: #fff;
+            border-radius: 999px;
+            padding: 6px 14px 6px 6px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
+            gap: 10px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
+            position: relative;
         }
 
-        .finexy-user-avatar:hover {
-            border-color: var(--accent-orange);
-            transform: scale(1.05);
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f0c27b, #c98850);
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            color: #fff;
+            font-size: 15px;
         }
 
-        .finexy-dropdown-menu {
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile-name {
+            font-size: 13.5px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .profile-mail {
+            font-size: 11.5px;
+            color: var(--muted);
+        }
+
+        .chev {
+            color: var(--muted);
+        }
+
+        /* User Dropdown */
+        .user-dropdown {
             position: absolute;
-            top: calc(100% + 0.5rem);
+            top: calc(100% + 8px);
             right: 0;
-            background-color: var(--secondary-dark);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
             min-width: 280px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            z-index: 1001;
+            z-index: 1000;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
-        .finexy-dropdown-menu.active {
+        .user-dropdown.active {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
         }
 
-        .finexy-dropdown-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
+        .dropdown-header {
+            padding: 18px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .finexy-dropdown-user-info {
+        .dropdown-user {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 12px;
         }
 
-        .finexy-dropdown-user-avatar {
+        .dropdown-avatar {
             width: 48px;
             height: 48px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f0c27b, #c98850);
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            color: #fff;
             font-size: 18px;
         }
 
-        .finexy-dropdown-user-details {
+        .dropdown-user-info {
             flex: 1;
         }
 
-        .finexy-dropdown-user-name {
-            font-size: 14px;
+        .dropdown-user-name {
+            font-size: 15px;
             font-weight: 600;
-            color: var(--text-light);
-            margin-bottom: 0.25rem;
+            color: var(--ink);
         }
 
-        .finexy-dropdown-user-role {
-            font-size: 12px;
-            color: var(--text-muted);
+        .dropdown-user-role {
+            font-size: 12.5px;
+            color: var(--muted);
+            margin-top: 2px;
         }
 
-        .finexy-dropdown-body {
-            padding: 0.5rem 0;
+        .dropdown-body {
+            padding: 8px 0;
         }
 
-        .finexy-dropdown-item {
+        .dropdown-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: var(--text-light);
+            gap: 12px;
+            padding: 12px 18px;
+            color: var(--ink-2);
             text-decoration: none;
             font-size: 14px;
             cursor: pointer;
@@ -251,150 +283,164 @@
             background: transparent;
             width: 100%;
             text-align: left;
-            transition: all 0.3s ease;
+            font-family: inherit;
+            transition: background 0.15s;
         }
 
-        .finexy-dropdown-item:hover {
-            background-color: rgba(255, 112, 67, 0.1);
-            color: var(--accent-orange);
+        .dropdown-item:hover {
+            background: var(--card-soft);
         }
 
-        .finexy-dropdown-item i {
-            font-size: 16px;
-            width: 20px;
+        .dropdown-item svg {
+            width: 18px;
+            height: 18px;
         }
 
-        .finexy-dropdown-item.logout {
-            color: #ff6b6b;
-            border-top: 1px solid var(--border-color);
-            margin-top: 0.5rem;
-            padding-top: 0.75rem;
+        .dropdown-item.logout {
+            color: var(--red);
+            border-top: 1px solid var(--line);
+            margin-top: 4px;
+            padding-top: 12px;
         }
 
-        .finexy-dropdown-item.logout:hover {
-            background-color: rgba(255, 107, 107, 0.1);
-            color: #ff8787;
+        .greeting {
+            padding: 10px 0 24px 0;
         }
 
-        .finexy-main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
+        .greeting h1 {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -.5px;
         }
 
-        .finexy-card {
-            background-color: var(--secondary-dark);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
+        .greeting p {
+            color: var(--muted);
+            font-size: 14.5px;
+            margin-top: 6px;
         }
 
-        .finexy-card:hover {
-            border-color: var(--accent-orange);
-            box-shadow: 0 4px 20px rgba(255, 112, 67, 0.15);
+        .main-content {
+            min-height: 400px;
         }
 
-        @@media (max-width: 768px) {
-            .finexy-nav-links {
+        @@media (max-width: 820px) {
+            .nav-pill {
                 display: none;
             }
 
-            .finexy-nav-search {
-                display: none;
+            body {
+                padding: 10px;
             }
 
-            .finexy-nav-container {
-                gap: 1rem;
+            .app {
+                padding: 14px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="finexy-nav">
-        <div class="finexy-nav-container">
-            <!-- Logo -->
-            <div class="finexy-logo">
-                <div class="finexy-logo-icon">
-                    <i class="fas fa-chart-line"></i>
+    <div class="app">
+        <!-- ================= NAVBAR ================= -->
+        <header class="navbar">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M5 19L19 5M19 5H9M19 5V15" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
                 </div>
-                <div class="finexy-logo-text">Finexy</div>
+                <span class="brand-name">Finexy</span>
             </div>
 
-            <!-- Navigation Links -->
-            <div class="finexy-nav-links">
-                <a asp-controller="Home" asp-action="Index" class="finexy-nav-link">Overview</a>
-                <a href="#" class="finexy-nav-link">Activity</a>
-                <a href="#" class="finexy-nav-link">Manage</a>
-                <a href="#" class="finexy-nav-link">Program</a>
-                <a asp-controller="InterfaceSystem" asp-action="Index" class="finexy-nav-link">Account</a>
-                <a href="#" class="finexy-nav-link">Reports</a>
-            </div>
+            <nav class="nav-pill">
+                <a asp-controller="Home" asp-action="Index" class="active">Overview</a>
+                <a href="#">Activity</a>
+                <a href="#">Manage</a>
+                <a href="#">Program</a>
+                <a asp-controller="InterfaceSystem" asp-action="Index">Account</a>
+                <a href="#">Reports</a>
+            </nav>
 
-            <!-- Right Side Controls -->
-            <div class="finexy-nav-right">
-                <!-- Search (Hidden on mobile) -->
-                <div class="finexy-nav-search" style="display: none;">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Search..." />
+            <div class="nav-right">
+                <div class="icon-group">
+                    <button class="icon-btn" aria-label="Search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <circle cx="11" cy="11" r="7" />
+                            <path d="M20 20l-3.5-3.5" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn" aria-label="Notifications">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.7 21a2 2 0 01-3.4 0" />
+                        </svg>
+                        <span class="dot"></span>
+                    </button>
+                    <button class="icon-btn" aria-label="Alerts">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 8v4" />
+                            <circle cx="12" cy="16" r=".5" fill="currentColor" />
+                        </svg>
+                    </button>
                 </div>
-
-                <!-- Icon Buttons -->
-                <button class="finexy-nav-icon-btn" title="Search">
-                    <i class="fas fa-search"></i>
-                </button>
-                <button class="finexy-nav-icon-btn" title="Notifications">
-                    <i class="fas fa-bell"></i>
-                </button>
-                <button class="finexy-nav-icon-btn" title="Settings">
-                    <i class="fas fa-cog"></i>
-                </button>
 
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <div class="finexy-user-menu">
-                        <button id="user-menu-btn" class="finexy-user-avatar">
-                            @{
-                                var fullName = User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "User";
-                                var firstChar = fullName.Length > 0 ? fullName.Substring(0, 1) : "U";
-                            }
-                            @firstChar
-                        </button>
+                    <div class="profile" id="profile-btn">
+                        @{
+                            var fullName = User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "User";
+                            var jobPosition = User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value ?? "Member";
+                            var loginName = User.Claims.FirstOrDefault(c => c.Type == "LoginName")?.Value ?? "";
+                            var firstChar = fullName.Length > 0 ? fullName.Substring(0, 1) : "U";
+                        }
+                        <div class="avatar">@firstChar</div>
+                        <div class="profile-info">
+                            <div class="profile-name">@fullName</div>
+                            <div class="profile-mail">@loginName</div>
+                        </div>
+                        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
 
-                        <div id="user-dropdown" class="finexy-dropdown-menu">
-                            <div class="finexy-dropdown-header">
-                                <div class="finexy-dropdown-user-info">
-                                    <div class="finexy-dropdown-user-avatar">
-                                        @firstChar
-                                    </div>
-                                    <div class="finexy-dropdown-user-details">
-                                        <div class="finexy-dropdown-user-name">
-                                            @fullName
-                                        </div>
-                                        <div class="finexy-dropdown-user-role">
-                                            @(User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value ?? "Member")
-                                        </div>
+                        <div class="user-dropdown" id="user-dropdown">
+                            <div class="dropdown-header">
+                                <div class="dropdown-user">
+                                    <div class="dropdown-avatar">@firstChar</div>
+                                    <div class="dropdown-user-info">
+                                        <div class="dropdown-user-name">@fullName</div>
+                                        <div class="dropdown-user-role">@jobPosition</div>
                                     </div>
                                 </div>
                             </div>
-
-                            <div class="finexy-dropdown-body">
-                                <a href="#" class="finexy-dropdown-item">
-                                    <i class="fas fa-user"></i>
+                            <div class="dropdown-body">
+                                <a href="#" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                        <circle cx="12" cy="8" r="4" />
+                                        <path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2" />
+                                    </svg>
                                     <span>My Profile</span>
                                 </a>
-                                <a href="#" class="finexy-dropdown-item">
-                                    <i class="fas fa-cog"></i>
+                                <a href="#" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z" />
+                                    </svg>
                                     <span>Settings</span>
                                 </a>
-                                <a href="#" class="finexy-dropdown-item">
-                                    <i class="fas fa-question-circle"></i>
+                                <a href="#" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                        <circle cx="12" cy="12" r="9" />
+                                        <path d="M9.5 9a2.5 2.5 0 015 .5c0 1.5-2.5 2-2.5 3.5" />
+                                        <circle cx="12" cy="17" r=".5" fill="currentColor" />
+                                    </svg>
                                     <span>Help</span>
                                 </a>
-                                <form asp-controller="Account" asp-action="Logout" method="post" style="border: none; margin: 0; padding: 0;">
-                                    <button type="submit" class="finexy-dropdown-item logout">
-                                        <i class="fas fa-sign-out-alt"></i>
+                                <form asp-controller="Account" asp-action="Logout" method="post" style="margin: 0;">
+                                    <button type="submit" class="dropdown-item logout">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M9 21H6a3 3 0 01-3-3V6a3 3 0 013-3h3" />
+                                            <path d="M16 17l5-5-5-5M21 12H9" />
+                                        </svg>
                                         <span>Logout</span>
                                     </button>
                                 </form>
@@ -404,69 +450,58 @@
                 }
                 else
                 {
-                    <a asp-controller="Account" asp-action="Login" class="finexy-nav-icon-btn" style="background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%); padding: 0.5rem 1rem; width: auto; border-radius: 8px; font-size: 14px; font-weight: 600;">
-                        Login
+                    <a asp-controller="Account" asp-action="Login" class="profile" style="text-decoration: none;">
+                        <div class="avatar">?</div>
+                        <div class="profile-info">
+                            <div class="profile-name">Login</div>
+                            <div class="profile-mail">Click to login</div>
+                        </div>
                     </a>
                 }
             </div>
-        </div>
-    </nav>
+        </header>
 
-    <!-- Page Content -->
-    <main class="finexy-main">
-        @RenderBody()
-    </main>
+        <!-- ================= GREETING ================= -->
+        <section class="greeting">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                var fullName = User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "User";
+                <h1>Good morning, @fullName</h1>
+            }
+            else
+            {
+                <h1>Welcome to Finexy</h1>
+            }
+            <p>Stay on top of your tasks, monitor progress, and track status.</p>
+        </section>
 
-    <!-- Footer -->
-    <footer style="background-color: var(--secondary-dark); border-top: 1px solid var(--border-color); padding: 2rem 0; margin-top: 4rem;">
-        <div style="max-width: 1400px; margin: 0 auto; padding: 0 1.5rem;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                        <div style="width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white;">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <span style="font-size: 16px; font-weight: 700; color: var(--text-light);">Finexy</span>
-                    </div>
-                    <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Manage your finances with ease and confidence.</p>
-                </div>
-                <div>
-                    <h4 style="font-size: 14px; font-weight: 600; color: var(--text-light); margin-bottom: 1rem;">Product</h4>
-                    <ul style="list-style: none;">
-                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Features</a></li>
-                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Pricing</a></li>
-                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Security</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 style="font-size: 14px; font-weight: 600; color: var(--text-light); margin-bottom: 1rem;">Company</h4>
-                    <ul style="list-style: none;">
-                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">About</a></li>
-                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Blog</a></li>
-                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Contact</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div style="border-top: 1px solid var(--border-color); padding-top: 2rem; text-align: center;">
-                <p style="font-size: 12px; color: var(--text-muted);">© 2026 Finexy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+        <!-- Page Content -->
+        <main class="main-content">
+            @RenderBody()
+        </main>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const userMenuBtn = document.getElementById('user-menu-btn');
+            const profileBtn = document.getElementById('profile-btn');
             const userDropdown = document.getElementById('user-dropdown');
 
-            if (userMenuBtn && userDropdown) {
-                userMenuBtn.addEventListener('click', function (e) {
+            if (profileBtn && userDropdown) {
+                profileBtn.addEventListener('click', function (e) {
                     e.stopPropagation();
                     userDropdown.classList.toggle('active');
                 });
 
                 document.addEventListener('click', function (e) {
-                    if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    if (!profileBtn.contains(e.target)) {
                         userDropdown.classList.remove('active');
+                    }
+                });
+
+                // Prevent dropdown close when clicking inside
+                userDropdown.addEventListener('click', function (e) {
+                    if (e.target.tagName !== 'BUTTON' && !e.target.closest('form')) {
+                        e.stopPropagation();
                     }
                 });
             }
