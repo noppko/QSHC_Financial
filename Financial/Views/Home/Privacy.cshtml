@@ -13,32 +13,34 @@
         <div class="bg-gradient-to-r from-primary-50 to-blue-50 rounded-2xl p-6 mb-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">ข้อมูลผู้ใช้งาน</h3>
             <div class="space-y-2">
-                <p class="text-gray-700"><span class="font-medium">ชื่อ:</span> @User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value</p>
-                <p class="text-gray-700"><span class="font-medium">ตำแหน่ง:</span> @User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value</p>
+                <p class="text-gray-700"><span class="font-medium">ชื่อ:</span> @User.Claims.FirstOrDefault(c => c.Type ==
+                                    "FullName")?.Value</p>
+                    <p class="text-gray-700"><span class="font-medium">ตำแหน่ง:</span> @User.Claims.FirstOrDefault(c => c.Type
+                                        == "JobPosition")?.Value</p>
+                    </div>
+                </div>
+            }
+
+            <div class="prose max-w-none">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การเก็บรักษาข้อมูล</h2>
+                <p class="text-gray-600 mb-4">ระบบของเราเก็บรักษาข้อมูลส่วนบุคคลและข้อมูลการทำงานของคุณอย่างปลอดภัย</p>
+
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การใช้ข้อมูล</h2>
+                <p class="text-gray-600 mb-4">ข้อมูลของคุณจะถูกใช้เพื่อ:</p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
+                    <li>การยืนยันตัวตนและการเข้าถึงระบบ</li>
+                    <li>การบันทึก Audit Trail</li>
+                    <li>การรายงานและการวิเคราะห์ข้อมูล</li>
+                    <li>การปรับปรุงประสิทธิภาพของระบบ</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การรักษาความปลอดภัย</h2>
+                <p class="text-gray-600 mb-4">เราใช้มาตรการรักษาความปลอดภัยตามมาตรฐานสากล รวมถึง:</p>
+                <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
+                    <li>การเข้ารหัสข้อมูล (Encryption)</li>
+                    <li>การยืนยันตัวตนหลายชั้น (Multi-factor Authentication)</li>
+                    <li>การบันทึกการเข้าใช้งาน (Logging)</li>
+                    <li>การสำรองข้อมูล (Backup) อย่างสม่ำเสมอ</li>
+                </ul>
             </div>
         </div>
-    }
-
-    <div class="prose max-w-none">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การเก็บรักษาข้อมูล</h2>
-        <p class="text-gray-600 mb-4">ระบบของเราเก็บรักษาข้อมูลส่วนบุคคลและข้อมูลการทำงานของคุณอย่างปลอดภัย</p>
-        
-        <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การใช้ข้อมูล</h2>
-        <p class="text-gray-600 mb-4">ข้อมูลของคุณจะถูกใช้เพื่อ:</p>
-        <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
-            <li>การยืนยันตัวตนและการเข้าถึงระบบ</li>
-            <li>การบันทึก Audit Trail</li>
-            <li>การรายงานและการวิเคราะห์ข้อมูล</li>
-            <li>การปรับปรุงประสิทธิภาพของระบบ</li>
-        </ul>
-
-        <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การรักษาความปลอดภัย</h2>
-        <p class="text-gray-600 mb-4">เราใช้มาตรการรักษาความปลอดภัยตามมาตรฐานสากล รวมถึง:</p>
-        <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
-            <li>การเข้ารหัสข้อมูล (Encryption)</li>
-            <li>การยืนยันตัวตนหลายชั้น (Multi-factor Authentication)</li>
-            <li>การบันทึกการเข้าใช้งาน (Logging)</li>
-            <li>การสำรองข้อมูล (Backup) อย่างสม่ำเสมอ</li>
-        </ul>
-    </div>
-</div>

@@ -10,7 +10,8 @@
     <div class="bg-white rounded-3xl shadow-lg p-8 mb-6">
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <div
+                    class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
                     <i class="fas fa-credit-card text-white text-xl"></i>
                 </div>
                 <div>
@@ -21,11 +22,13 @@
         </div>
 
         <!-- Upload Form -->
-        <form asp-action="UploadEDCFile" enctype="multipart/form-data" class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6">
+        <form asp-action="UploadEDCFile" enctype="multipart/form-data"
+              class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6">
             <div class="flex space-x-3">
                 <input type="file" name="file" required
                        class="flex-1 px-4 py-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white">
-                <button type="submit" class="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg">
+                <button type="submit"
+                        class="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg">
                     <i class="fas fa-upload mr-2"></i>Upload
                 </button>
             </div>
@@ -37,7 +40,7 @@
         <div class="px-8 py-6 border-b border-gray-200">
             <h2 class="text-xl font-semibold text-gray-800">Recent Records</h2>
         </div>
-@* <h1>เลือก Path Directory</h1>
+        @* <h1>เลือก Path Directory</h1>
 <input type="file" id="fileInput" webkitdirectory mozdirectory />
 <br>
 <br>
@@ -45,231 +48,232 @@
 <p id="directoryPath"></p> *@
 
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Code)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CompanyCode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CompanyName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.MerchantNo)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.MerchantName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Htype)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TerminalId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TransactionDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PostDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PersonalId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Surname)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.RefPid)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Pidcus)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CusName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CusSurname)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Paidtype1)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Paidtype2)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.BirthDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.EditDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TranAmt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Batch)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Trace)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TxnsCode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AppCode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TransRefId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cuser)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Muser)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cwhen)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Mwhen)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.StatusFlag)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Timestamp)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Code)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CompanyCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CompanyName)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.MerchantNo)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.MerchantName)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Htype)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TerminalId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TransactionDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PostDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PersonalId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Surname)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.RefPid)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Pidcus)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CusName)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CusSurname)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Paidtype1)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Paidtype2)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.BirthDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.EditDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TranAmt)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Batch)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Trace)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TxnsCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.AppCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TransRefId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UserId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Cuser)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Muser)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Cwhen)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Mwhen)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.StatusFlag)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Timestamp)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Uid">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Uid">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Uid">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
-    <script>
-        function getDirectory() {
-            const input = document.getElementById('fileInput');
-            const directoryPath = input.files.length > 0 ? input.files[0].webkitRelativePath.split('/')[0] : '';
-            document.getElementById('directoryPath').innerText = 'Path Directory: ' + directoryPath;
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Code)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.CompanyCode)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.CompanyName)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.MerchantNo)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.MerchantName)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Htype)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.TerminalId)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.TransactionDate)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.PostDate)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.PersonalId)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Name)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Surname)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.RefPid)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Pidcus)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.CusName)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.CusSurname)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Paidtype1)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Paidtype2)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.BirthDate)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.EditDate)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.TranAmt)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Batch)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Trace)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.TxnsCode)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.AppCode)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.TransRefId)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.UserId)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Cuser)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Muser)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Cwhen)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Mwhen)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.StatusFlag)
+                    </th>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Timestamp)
+                    </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Code)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.CompanyCode)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.CompanyName)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.MerchantNo)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.MerchantName)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Htype)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TerminalId)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TransactionDate)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.PostDate)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.PersonalId)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Name)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Surname)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.RefPid)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Pidcus)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.CusName)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.CusSurname)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Paidtype1)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Paidtype2)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.BirthDate)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.EditDate)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TranAmt)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Batch)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Trace)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TxnsCode)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.AppCode)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TransRefId)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.UserId)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Cuser)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Muser)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Cwhen)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Mwhen)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.StatusFlag)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Timestamp)
+                        </td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.Uid">Edit</a> |
+                            <a asp-action="Details" asp-route-id="@item.Uid">Details</a> |
+                            <a asp-action="Delete" asp-route-id="@item.Uid">Delete</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @section Scripts {
+            @{
+                await Html.RenderPartialAsync("_ValidationScriptsPartial");
+            }
+            <script>
+                        function getDirectory() {
+                            const input = document.getElementById('fileInput');
+                            const directoryPath = input.files.length > 0 ? input.files[0].webkitRelativePath.split('/')[0] : '';
+                            document.getElementById('directoryPath').innerText = 'Path Directory: ' + directoryPath;
+                        }
+            </script>
         }
-    </script>
-}
