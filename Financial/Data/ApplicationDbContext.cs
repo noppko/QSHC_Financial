@@ -62,14 +62,14 @@ namespace Financial.Data
                 if (entry.State == EntityState.Added)
                 {
                     // เพิ่ม record ใหม่
-                    entry.Entity.CreatedAt = DateTime.Now; // ใช้เวลาท้องถิ่น
+                    entry.Entity.CreatedAt = DateTime.UtcNow; // ใช้ UTC time
                     entry.Entity.CreatedBy = currentUser;
                     entry.Entity.IsActive = true;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
                     // แก้ไข record
-                    entry.Entity.UpdatedAt = DateTime.Now; // ใช้เวลาท้องถิ่น
+                    entry.Entity.UpdatedAt = DateTime.UtcNow; // ใช้ UTC time
                     entry.Entity.UpdatedBy = currentUser;
 
                     // ป้องกันไม่ให้แก้ไข CreatedAt และ CreatedBy
@@ -86,6 +86,9 @@ namespace Financial.Data
         /// </summary>
         private void SeedReferenceValues(ModelBuilder modelBuilder)
         {
+            // ใช้ static datetime เพื่อป้องกัน model changes warning
+            var seedDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
             var referenceValues = new List<ReferenceValue>
             {
                 // TITLE - คำนำหน้าชื่อ
@@ -99,7 +102,7 @@ namespace Financial.Data
                     DisplayOrder = 1,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -111,7 +114,7 @@ namespace Financial.Data
                     DisplayOrder = 2,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -123,7 +126,7 @@ namespace Financial.Data
                     DisplayOrder = 3,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -135,7 +138,7 @@ namespace Financial.Data
                     DisplayOrder = 4,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
 
                 // GENDER - เพศ
@@ -149,7 +152,7 @@ namespace Financial.Data
                     DisplayOrder = 1,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -161,7 +164,7 @@ namespace Financial.Data
                     DisplayOrder = 2,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -173,7 +176,7 @@ namespace Financial.Data
                     DisplayOrder = 3,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
 
                 // BLOOD_TYPE - กรุ๊ปเลือด
@@ -187,7 +190,7 @@ namespace Financial.Data
                     DisplayOrder = 1,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -199,7 +202,7 @@ namespace Financial.Data
                     DisplayOrder = 2,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -211,7 +214,7 @@ namespace Financial.Data
                     DisplayOrder = 3,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 },
                 new ReferenceValue
                 {
@@ -223,7 +226,7 @@ namespace Financial.Data
                     DisplayOrder = 4,
                     IsSystem = true,
                     CreatedBy = "System",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = seedDate
                 }
             };
 

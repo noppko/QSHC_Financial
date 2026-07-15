@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-Financial-46669941-e2ce-4ff5-91d7-5e055f582acc</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <SkipWorkloadRestore>true</SkipWorkloadRestore>
+    <SkipWorkloadResolve>true</SkipWorkloadResolve>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,11 +18,11 @@
     <PackageReference Include="QuestPDF" Version="2024.12.3" />
     
     <!-- EF Core & Database -->
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -31,18 +33,16 @@
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     
     <!-- HTTP Client -->
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.10" />
     
     <!-- Development Tools -->
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
   </ItemGroup>
 
   <!-- Tailwind CSS Build Automation -->
   <Target Name="BuildTailwind" BeforeTargets="Build">
-    <Exec Command="npx tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --minify" 
-          ContinueOnError="true" 
-          IgnoreExitCode="true" />
+    <Exec Command="npx tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --minify" ContinueOnError="true" IgnoreExitCode="true" />
   </Target>
 
 </Project>

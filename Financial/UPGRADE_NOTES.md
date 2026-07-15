@@ -202,15 +202,16 @@
 
 - ✅ Run `dotnet build` - 0 errors ✅
 - ✅ Run `dotnet test` - 10/10 tests passed ✅
-- [ ] Run `dotnet ef migrations add InitialWithReferenceValues`
-- [ ] Run `dotnet ef database update`
-- [ ] รันแอปและทดสอบด้วย test user (**it099 / abc12345**):
-  - [ ] Login
-  - [ ] Dashboard
-  - [ ] IPD Discharges
-  - [ ] OPD Discharges
-  - [ ] Interface System
-  - [ ] Excel Export
+- ✅ Run `dotnet ef migrations add InitialWithReferenceValues` - Complete ✅
+- ✅ Run `dotnet ef database update` - Complete ✅
+- ✅ Application running at https://localhost:7244 ✅
+- ⏳ Manual testing with test user (**it099 / abc12345**):
+  - [ ] Login with it099/abc12345
+  - [ ] Dashboard displays correctly with modern design
+  - [ ] IPD Discharges page loads and exports Excel
+  - [ ] OPD Discharges page loads and exports Excel
+  - [ ] Interface System file upload works
+  - [ ] All views display with modern design
   - [ ] Logout
 - [ ] บันทึกผลการทดสอบพร้อม screenshots (ถ้าทำได้)
 - [ ] Update UPGRADE_NOTES.md ฉบับสมบูรณ์
