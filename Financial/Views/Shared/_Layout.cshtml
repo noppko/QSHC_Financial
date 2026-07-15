@@ -3,115 +3,476 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ระบบบัญชี</title>
+    <title>@ViewData["Title"] - Finexy</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        :root {
+            --primary-dark: #0f1419;
+            --secondary-dark: #1a1f2e;
+            --accent-orange: #ff7043;
+            --accent-orange-light: #ff8c5a;
+            --text-light: #f5f5f5;
+            --text-muted: #a0aec0;
+            --border-color: #2d3748;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--primary-dark);
+            color: var(--text-light);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        .finexy-nav {
+            background-color: var(--secondary-dark);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .finexy-nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .finexy-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: max-content;
+        }
+
+        .finexy-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: white;
+        }
+
+        .finexy-logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .finexy-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        .finexy-nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .finexy-nav-link:hover,
+        .finexy-nav-link.active {
+            color: var(--accent-orange);
+        }
+
+        .finexy-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: auto;
+        }
+
+        .finexy-nav-search {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(255, 112, 67, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .finexy-nav-search input {
+            background: transparent;
+            border: none;
+            color: var(--text-light);
+            outline: none;
+            width: 200px;
+            font-size: 13px;
+        }
+
+        .finexy-nav-search input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .finexy-nav-icon-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .finexy-nav-icon-btn:hover {
+            background-color: rgba(255, 112, 67, 0.1);
+            color: var(--accent-orange);
+        }
+
+        .finexy-user-menu {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .finexy-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .finexy-user-avatar:hover {
+            border-color: var(--accent-orange);
+            transform: scale(1.05);
+        }
+
+        .finexy-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            background-color: var(--secondary-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            min-width: 280px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .finexy-dropdown-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .finexy-dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .finexy-dropdown-user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .finexy-dropdown-user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .finexy-dropdown-user-details {
+            flex: 1;
+        }
+
+        .finexy-dropdown-user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .finexy-dropdown-user-role {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .finexy-dropdown-body {
+            padding: 0.5rem 0;
+        }
+
+        .finexy-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+
+        .finexy-dropdown-item:hover {
+            background-color: rgba(255, 112, 67, 0.1);
+            color: var(--accent-orange);
+        }
+
+        .finexy-dropdown-item i {
+            font-size: 16px;
+            width: 20px;
+        }
+
+        .finexy-dropdown-item.logout {
+            color: #ff6b6b;
+            border-top: 1px solid var(--border-color);
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+        }
+
+        .finexy-dropdown-item.logout:hover {
+            background-color: rgba(255, 107, 107, 0.1);
+            color: #ff8787;
+        }
+
+        .finexy-main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .finexy-card {
+            background-color: var(--secondary-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .finexy-card:hover {
+            border-color: var(--accent-orange);
+            box-shadow: 0 4px 20px rgba(255, 112, 67, 0.15);
+        }
+
+        @@media (max-width: 768px) {
+            .finexy-nav-links {
+                display: none;
+            }
+
+            .finexy-nav-search {
+                display: none;
+            }
+
+            .finexy-nav-container {
+                gap: 1rem;
+            }
+        }
+    </style>
 </head>
-<body style="background: linear-gradient(135deg, #8B95C9 0%, #A4ADD9 50%, #9BA7D1 100%);" class="min-h-screen">
-    <!-- Top Navigation Bar -->
-    <nav class="bg-gray-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Logo & Brand -->
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                        <i class="fas fa-chart-line text-white text-sm"></i>
-                    </div>
-                    <span class="text-lg font-bold text-gray-800">FINANCIAL</span>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="finexy-nav">
+        <div class="finexy-nav-container">
+            <!-- Logo -->
+            <div class="finexy-logo">
+                <div class="finexy-logo-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="finexy-logo-text">Finexy</div>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="finexy-nav-links">
+                <a asp-controller="Home" asp-action="Index" class="finexy-nav-link">Overview</a>
+                <a href="#" class="finexy-nav-link">Activity</a>
+                <a href="#" class="finexy-nav-link">Manage</a>
+                <a href="#" class="finexy-nav-link">Program</a>
+                <a asp-controller="InterfaceSystem" asp-action="Index" class="finexy-nav-link">Account</a>
+                <a href="#" class="finexy-nav-link">Reports</a>
+            </div>
+
+            <!-- Right Side Controls -->
+            <div class="finexy-nav-right">
+                <!-- Search (Hidden on mobile) -->
+                <div class="finexy-nav-search" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search..." />
                 </div>
 
-                <!-- Main Navigation -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a asp-controller="Home" asp-action="Index" class="text-gray-700 hover:text-gray-900 font-medium transition-colors">Home</a>
-                    <a asp-controller="Discharges" asp-action="IPD" class="text-gray-700 hover:text-gray-900 font-medium transition-colors">Messages</a>
-                    <a asp-controller="Discharges" asp-action="OPD" class="text-gray-700 hover:text-gray-900 font-medium transition-colors">Discover</a>
-                    <a asp-controller="InterfaceSystem" asp-action="Index" class="text-gray-700 hover:text-gray-900 font-medium transition-colors">Wallet</a>
-                    <a asp-controller="InterfaceSystem" asp-action="EDCIndex" class="text-gray-700 hover:text-gray-900 font-medium transition-colors">Projects</a>
-                </div>
+                <!-- Icon Buttons -->
+                <button class="finexy-nav-icon-btn" title="Search">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button class="finexy-nav-icon-btn" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <button class="finexy-nav-icon-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
 
-                <!-- Right Side: Search, Notifications, User -->
-                <div class="flex items-center space-x-4">
-                    <!-- Search -->
-                    <div class="hidden lg:flex items-center bg-white rounded-lg px-4 py-2 border border-gray-200">
-                        <i class="fas fa-search text-gray-400 text-sm mr-2"></i>
-                        <input type="text" placeholder="Enter your search request..." class="bg-transparent outline-none text-sm text-gray-600 w-64" />
-                    </div>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="finexy-user-menu">
+                        <button id="user-menu-btn" class="finexy-user-avatar">
+                            @{
+                                var fullName = User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "User";
+                                var firstChar = fullName.Length > 0 ? fullName.Substring(0, 1) : "U";
+                            }
+                            @firstChar
+                        </button>
 
-                    <!-- Icons -->
-                    <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors">
-                        <i class="fas fa-search text-gray-600 text-sm"></i>
-                    </button>
-                    <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors">
-                        <i class="fas fa-bell text-gray-600 text-sm"></i>
-                    </button>
-                    <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors">
-                        <i class="fas fa-moon text-gray-600 text-sm"></i>
-                    </button>
-
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <div class="relative group">
-                            <button class="w-9 h-9 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                                <span class="text-white text-sm font-semibold">@(User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value?.Substring(0, 1) ?? "U")</span>
-                            </button>
-                            <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 hidden group-hover:block z-50">
-                                <div class="px-4 py-2 border-b">
-                                    <p class="text-sm font-medium text-gray-800">@User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value</p>
-                                    <p class="text-xs text-gray-500">@User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value</p>
+                        <div id="user-dropdown" class="finexy-dropdown-menu">
+                            <div class="finexy-dropdown-header">
+                                <div class="finexy-dropdown-user-info">
+                                    <div class="finexy-dropdown-user-avatar">
+                                        @firstChar
+                                    </div>
+                                    <div class="finexy-dropdown-user-details">
+                                        <div class="finexy-dropdown-user-name">
+                                            @fullName
+                                        </div>
+                                        <div class="finexy-dropdown-user-role">
+                                            @(User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value ?? "Member")
+                                        </div>
+                                    </div>
                                 </div>
-                                <form asp-controller="Account" asp-action="Logout" method="post">
-                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2">
+                            </div>
+
+                            <div class="finexy-dropdown-body">
+                                <a href="#" class="finexy-dropdown-item">
+                                    <i class="fas fa-user"></i>
+                                    <span>My Profile</span>
+                                </a>
+                                <a href="#" class="finexy-dropdown-item">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Settings</span>
+                                </a>
+                                <a href="#" class="finexy-dropdown-item">
+                                    <i class="fas fa-question-circle"></i>
+                                    <span>Help</span>
+                                </a>
+                                <form asp-controller="Account" asp-action="Logout" method="post" style="border: none; margin: 0; padding: 0;">
+                                    <button type="submit" class="finexy-dropdown-item logout">
                                         <i class="fas fa-sign-out-alt"></i>
                                         <span>Logout</span>
                                     </button>
                                 </form>
                             </div>
                         </div>
-                    }
-                    else
-                    {
-                        <a asp-controller="Account" asp-action="Login" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
-                            Login
-                        </a>
-                    }
-                </div>
-
-                <!-- Mobile Menu Button -->
-                <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg hover:bg-gray-200">
-                    <i class="fas fa-bars text-gray-600"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200 bg-white">
-            <div class="px-4 py-3 space-y-2">
-                <a asp-controller="Home" asp-action="Index" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Home</a>
-                <a asp-controller="Discharges" asp-action="IPD" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Messages</a>
-                <a asp-controller="Discharges" asp-action="OPD" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Discover</a>
-                <a asp-controller="InterfaceSystem" asp-action="Index" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Wallet</a>
-                <a asp-controller="InterfaceSystem" asp-action="EDCIndex" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Projects</a>
+                    </div>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="finexy-nav-icon-btn" style="background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%); padding: 0.5rem 1rem; width: auto; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                        Login
+                    </a>
+                }
             </div>
         </div>
     </nav>
 
     <!-- Page Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="finexy-main">
         @RenderBody()
     </main>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script>
-        // Mobile menu toggle
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileMenu = document.getElementById('mobile-menu');
-        if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', function() {
-                mobileMenu.classList.toggle('hidden');
-            });
-        }
-    </script>
-            @await RenderSectionAsync("Scripts", required: false)
-        </body>
+    <!-- Footer -->
+    <footer style="background-color: var(--secondary-dark); border-top: 1px solid var(--border-color); padding: 2rem 0; margin-top: 4rem;">
+        <div style="max-width: 1400px; margin: 0 auto; padding: 0 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <div style="width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-light) 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <span style="font-size: 16px; font-weight: 700; color: var(--text-light);">Finexy</span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Manage your finances with ease and confidence.</p>
+                </div>
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 600; color: var(--text-light); margin-bottom: 1rem;">Product</h4>
+                    <ul style="list-style: none;">
+                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Features</a></li>
+                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Pricing</a></li>
+                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Security</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 600; color: var(--text-light); margin-bottom: 1rem;">Company</h4>
+                    <ul style="list-style: none;">
+                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">About</a></li>
+                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Blog</a></li>
+                        <li><a href="#" style="font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.3s;">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div style="border-top: 1px solid var(--border-color); padding-top: 2rem; text-align: center;">
+                <p style="font-size: 12px; color: var(--text-muted);">© 2026 Finexy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
-    </html>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const userMenuBtn = document.getElementById('user-menu-btn');
+            const userDropdown = document.getElementById('user-dropdown');
+
+            if (userMenuBtn && userDropdown) {
+                userMenuBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('active');
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
