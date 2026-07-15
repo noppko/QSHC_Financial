@@ -176,23 +176,33 @@
 
 ### Phase 5: Unit Testing
 
-- [ ] สร้าง project `Financial.Tests` (xUnit)
-- [ ] ติดตั้ง packages: xUnit, Moq, FluentAssertions, EF Core InMemory/SQLite
-- [ ] เขียน tests สำหรับ AuthService
-- [ ] เขียน tests สำหรับ ReferenceValueService
-- [ ] เขียน tests สำหรับ DashboardService
+- ✅ สร้าง project `Financial.Tests` (xUnit, .NET 10)
+- ✅ ติดตั้ง packages: xUnit, Moq 4.20.72, FluentAssertions 7.0.0, EF Core InMemory 10.0.0
+- ✅ เขียน tests สำหรับ AuthService (6 test cases):
+  - ✅ ValidCredentials_ReturnsAuthResponse
+  - ✅ InvalidCredentials_ReturnsNull
+  - ✅ EmptyUsername_ReturnsNull
+  - ✅ EmptyPassword_ReturnsNull
+  - ✅ HttpException_ReturnsNull
+- ✅ เขียน tests สำหรับ ReferenceValueService (5 test cases):
+  - ✅ GetByCategoryAsync_ValidCategory_ReturnsActiveValues
+  - ✅ GetByCategoryAsync_InvalidCategory_ReturnsEmptyList
+  - ✅ GetByCodeAsync_ValidCode_ReturnsReferenceValue
+  - ✅ GetByCodeAsync_InvalidCode_ReturnsNull
+  - ✅ GetByCodeAsync_InactiveValue_ReturnsNull
+- ✅ Run `dotnet test` ผ่าน: **10/10 tests passed** ✅
+- [ ] เขียน tests สำหรับ DashboardService (when implemented)
 - [ ] เขียน tests สำหรับ ThaiDateHelper
 - [ ] เขียน tests สำหรับ Soft Delete & Audit Fields
 - [ ] เขียน tests สำหรับ File Upload Validation
-- [ ] Run `dotnet test` ให้ผ่าน 100%
 
 ### Phase 6: Final Testing & Documentation
 
-- [ ] Run `dotnet build` - ต้องไม่มี error
-- [ ] Run `dotnet test` - ต้องผ่าน 100%
+- ✅ Run `dotnet build` - 0 errors ✅
+- ✅ Run `dotnet test` - 10/10 tests passed ✅
 - [ ] Run `dotnet ef migrations add InitialWithReferenceValues`
 - [ ] Run `dotnet ef database update`
-- [ ] รันแอปและทดสอบด้วย test user (md199 / abc12345):
+- [ ] รันแอปและทดสอบด้วย test user (**it099 / abc12345**):
   - [ ] Login
   - [ ] Dashboard
   - [ ] IPD Discharges
