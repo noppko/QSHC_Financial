@@ -1,52 +1,80 @@
 ﻿@model System.Data.DataTable
 
 @{
-    ViewData["Title"] = "Upload File & Recent Records";
+    ViewData["Title"] = "Interface EDC";
 }
 
-<h2 class="text-center text-primary">Upload File & Recent Records</h2>
+<!-- Interface EDC -->
+<div class="max-w-7xl mx-auto">
+    <!-- Header & Upload Card -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 mb-6">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-exchange-alt text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Interface EDC</h1>
+                    <p class="text-sm text-gray-500">อัปโหลดและดูประวัติข้อมูล</p>
+                </div>
+            </div>
+        </div>
 
-<div class="container mt-4">
-    <div class="card p-4 shadow-sm">
-        <form asp-controller="InterfaceEDC" asp-action="UploadFile" method="post" enctype="multipart/form-data" class="mb-4">
-            <div class="input-group">
-                <input type="file" name="file" class="form-control" required>
-                <button type="submit" class="btn btn-primary">Upload</button>
+        <!-- Upload Form -->
+        <form asp-controller="InterfaceEDC" asp-action="UploadFile" method="post" enctype="multipart/form-data"
+              class="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl p-6">
+            <div class="flex space-x-3">
+                <input type="file" name="file" required
+                       class="flex-1 px-4 py-3 border border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white">
+                <button type="submit" class="px-8 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg">
+                    <i class="fas fa-upload mr-2"></i>Upload
+                </button>
             </div>
         </form>
     </div>
-</div>
 
-<div class="container mt-4">
-    <div class="card p-4 shadow-sm">
-        <h4 class="text-secondary">Latest 50 Records</h4>
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
+    <!-- Records Table Card -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+        <div class="px-8 py-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-800">Latest 50 Records</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
                     <tr>
-                        <th>Filename</th>
-                        <th>Record</th>
-                        <th>Data</th>
-                        <th>Process Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filename</th>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @if (Model.Rows.Count > 0)
+                <tbody class="divide-y divide-gray-200">
+                    @if (Model?.Rows.Count > 0)
                     {
                         @foreach (System.Data.DataRow row in Model.Rows)
                         {
-                            <tr>
-                                <td>@row["Filename"]</td>
-                                <td>@row["Record"]</td>
-                                <td>@row["Data"]</td>
-                                <td>@row["ProcessStatus"]</td>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@row["Filename"]</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@row["Record"]</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">@row["Data"]</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                                        @(row["ProcessStatus"]?.ToString() == "Success" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800")">
+                                        @row["ProcessStatus"]
+                                    </span>
+                                </td>
                             </tr>
                         }
                     }
                     else
                     {
                         <tr>
-                            <td colspan="4" class="text-center text-muted">No records found</td>
+                            <td colspan="4" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center text-gray-400">
+                                    <i class="fas fa-inbox text-4xl mb-3"></i>
+                                    <p class="text-sm">ไม่พบข้อมูล</p>
+                                </div>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -54,5 +82,3 @@
         </div>
     </div>
 </div>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
