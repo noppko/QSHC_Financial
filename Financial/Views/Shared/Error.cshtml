@@ -1,25 +1,67 @@
 ﻿@model ErrorViewModel
 @{
     ViewData["Title"] = "Error";
+    Layout = "_Layout";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-3xl shadow-2xl p-12 max-w-2xl w-full text-center">
+        <!-- Error Icon -->
+        <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-exclamation-triangle text-red-600 text-4xl"></i>
+        </div>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
-    </p>
-}
+        <!-- Error Message -->
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Oops! Something went wrong</h1>
+        <p class="text-lg text-gray-600 mb-8">เกิดข้อผิดพลาดในการประมวลผลคำขอของคุณ</p>
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+        @if (Model?.ShowRequestId == true)
+        {
+            <div class="bg-gray-50 rounded-xl p-4 mb-8">
+                <p class="text-sm text-gray-500 mb-1">Request ID</p>
+                <code class="text-sm font-mono text-gray-800">@Model.RequestId</code>
+            </div>
+        }
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a asp-controller="Home" asp-action="Index" 
+               class="px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors inline-flex items-center justify-center space-x-2">
+                <i class="fas fa-home"></i>
+                <span>กลับหน้าหลัก</span>
+            </a>
+            <button onclick="history.back()" 
+                    class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors inline-flex items-center justify-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>ย้อนกลับ</span>
+            </button>
+        </div>
+
+        <!-- Development Info -->
+        @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+        {
+            <div class="mt-12 p-6 bg-yellow-50 border border-yellow-200 rounded-xl text-left">
+                <div class="flex items-start space-x-3 mb-4">
+                    <i class="fas fa-info-circle text-yellow-600 mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold text-yellow-800 mb-2">Development Mode</h3>
+                        <p class="text-sm text-yellow-700">
+                            This detailed error information is only shown in Development environment. 
+                            Do not enable this for deployed applications.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Support Info -->
+        <div class="mt-8 pt-8 border-t border-gray-200">
+            <p class="text-sm text-gray-500">
+                หากปัญหายังคงมีอยู่ กรุณาติดต่อฝ่ายสนับสนุนระบบ
+            </p>
+            <a href="http://10.67.67.169/" class="text-sm text-primary-600 hover:text-primary-700 mt-2 inline-block">
+                www.sirikit.go.th
+            </a>
+        </div>
+    </div>
+</div>
