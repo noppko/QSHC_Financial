@@ -28,8 +28,8 @@ namespace Financial.Database.QSHC.Models
         //[ForeignKey(nameof(JobPositionID))]
 
 
-        public virtual JobPosition JobPosition { get; set; }
-        public virtual Division Division { get; set; }
+        public virtual JobPosition JobPosition { get; set; } = null!;
+        public virtual Division Division { get; set; } = null!;
 
 
 

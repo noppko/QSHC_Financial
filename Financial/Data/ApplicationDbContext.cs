@@ -20,7 +20,7 @@ namespace Financial.Data
         }
 
         // DbSets
-        public DbSet<ReferenceValue> ReferenceValues { get; set; }
+        public DbSet<ReferenceValue> ReferenceValues { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -44,7 +44,7 @@
         }
 </style>
 <ul class="navbar-nav">
-    @if (User.Identity.IsAuthenticated)
+    @if (User.Identity?.IsAuthenticated == true)
     {
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center text-dark"
@@ -54,13 +54,13 @@
                data-bs-toggle="dropdown"
                aria-expanded="false">
                 <i class="fas fa-user-circle me-2"></i>
-                <span>@User.Identity?.Name - @User.Claims.Where(c => c.Type == "FullName").FirstOrDefault().Value</span>
+                <span>@User.Identity?.Name - @(User.Claims.Where(c => c.Type == "FullName").FirstOrDefault()?.Value ?? "Unknown")</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="navbarDropdown">
                 <li>
                     <a class="dropdown-item">
                         <i class="fas fa-cog me-2"></i>
-                        @User.Claims.Where(c => c.Type == "JobPosition").FirstOrDefault().Value
+                        @(User.Claims.Where(c => c.Type == "JobPosition").FirstOrDefault()?.Value ?? "N/A")
                     </a>
                 </li>
                 <li><hr class="dropdown-divider"></li>

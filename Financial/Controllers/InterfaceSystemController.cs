@@ -82,7 +82,6 @@ namespace Financial.Controllers
             }
 
             string vInfCode = "EDC";
-            string vInfName = "Electronic Data Capture";
             var userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "LoginUID")?.Value);
             var MUser = userId;
             var CUser = userId;
@@ -94,7 +93,7 @@ namespace Financial.Controllers
                 var lines = new List<string>();
                 using (var streamReader = new StreamReader(file.OpenReadStream()))
                 {
-                    string line;
+                    string? line;
                     while ((line = streamReader.ReadLine()) != null)
                     {
                         lines.Add(line);
@@ -251,7 +250,7 @@ namespace Financial.Controllers
 
         public class PathRequest
         {
-            public string Path { get; set; }
+            public string Path { get; set; } = null!;
         }
         [HttpPost]
         public IActionResult TestConnection([FromBody] PathRequest request)
@@ -300,9 +299,9 @@ namespace Financial.Controllers
 
             using (var stream = new StreamReader(file.OpenReadStream()))
             {
-                while (!stream.EndOfStream)
+                string? line;
+                while ((line = await stream.ReadLineAsync()) != null)
                 {
-                    var line = await stream.ReadLineAsync();
                     if (!string.IsNullOrWhiteSpace(line))
                     {
                         var values = line.Split('|'); // แยกค่าด้วย "|"

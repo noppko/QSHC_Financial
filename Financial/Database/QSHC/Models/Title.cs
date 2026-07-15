@@ -20,14 +20,14 @@ namespace Financial.Database.QSHC.Models
         public int TitleId { get; set; }
         [Required]
         [StringLength(3)]
-        public string TitleCode { get; set; }
+        public string TitleCode { get; set; } = null!;
         [StringLength(50)]
-        public string Abbreviation { get; set; }
+        public string Abbreviation { get; set; } = null!;
         [Required]
         [StringLength(50)]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
         [StringLength(50)]
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         //[InverseProperty("Title")]
         //public virtual ICollection<Employee> Employees { get; set; }

@@ -19,14 +19,14 @@ namespace Financial.Database.QSHC.Models
         public int DivisionID { get; set; }
         [Required]
         [StringLength(50)]
-        public string ThaiName { get; set; }
+        public string ThaiName { get; set; } = null!;
         [StringLength(50)]
-        public string EnglishName { get; set; }
+        public string EnglishName { get; set; } = null!;
         [Required]
         [StringLength(6)]
-        public string Abbrevation { get; set; }
+        public string Abbrevation { get; set; } = null!;
         [StringLength(50)]
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
         [Column("DepartmentID")]
         [ForeignKey(nameof(DepartmentId))]
         public int? DepartmentId { get; set; }

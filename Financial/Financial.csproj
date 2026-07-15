@@ -6,8 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-Financial-46669941-e2ce-4ff5-91d7-5e055f582acc</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <SkipWorkloadRestore>true</SkipWorkloadRestore>
-    <SkipWorkloadResolve>true</SkipWorkloadResolve>
   </PropertyGroup>
 
   <ItemGroup>
