@@ -1,0 +1,24 @@
+@model List<Financial.Components.NavbarMenuViewComponent.MenuItem>
+
+<nav class="nav-pill">
+    @foreach (var item in Model)
+    {
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+        var isActive = !string.IsNullOrEmpty(item.Controller) && 
+                       currentController.Equals(item.Controller, StringComparison.OrdinalIgnoreCase);
+        
+        if (!string.IsNullOrEmpty(item.Controller) && !string.IsNullOrEmpty(item.Action))
+        {
+            <a asp-controller="@item.Controller" asp-action="@item.Action" 
+               class="@(isActive ? "active" : "")">
+                @item.Name
+            </a>
+        }
+        else
+        {
+            <a href="@item.Url" class="@(isActive ? "active" : "")">
+                @item.Name
+            </a>
+        }
+    }
+</nav>

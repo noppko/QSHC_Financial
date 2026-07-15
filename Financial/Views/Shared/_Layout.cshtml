@@ -354,14 +354,7 @@
                 <span class="brand-name">Finexy</span>
             </div>
 
-            <nav class="nav-pill">
-                <a asp-controller="Home" asp-action="Index" class="active">Overview</a>
-                <a href="#">Activity</a>
-                <a href="#">Manage</a>
-                <a href="#">Program</a>
-                <a asp-controller="InterfaceSystem" asp-action="Index">Account</a>
-                <a href="#">Reports</a>
-            </nav>
+            @await Component.InvokeAsync("NavbarMenu")
 
             <div class="nav-right">
                 <div class="icon-group">

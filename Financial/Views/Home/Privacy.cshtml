@@ -2,45 +2,132 @@
     ViewData["Title"] = "Privacy Policy";
 }
 
-<div class="bg-white rounded-3xl shadow-lg p-8">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Privacy Policy</h1>
-        <p class="text-gray-600">นโยบายความเป็นส่วนตัวของระบบ Financial</p>
-    </div>
+<style>
+    .privacy-container {
+        background: var(--card);
+        border-radius: var(--radius-xl);
+        padding: 28px;
+    }
+
+    .privacy-container h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 12px;
+    }
+
+    .privacy-container h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--ink);
+        margin: 24px 0 14px;
+    }
+
+    .privacy-container p {
+        color: var(--ink-2);
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 16px;
+    }
+
+    .privacy-container ul {
+        list-style: none;
+        margin-bottom: 16px;
+    }
+
+    .privacy-container li {
+        color: var(--ink-2);
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        padding-left: 24px;
+        position: relative;
+    }
+
+    .privacy-container li::before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: var(--orange);
+        font-weight: bold;
+    }
+
+    .user-info {
+        background: linear-gradient(135deg, rgba(244, 85, 31, 0.08), rgba(34, 181, 115, 0.08));
+        border-radius: var(--radius-lg);
+        padding: 18px;
+        margin-bottom: 24px;
+        border: 1px solid var(--line);
+    }
+
+    .user-info h3 {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 12px;
+    }
+
+    .user-info-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 8px;
+        font-size: 14.5px;
+    }
+
+    .user-info-row span:first-child {
+        font-weight: 600;
+        color: var(--ink);
+        min-width: 80px;
+    }
+
+    .user-info-row span:last-child {
+        color: var(--ink-2);
+    }
+
+    .sub-text {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="privacy-container">
+    <h1>Privacy Policy</h1>
+    <p class="sub-text">นโยบายความเป็นส่วนตัวของระบบ Financial</p>
 
     @if (User.Identity?.IsAuthenticated == true)
     {
-        <div class="bg-gradient-to-r from-primary-50 to-blue-50 rounded-2xl p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">ข้อมูลผู้ใช้งาน</h3>
-            <div class="space-y-2">
-                <p class="text-gray-700"><span class="font-medium">ชื่อ:</span> @User.Claims.FirstOrDefault(c => c.Type ==
-                                    "FullName")?.Value</p>
-                    <p class="text-gray-700"><span class="font-medium">ตำแหน่ง:</span> @User.Claims.FirstOrDefault(c => c.Type
-                                        == "JobPosition")?.Value</p>
-                    </div>
-                </div>
-            }
-
-            <div class="prose max-w-none">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การเก็บรักษาข้อมูล</h2>
-                <p class="text-gray-600 mb-4">ระบบของเราเก็บรักษาข้อมูลส่วนบุคคลและข้อมูลการทำงานของคุณอย่างปลอดภัย</p>
-
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การใช้ข้อมูล</h2>
-                <p class="text-gray-600 mb-4">ข้อมูลของคุณจะถูกใช้เพื่อ:</p>
-                <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                    <li>การยืนยันตัวตนและการเข้าถึงระบบ</li>
-                    <li>การบันทึก Audit Trail</li>
-                    <li>การรายงานและการวิเคราะห์ข้อมูล</li>
-                    <li>การปรับปรุงประสิทธิภาพของระบบ</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8">การรักษาความปลอดภัย</h2>
-                <p class="text-gray-600 mb-4">เราใช้มาตรการรักษาความปลอดภัยตามมาตรฐานสากล รวมถึง:</p>
-                <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                    <li>การเข้ารหัสข้อมูล (Encryption)</li>
-                    <li>การยืนยันตัวตนหลายชั้น (Multi-factor Authentication)</li>
-                    <li>การบันทึกการเข้าใช้งาน (Logging)</li>
-                    <li>การสำรองข้อมูล (Backup) อย่างสม่ำเสมอ</li>
-                </ul>
+        <div class="user-info">
+            <h3>ข้อมูลผู้ใช้งาน</h3>
+            <div class="user-info-row">
+                <span>ชื่อ:</span>
+                <span>@User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "ไม่ระบุ"</span>
+            </div>
+            <div class="user-info-row">
+                <span>ตำแหน่ง:</span>
+                <span>@User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value ?? "ไม่ระบุ"</span>
             </div>
         </div>
+    }
+
+    <h2>การเก็บรักษาข้อมูล</h2>
+    <p>ระบบของเราเก็บรักษาข้อมูลส่วนบุคคลและข้อมูลการทำงานของคุณอย่างปลอดภัย</p>
+
+    <h2>การใช้ข้อมูล</h2>
+    <p>ข้อมูลของคุณจะถูกใช้เพื่อ:</p>
+    <ul>
+        <li>การยืนยันตัวตนและการเข้าถึงระบบ</li>
+        <li>การบันทึก Audit Trail</li>
+        <li>การรายงานและการวิเคราะห์ข้อมูล</li>
+        <li>การปรับปรุงประสิทธิภาพของระบบ</li>
+    </ul>
+
+    <h2>การรักษาความปลอดภัย</h2>
+    <p>เราใช้มาตรการรักษาความปลอดภัยตามมาตรฐานสากล รวมถึง:</p>
+    <ul>
+        <li>การเข้ารหัสข้อมูล (Encryption)</li>
+        <li>การยืนยันตัวตนหลายชั้น (Multi-factor Authentication)</li>
+        <li>การบันทึกการเข้าใช้งาน (Logging)</li>
+        <li>การสำรองข้อมูล (Backup) อย่างสม่ำเสมอ</li>
+    </ul>
+</div>

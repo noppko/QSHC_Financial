@@ -1,187 +1,436 @@
 ﻿@{
-    ViewData["Title"] = "File Upload";
+    ViewData["Title"] = "Interface System - File Upload";
 }
 
-<!-- File Upload to Network Path -->
-<div class="max-w-4xl mx-auto">
-    <!-- Header Card -->
-    <div class="bg-white rounded-3xl shadow-lg p-8 mb-6">
-        <div class="flex items-center space-x-3 mb-6">
-            <div
-                class="w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-xl flex items-center justify-center">
-                <i class="fas fa-cloud-upload-alt text-white text-xl"></i>
+<style>
+    .upload-container {
+        background: var(--card);
+        border-radius: var(--radius-xl);
+        padding: 28px;
+        max-width: 900px;
+    }
+
+    .upload-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .upload-header-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--orange), var(--orange-2));
+        display: grid;
+        place-items: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .upload-header-text h1 {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 4px;
+    }
+
+    .upload-header-text p {
+        font-size: 14px;
+        color: var(--muted);
+    }
+
+    .form-section {
+        margin-bottom: 28px;
+    }
+
+    .form-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 12px;
+    }
+
+    .form-label .icon {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+    }
+
+    .path-input-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .form-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--ink);
+        background: #fff;
+        transition: all 0.2s;
+    }
+
+    .form-input::placeholder {
+        color: var(--muted);
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--orange);
+        box-shadow: 0 0 0 3px rgba(244, 85, 31, 0.1);
+    }
+
+    .btn {
+        padding: 12px 20px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #fff;
+        color: var(--ink-2);
+        transition: all 0.2s;
+    }
+
+    .btn:hover {
+        background: var(--card-soft);
+        border-color: var(--muted);
+    }
+
+    .btn-primary {
+        background: var(--orange);
+        color: #fff;
+        border-color: var(--orange);
+    }
+
+    .btn-primary:hover {
+        background: var(--orange-2);
+        border-color: var(--orange-2);
+    }
+
+    .connection-status {
+        padding: 12px 16px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        margin-top: 12px;
+        display: none;
+    }
+
+    .connection-status.success {
+        display: block;
+        background: #E8F7EF;
+        color: var(--green);
+        border: 1px solid var(--green);
+    }
+
+    .connection-status.error {
+        display: block;
+        background: #FDEBEA;
+        color: var(--red);
+        border: 1px solid var(--red);
+    }
+
+    .upload-area {
+        border: 2px dashed var(--line);
+        border-radius: var(--radius-lg);
+        padding: 40px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+    }
+
+    .upload-area:hover {
+        border-color: var(--orange);
+        background: rgba(244, 85, 31, 0.02);
+    }
+
+    .upload-area-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+    }
+
+    .upload-area-text h5 {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 8px;
+    }
+
+    .upload-area-text p {
+        font-size: 13px;
+        color: var(--muted);
+    }
+
+    #fileInput {
+        display: none;
+    }
+
+    .file-info {
+        padding: 16px;
+        background: var(--card-soft);
+        border-radius: var(--radius-md);
+        margin-top: 16px;
+        display: none;
+    }
+
+    .file-info.show {
+        display: block;
+    }
+
+    .file-info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 13.5px;
+    }
+
+    .file-info-row:last-child {
+        border-bottom: none;
+    }
+
+    .file-info-row span:first-child {
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .file-info-row span:last-child {
+        color: var(--ink);
+        font-weight: 500;
+    }
+
+    .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 28px;
+    }
+
+    .info-box {
+        background: rgba(244, 85, 31, 0.05);
+        border-left: 4px solid var(--orange);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        margin-top: 24px;
+        font-size: 13.5px;
+        color: var(--ink-2);
+    }
+
+    .info-box strong {
+        color: var(--ink);
+        font-weight: 600;
+    }
+</style>
+
+<div class="upload-container">
+    <div class="upload-header">
+        <div class="upload-header-icon">☁️</div>
+        <div class="upload-header-text">
+            <h1>Interface System File Upload</h1>
+            <p>อัปโหลดไฟล์ไปยัง Network Path</p>
+        </div>
+    </div>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <!-- Destination Path -->
+        <div class="form-section">
+            <label class="form-label">
+                <span class="icon">📁</span>
+                Destination Path
+            </label>
+            <div class="path-input-group">
+                <input type="text" id="destinationPath" class="form-input"
+                       placeholder="\\10.67.67.77\interface\CLAIM\EDC"
+                       value="\\10.67.67.77\interface\CLAIM\EDC">
+                <button type="button" id="testConnection" class="btn btn-primary">
+                    🔗 Test Connection
+                </button>
             </div>
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">File Upload to Network Path</h1>
-                <p class="text-sm text-gray-500">อัปโหลดไฟล์ไปยัง Network Path</p>
-            </div>
+            <div id="connectionStatus" class="connection-status"></div>
         </div>
 
-        <form id="uploadForm" enctype="multipart/form-data">
-            <!-- Destination Path -->
-            <div class="mb-6">
-                <label for="destinationPath" class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-folder text-primary-600"></i> Destination Path
-                </label>
-                <div class="flex space-x-2">
-                    <input type="text" id="destinationPath"
-                           class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                           placeholder="\\10.67.67.77\interface\CLAIM\EDC" value="\\10.67.67.77\interface\CLAIM\EDC">
-                    <button type="button" id="testConnection"
-                            class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors">
-                        <i class="fas fa-network-wired mr-2"></i>Test
-                    </button>
+        <!-- File Upload Area -->
+        <div class="form-section">
+            <label class="form-label">
+                <span class="icon">📄</span>
+                Select File
+            </label>
+            <div id="uploadArea" class="upload-area">
+                <div class="upload-area-icon">⬆️</div>
+                <div class="upload-area-text">
+                    <h5>Click to select file or drag and drop</h5>
+                    <p>Maximum file size: 50MB</p>
                 </div>
-                <div id="connectionStatus" class="mt-3 px-4 py-2 rounded-lg text-sm hidden"></div>
+                <input type="file" id="fileInput" accept="*/*">
             </div>
+            <div id="fileInfo" class="file-info"></div>
+        </div>
 
-            <!-- File Upload Area -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-file text-primary-600"></i> Select File
-                </label>
-                <div id="uploadArea"
-                     class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all">
-                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
-                    <h5 class="text-lg font-medium text-gray-700 mb-2">Click to select file or drag and drop</h5>
-                    <p class="text-sm text-gray-500">Maximum file size: 50MB</p>
-                    <input type="file" id="fileInput" class="hidden" accept="*/*">
-                </div>
-                <div id="fileInfo" class="mt-4 p-4 bg-gray-50 rounded-xl hidden">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-file-alt text-primary-600 text-2xl"></i>
-                            <div>
-                                <p id="fileName" class="font-medium text-gray-900"></p>
-                                <p id="fileSize" class="text-sm text-gray-500"></p>
-                            </div>
-                        </div>
-                        <button type="button" onclick="clearFile()" class="text-red-500 hover:text-red-700">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Bar -->
-            <div id="progressContainer" class="mb-6 hidden">
-                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                    <div id="progressBar" class="bg-primary-600 h-3 transition-all duration-300" style="width: 0%">
-                    </div>
-                </div>
-                <p id="progressText" class="text-center text-sm text-gray-600 mt-2">Uploading...</p>
-            </div>
-
-            <!-- File Exists Warning -->
-            <div id="fileExistsWarning" class="mb-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl hidden">
-                <div class="flex items-center space-x-3 mb-4">
-                    <i class="fas fa-exclamation-triangle text-amber-600 text-2xl"></i>
-                    <p class="font-semibold text-amber-900">ไฟล์นี้มีอยู่แล้ว!</p>
-                </div>
-                <div id="existingFileDetails" class="text-sm text-gray-700 mb-4"></div>
-                <div id="overwriteOptions" class="grid grid-cols-2 gap-3">
-                    <button type="button" id="overwriteBtn"
-                            class="px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-colors">
-                        <i class="fas fa-sync-alt mr-2"></i>เขียนทับไฟล์เดิม
-                    </button>
-                    <button type="button" id="cancelBtn"
-                            class="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl transition-colors">
-                        <i class="fas fa-times mr-2"></i>ยกเลิก
-                    </button>
-                </div>
-            </div>
-
-            <!-- Upload Button -->
-            <button type="submit" id="uploadBtn" disabled
-                    class="w-full px-6 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                <i class="fas fa-upload mr-2"></i>Upload File
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button type="button" id="clearForm" class="btn">
+                🔄 Clear
             </button>
-        </form>
+            <button type="submit" id="uploadBtn" class="btn btn-primary">
+                ⬆️ Upload File
+            </button>
+        </div>
+    </form>
 
-        <!-- Result Display -->
-        <div id="resultContainer" class="mt-6 p-6 rounded-2xl hidden"></div>
+    <div class="info-box">
+        <strong>ข้อมูลไฟล์:</strong><br>
+        • ไฟล์ต้องเป็น .txt เท่านั้น<br>
+        • ชื่อไฟล์ต้องขึ้นต้นด้วย HCG14584<br>
+        • ขนาดไฟล์สูงสุด 50MB
     </div>
 </div>
 
-@section Scripts {
-    <script>
-        let selectedFile = null;
-        let overwriteMode = false;
+<script>
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const testBtn = document.getElementById('testConnection');
+    const destinationInput = document.getElementById('destinationPath');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const clearBtn = document.getElementById('clearForm');
 
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-        const fileName = document.getElementById('fileName');
-        const fileSize = document.getElementById('fileSize');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const uploadForm = document.getElementById('uploadForm');
+    uploadArea.addEventListener('click', () => fileInput.click());
 
-        uploadArea.onclick = () => fileInput.click();
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--orange)';
+        uploadArea.style.background = 'rgba(244, 85, 31, 0.02)';
+    });
 
-        fileInput.onchange = (e) => {
-            if (e.target.files.length > 0) handleFileSelect(e.target.files[0]);
-        };
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.borderColor = 'var(--line)';
+        uploadArea.style.background = '#fff';
+    });
 
-        function handleFileSelect(file) {
-            selectedFile = file;
-            fileName.textContent = file.name;
-            fileSize.textContent = formatFileSize(file.size);
-            fileInfo.classList.remove('hidden');
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--line)';
+        uploadArea.style.background = '#fff';
+        fileInput.files = e.dataTransfer.files;
+        displayFileInfo();
+    });
+
+    fileInput.addEventListener('change', displayFileInfo);
+
+    function displayFileInfo() {
+        if (fileInput.files.length === 0) {
+            fileInfo.classList.remove('show');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+
+        fileInfo.innerHTML = `
+            <div class="file-info-row">
+                <span>File Name:</span>
+                <span>${file.name}</span>
+            </div>
+            <div class="file-info-row">
+                <span>File Size:</span>
+                <span>${fileSize} MB</span>
+            </div>
+            <div class="file-info-row">
+                <span>File Type:</span>
+                <span>${file.type || 'Unknown'}</span>
+            </div>
+        `;
+        fileInfo.classList.add('show');
+    }
+
+    testBtn.addEventListener('click', async () => {
+        const path = destinationInput.value;
+        if (!path) {
+            showStatus('Please enter a destination path', 'error');
+            return;
+        }
+
+        testBtn.disabled = true;
+        testBtn.textContent = '⏳ Testing...';
+
+        try {
+            const response = await fetch('/InterfaceSystem/CheckFileExists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ destinationPath: path, fileName: 'test.txt' })
+            });
+
+            const result = await response.json();
+            if (result.error) {
+                showStatus('❌ ' + result.error, 'error');
+            } else {
+                showStatus('✅ Connection successful', 'success');
+            }
+        } catch (error) {
+            showStatus('❌ ' + error.message, 'error');
+        } finally {
+            testBtn.disabled = false;
+            testBtn.textContent = '🔗 Test Connection';
+        }
+    });
+
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (fileInput.files.length === 0) {
+            showStatus('Please select a file', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = '⏳ Uploading...';
+
+        try {
+            const response = await fetch('/InterfaceSystem/ImportEDC', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.error) {
+                showStatus('❌ ' + result.error, 'error');
+            } else {
+                showStatus('✅ File uploaded successfully', 'success');
+                uploadForm.reset();
+                fileInfo.classList.remove('show');
+            }
+        } catch (error) {
+            showStatus('❌ ' + error.message, 'error');
+        } finally {
             uploadBtn.disabled = false;
+            uploadBtn.textContent = '⬆️ Upload File';
         }
+    });
 
-        function clearFile() {
-            selectedFile = null;
-            fileInput.value = '';
-            fileInfo.classList.add('hidden');
-            uploadBtn.disabled = true;
-        }
+    clearBtn.addEventListener('click', () => {
+        uploadForm.reset();
+        fileInfo.classList.remove('show');
+        connectionStatus.classList.remove('success', 'error');
+    });
 
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        uploadForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const file = selectedFile || fileInput.files[0];
-            const path = document.getElementById('destinationPath').value.trim();
-
-            if (!file || !path) {
-                alert('กรุณาเลือกไฟล์และระบุ path');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('destinationPath', path);
-            formData.append('overwrite', overwriteMode);
-
-            document.getElementById('progressContainer').classList.remove('hidden');
-            uploadBtn.disabled = true;
-
-            try {
-                const response = await fetch('/InterfaceSystem/UploadFile', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-
-                document.getElementById('progressContainer').classList.add('hidden');
-                document.getElementById('resultContainer').innerHTML = data.success
-                    ? `<div class="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl"><i class="fas fa-check-circle mr-2"></i>${data.message}</div>`
-                    : `<div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl"><i class="fas fa-times-circle mr-2"></i>${data.message}</div>`;
-                document.getElementById('resultContainer').classList.remove('hidden');
-
-                if (data.success) clearFile();
-            } catch (error) {
-                alert('เกิดข้อผิดพลาด: ' + error.message);
-            } finally {
-                uploadBtn.disabled = false;
-            }
-        };
-    </script>
-}
+    function showStatus(message, type) {
+        connectionStatus.textContent = message;
+        connectionStatus.className = `connection-status ${type}`;
+    }
+</script>
