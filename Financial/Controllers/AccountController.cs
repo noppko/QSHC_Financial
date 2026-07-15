@@ -69,19 +69,25 @@ namespace Financial.Controllers
                     // สร้าง Claims สำหรับ Cookie Authentication
                     var claims = new List<Claim>
                     {
-                        new Claim(ClaimTypes.Name, userData.LoginName),
-                        new Claim("LoginName", userData.LoginName),
-                        new Claim("FullName", userData.FullName),
-                        new Claim("Gender", userData.Gender),
-                        new Claim("JobPosition", userData.JobPosition),
-                        new Claim("Division", userData.Division),
-                        new Claim(ClaimTypes.Email, userData.Email)
+                        new Claim(ClaimTypes.Name, userData.LoginName ?? "Unknown"),
+                        new Claim("LoginName", userData.LoginName ?? "Unknown"),
+                        new Claim("FullName", userData.FullName ?? "Unknown"),
+                        new Claim("Gender", userData.Gender ?? "Unknown"),
+                        new Claim("JobPosition", userData.JobPosition ?? "Unknown"),
+                        new Claim("Division", userData.Division ?? "Unknown"),
+                        new Claim(ClaimTypes.Email, userData.Email ?? "unknown@local")
                     };
 
                     // เพิ่ม Roles ทั้งหมด
-                    foreach (var role in userData.Roles)
+                    if (userData.Roles != null)
                     {
-                        claims.Add(new Claim(ClaimTypes.Role, role));
+                        foreach (var role in userData.Roles)
+                        {
+                            if (!string.IsNullOrWhiteSpace(role))
+                            {
+                                claims.Add(new Claim(ClaimTypes.Role, role));
+                            }
+                        }
                     }
 
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
