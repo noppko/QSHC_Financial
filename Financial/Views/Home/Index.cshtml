@@ -319,25 +319,12 @@
                                         </div>
                                     </div>
 
-                                    @section Scripts {
-                                        <script>
-                                            // Add smooth animations on page load
-                                            document.addEventListener('DOMContentLoaded', function () {
-                                                const cards = document.querySelectorAll('.bg-white, .bg-gradient-to-br');
-                                                cards.forEach((card, index) => {
-                                                    card.style.opacity = '0';
-                                                    card.style.transform = 'translateY(20px)';
-                                                    setTimeout(() => {
-                                                        card.style.transition = 'all 0.5s ease-out';
-                                                        card.style.opacity = '1';
-                                                        card.style.transform = 'translateY(0)';
-                                                    }, index * 100);
-                                                });
-                                            });
-                                        </script>
-                                    }
-                                    class="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl
-                                    hover:from-green-100 hover:to-green-200 transition-all duration-300 group">
+                                    <!-- Quick Links Section -->
+                                    <div class="bg-white rounded-3xl shadow-lg p-8 mt-6">
+                                        <h2 class="text-xl font-bold text-gray-800 mb-6">Quick Access</h2>
+                                        <div class="grid grid-cols-3 gap-4">
+                                            <a asp-controller="Discharges" asp-action="OPD"
+                                               class="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl hover:from-green-100 hover:to-green-200 transition-all duration-300 group">
                                     <i class="fas fa-user-injured text-4xl text-green-600 mb-3 group-hover:scale-110 transition-transform"></i>
                                     <span class="text-sm font-medium text-gray-700">D/C OPD</span>
                                 </a>
