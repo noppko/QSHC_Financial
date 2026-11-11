@@ -1,133 +1,29 @@
 ﻿@{
-    ViewData["Title"] = "Privacy Policy";
+    ViewData["Title"] = "ความเป็นส่วนตัว";
 }
-
-<style>
-    .privacy-container {
-        background: var(--card);
-        border-radius: var(--radius-xl);
-        padding: 28px;
-    }
-
-    .privacy-container h1 {
-        font-size: 32px;
-        font-weight: 700;
-        color: var(--ink);
-        margin-bottom: 12px;
-    }
-
-    .privacy-container h2 {
-        font-size: 22px;
-        font-weight: 700;
-        color: var(--ink);
-        margin: 24px 0 14px;
-    }
-
-    .privacy-container p {
-        color: var(--ink-2);
-        font-size: 15px;
-        line-height: 1.6;
-        margin-bottom: 16px;
-    }
-
-    .privacy-container ul {
-        list-style: none;
-        margin-bottom: 16px;
-    }
-
-    .privacy-container li {
-        color: var(--ink-2);
-        font-size: 15px;
-        line-height: 1.6;
-        margin-bottom: 8px;
-        padding-left: 24px;
-        position: relative;
-    }
-
-    .privacy-container li::before {
-        content: "•";
-        position: absolute;
-        left: 0;
-        color: var(--orange);
-        font-weight: bold;
-    }
-
-    .user-info {
-        background: linear-gradient(135deg, rgba(244, 85, 31, 0.08), rgba(34, 181, 115, 0.08));
-        border-radius: var(--radius-lg);
-        padding: 18px;
-        margin-bottom: 24px;
-        border: 1px solid var(--line);
-    }
-
-    .user-info h3 {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--ink);
-        margin-bottom: 12px;
-    }
-
-    .user-info-row {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 8px;
-        font-size: 14.5px;
-    }
-
-    .user-info-row span:first-child {
-        font-weight: 600;
-        color: var(--ink);
-        min-width: 80px;
-    }
-
-    .user-info-row span:last-child {
-        color: var(--ink-2);
-    }
-
-    .sub-text {
-        color: var(--muted);
-        font-size: 14px;
-        margin-bottom: 20px;
-    }
-</style>
-
-<div class="privacy-container">
-    <h1>Privacy Policy</h1>
-    <p class="sub-text">นโยบายความเป็นส่วนตัวของระบบ Financial</p>
-
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <div class="user-info">
-            <h3>ข้อมูลผู้ใช้งาน</h3>
-            <div class="user-info-row">
-                <span>ชื่อ:</span>
-                <span>@User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "ไม่ระบุ"</span>
-            </div>
-            <div class="user-info-row">
-                <span>ตำแหน่ง:</span>
-                <span>@User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value ?? "ไม่ระบุ"</span>
-            </div>
-        </div>
-    }
-
-    <h2>การเก็บรักษาข้อมูล</h2>
-    <p>ระบบของเราเก็บรักษาข้อมูลส่วนบุคคลและข้อมูลการทำงานของคุณอย่างปลอดภัย</p>
-
-    <h2>การใช้ข้อมูล</h2>
-    <p>ข้อมูลของคุณจะถูกใช้เพื่อ:</p>
-    <ul>
-        <li>การยืนยันตัวตนและการเข้าถึงระบบ</li>
-        <li>การบันทึก Audit Trail</li>
-        <li>การรายงานและการวิเคราะห์ข้อมูล</li>
-        <li>การปรับปรุงประสิทธิภาพของระบบ</li>
-    </ul>
-
-    <h2>การรักษาความปลอดภัย</h2>
-    <p>เราใช้มาตรการรักษาความปลอดภัยตามมาตรฐานสากล รวมถึง:</p>
-    <ul>
-        <li>การเข้ารหัสข้อมูล (Encryption)</li>
-        <li>การยืนยันตัวตนหลายชั้น (Multi-factor Authentication)</li>
-        <li>การบันทึกการเข้าใช้งาน (Logging)</li>
-        <li>การสำรองข้อมูล (Backup) อย่างสม่ำเสมอ</li>
-    </ul>
-</div>
+<article class="card card-body max-w-3xl space-y-6 text-sm leading-7 text-stone-700">
+    <section class="rounded-xl bg-sand-50 p-4">
+        <h2 class="mb-2 font-semibold text-stone-900">ข้อมูลผู้ใช้งานปัจจุบัน</h2>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-6">
+            <dt class="text-stone-500">ชื่อ-สกุล</dt><dd>@(User.FindFirst("FullName")?.Value ?? "ไม่ระบุ")</dd>
+            <dt class="text-stone-500">ตำแหน่ง</dt><dd>@(User.FindFirst("JobPosition")?.Value ?? "ไม่ระบุ")</dd>
+            <dt class="text-stone-500">หน่วยงาน</dt><dd>@(User.FindFirst("Division")?.Value ?? "ไม่ระบุ")</dd>
+        </dl>
+    </section>
+    <section>
+        <h2 class="mb-1 font-semibold text-stone-900">การเก็บรักษาข้อมูล</h2>
+        <p>ระบบไม่จัดเก็บรหัสผ่านของผู้ใช้ การยืนยันตัวตนทำผ่านระบบกลางของโรงพยาบาล และข้อมูลการเข้าใช้งานถูกบันทึกเพื่อการตรวจสอบย้อนหลัง</p>
+    </section>
+    <section>
+        <h2 class="mb-1 font-semibold text-stone-900">การใช้ข้อมูลผู้ป่วย</h2>
+        <ul class="list-disc pl-5">
+            <li>ใช้เพื่อการบริหารการเงินและการเรียกเก็บค่ารักษาพยาบาลเท่านั้น</li>
+            <li>หน้า Dashboard แสดงเฉพาะรหัสอ้างอิง 4 หลัก ไม่แสดง HN และชื่อผู้ป่วย — ยกเว้นผู้ดูแลระบบ (Admin) ที่เห็น HN และชื่อ-สกุลของผู้ป่วยรอชำระเงิน ทุกครั้งที่เปิดดูจะถูกบันทึกการเข้าถึง (ผู้ใช้ ที่อยู่ IP เวลา) ผู้ป่วยที่ขอปกปิดชื่อจะแสดงเป็น “ผู้ป่วยปกปิดชื่อ”</li>
+            <li>ไฟล์ที่ส่งออก (Excel) มีข้อมูลส่วนบุคคล ต้องจัดเก็บตามนโยบาย PDPA ของโรงพยาบาล</li>
+        </ul>
+    </section>
+    <section>
+        <h2 class="mb-1 font-semibold text-stone-900">การรักษาความปลอดภัย</h2>
+        <p>ทุกหน้าต้องเข้าสู่ระบบก่อนใช้งาน เซสชันหมดอายุภายใน 8 ชั่วโมง และระบบจำกัดจำนวนครั้งการเข้าสู่ระบบเพื่อป้องกันการเดารหัสผ่าน</p>
+    </section>
+</article>

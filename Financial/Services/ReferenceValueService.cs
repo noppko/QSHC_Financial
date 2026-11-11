@@ -60,6 +60,25 @@ namespace Financial.Services
         }
 
         /// <summary>
+        /// ชื่อภาษาไทยของรหัส (ใช้ cache ของ category) — อ่านฐานไม่ได้หรือไม่พบรหัส คืนค่า fallback
+        /// </summary>
+        public async Task<string> GetNameAsync(string category, string code, string fallback)
+        {
+            try
+            {
+                var values = await GetByCategoryAsync(category);
+                return values.FirstOrDefault(v => string.Equals(v.Code, code, StringComparison.OrdinalIgnoreCase))?.NameTH ?? fallback;
+            }
+            catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
+            {
+                // ฐานใช้งานไม่ได้: จำผลว่างไว้ 1 นาที เพื่อไม่ให้ทุกหน้าต้องรอเชื่อมต่อฐานซ้ำ
+                _logger.LogWarning(ex, "Cannot read ReferenceValues {Category} — using fallback name", category);
+                _cache.Set($"RefValue_{category}", new List<ReferenceValue>(), TimeSpan.FromMinutes(1));
+                return fallback;
+            }
+        }
+
+        /// <summary>
         /// เพิ่มหรืออัปเดต Reference Value
         /// </summary>
         public async Task<bool> SaveAsync(ReferenceValue value)

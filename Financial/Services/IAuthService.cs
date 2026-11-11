@@ -12,7 +12,8 @@ namespace Financial.Services
         /// </summary>
         /// <param name="username">ชื่อผู้ใช้</param>
         /// <param name="password">รหัสผ่าน</param>
-        /// <returns>ข้อมูลผู้ใช้ถ้า login สำเร็จ, null ถ้าล้มเหลว</returns>
-        Task<AuthResponse?> AuthenticateAsync(string username, string password);
+        /// <param name="cancellationToken">ยกเลิกเมื่อผู้ใช้ปิดหน้า/ยกเลิก request</param>
+        /// <returns>ผลตอบกลับจาก API, null ถ้าเชื่อมต่อ API ไม่ได้</returns>
+        Task<AuthResponse?> AuthenticateAsync(string username, string password, CancellationToken cancellationToken = default);
     }
 }

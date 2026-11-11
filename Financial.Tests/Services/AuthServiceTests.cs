@@ -15,7 +15,6 @@ namespace Financial.Tests.Services
     {
         private readonly Mock<ILogger<AuthService>> _loggerMock;
         private readonly Mock<IOptions<AuthSettings>> _optionsMock;
-        private readonly AuthService _authService;
 
         public AuthServiceTests()
         {
@@ -84,7 +83,7 @@ namespace Financial.Tests.Services
         }
 
         [Fact]
-        public async Task AuthenticateAsync_InvalidCredentials_ReturnsNull()
+        public async Task AuthenticateAsync_Unauthorized_ReturnsFailedResponse()
         {
             // Arrange
             var username = "invalid";
@@ -109,11 +108,13 @@ namespace Financial.Tests.Services
             var result = await authService.AuthenticateAsync(username, password);
 
             // Assert
-            result.Should().BeNull();
+            // 401 = รหัสผ่านผิด (ไม่ใช่ระบบล่ม)
+            result.Should().NotBeNull();
+            result!.IsSuccess.Should().BeFalse();
         }
 
         [Fact]
-        public async Task AuthenticateAsync_EmptyUsername_ReturnsNull()
+        public async Task AuthenticateAsync_EmptyUsername_ReturnsFailedWithoutCallingApi()
         {
             // Arrange
             var username = "";
@@ -127,11 +128,13 @@ namespace Financial.Tests.Services
             var result = await authService.AuthenticateAsync(username, password);
 
             // Assert
-            result.Should().BeNull();
+            result.Should().NotBeNull();
+            result!.IsSuccess.Should().BeFalse();
+            httpMessageHandlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
         }
 
         [Fact]
-        public async Task AuthenticateAsync_EmptyPassword_ReturnsNull()
+        public async Task AuthenticateAsync_EmptyPassword_ReturnsFailedWithoutCallingApi()
         {
             // Arrange
             var username = "testuser";
@@ -145,7 +148,9 @@ namespace Financial.Tests.Services
             var result = await authService.AuthenticateAsync(username, password);
 
             // Assert
-            result.Should().BeNull();
+            result.Should().NotBeNull();
+            result!.IsSuccess.Should().BeFalse();
+            httpMessageHandlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
         }
 
         [Fact]

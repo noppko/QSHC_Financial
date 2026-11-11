@@ -1,524 +1,137 @@
-﻿<!DOCTYPE html>
+﻿@using Financial.Services.Authorization
+@using System.Security.Claims
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.Extensions.Options.IOptions<RoleOptions> RoleSettings
+@inject Financial.Services.IReferenceValueService ReferenceValues
+@{
+    var fullName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "ผู้ใช้งาน";
+    var jobPosition = User.FindFirst("JobPosition")?.Value ?? "";
+    var loginName = User.FindFirst("LoginName")?.Value ?? "";
+    var initial = string.IsNullOrEmpty(fullName) ? "U" : fullName[..1];
+    var roles = AppPolicies.Roles(User).ToList();
+    var accessLevel = AppPolicies.GetAccessLevel(User, RoleSettings.Value);
+    // ชื่อระดับสิทธิ์จาก ReferenceValues (category ACCESS_LEVEL) — อ่านไม่ได้ใช้ชื่อสำรอง
+    var accessLevelName = User.Identity?.IsAuthenticated == true
+        ? await ReferenceValues.GetNameAsync(ReferenceCategories.ACCESS_LEVEL, accessLevel, AppPolicies.Describe(accessLevel))
+        : string.Empty;
+    var accessBadge = accessLevel switch
+    {
+        AccessLevelCodes.ADMIN => "bg-red-50 text-red-700",
+        AccessLevelCodes.FINANCE => "bg-brand-50 text-brand-700",
+        _ => "bg-sand-100 text-stone-600",
+    };
+    var profile = new (string Label, string? Value)[]
+    {
+        ("ชื่อผู้ใช้", loginName),
+        ("ตำแหน่ง", jobPosition),
+        ("หน่วยงาน", User.FindFirst("Division")?.Value),
+        ("เพศ", User.FindFirst("Gender")?.Value),
+        ("อีเมล", User.FindFirst(ClaimTypes.Email)?.Value),
+    };
+    var csrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+<!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Finexy</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-            :root {
-                --bg: #EDEDEB;
-                --surface: #F7F7F5;
-                --card: #FFFFFF;
-                --card-soft: #F5F5F3;
-                --ink: #1B1B19;
-                --ink-2: #4A4A47;
-                --muted: #8B8B87;
-                --line: #ECECEA;
-                --orange: #F4551F;
-                --orange-2: #FF7A3D;
-                --green: #22B573;
-                --red: #F04438;
-                --yellow: #F5C518;
-                --radius-xl: 24px;
-                --radius-lg: 18px;
-                --radius-md: 14px;
-            }
-
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            body {
-                font-family: 'Inter', system-ui, sans-serif;
-                background: var(--bg);
-                color: var(--ink);
-                padding: 24px;
-                -webkit-font-smoothing: antialiased;
-            }
-
-            .app {
-                max-width: 1420px;
-                margin: 0 auto;
-                background: var(--surface);
-                border-radius: 32px;
-                padding: 20px 28px 28px;
-            }
-
-            /* ============ NAVBAR ============ */
-            .navbar {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 16px;
-                margin-bottom: 22px;
-            }
-
-            .brand {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                background: #fff;
-                border-radius: 999px;
-                padding: 10px 22px 10px 10px;
-            }
-
-            .brand-logo {
-                width: 34px;
-                height: 34px;
-                border-radius: 50%;
-                background: var(--orange);
-                display: grid;
-                place-items: center;
-            }
-
-            .brand-logo svg {
-                width: 18px;
-                height: 18px;
-            }
-
-            .brand-name {
-                font-weight: 700;
-                font-size: 17px;
-            }
-
-            .nav-pill {
-                background: #fff;
-                border-radius: 999px;
-                padding: 6px;
-                display: flex;
-                align-items: center;
-                gap: 4px;
-            }
-
-            .nav-pill a {
-                text-decoration: none;
-                color: var(--ink-2);
-                font-size: 14.5px;
-                font-weight: 500;
-                padding: 10px 20px;
-                border-radius: 999px;
-                transition: background .15s;
-            }
-
-            .nav-pill a:hover {
-                background: var(--card-soft);
-            }
-
-            .nav-pill a.active {
-                background: var(--ink);
-                color: #fff;
-                font-weight: 600;
-            }
-
-            .nav-right {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-            }
-
-            .icon-group {
-                background: #fff;
-                border-radius: 999px;
-                padding: 6px;
-                display: flex;
-                gap: 2px;
-            }
-
-            .icon-btn {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                border: none;
-                background: transparent;
-                display: grid;
-                place-items: center;
-                cursor: pointer;
-                color: var(--ink-2);
-                position: relative;
-            }
-
-            .icon-btn:hover {
-                background: var(--card-soft);
-            }
-
-            .icon-btn svg {
-                width: 19px;
-                height: 19px;
-            }
-
-            .dot {
-                position: absolute;
-                top: 9px;
-                right: 10px;
-                width: 7px;
-                height: 7px;
-                border-radius: 50%;
-                background: var(--orange);
-                border: 1.5px solid #fff;
-            }
-
-            .profile {
-                background: #fff;
-                border-radius: 999px;
-                padding: 6px 14px 6px 6px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                cursor: pointer;
-                position: relative;
-            }
-
-            .avatar {
-                width: 38px;
-                height: 38px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #f0c27b, #c98850);
-                overflow: hidden;
-                display: grid;
-                place-items: center;
-                font-weight: 700;
-                color: #fff;
-                font-size: 15px;
-            }
-
-            .profile-info {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .profile-name {
-                font-size: 13.5px;
-                font-weight: 600;
-                line-height: 1.2;
-            }
-
-            .profile-mail {
-                font-size: 11.5px;
-                color: var(--muted);
-            }
-
-            .chev {
-                color: var(--muted);
-            }
-
-            /* User Dropdown */
-            .user-dropdown {
-                position: absolute;
-                top: calc(100% + 8px);
-                right: 0;
-                background: #fff;
-                border-radius: 18px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-                min-width: 280px;
-                z-index: 1000;
-                opacity: 0;
-                visibility: hidden;
-                transform: translateY(-10px);
-                transition: all 0.2s ease;
-            }
-
-            .user-dropdown.active {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-            }
-
-            .dropdown-header {
-                padding: 18px;
-                border-bottom: 1px solid var(--line);
-            }
-
-            .dropdown-user {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .dropdown-avatar {
-                width: 48px;
-                height: 48px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #f0c27b, #c98850);
-                display: grid;
-                place-items: center;
-                font-weight: 700;
-                color: #fff;
-                font-size: 18px;
-            }
-
-            .dropdown-user-info {
-                flex: 1;
-            }
-
-            .dropdown-user-name {
-                font-size: 15px;
-                font-weight: 600;
-                color: var(--ink);
-            }
-
-            .dropdown-user-role {
-                font-size: 12.5px;
-                color: var(--muted);
-                margin-top: 2px;
-            }
-
-            .dropdown-body {
-                padding: 8px 0;
-            }
-
-            .dropdown-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 18px;
-                color: var(--ink-2);
-                text-decoration: none;
-                font-size: 14px;
-                cursor: pointer;
-                border: none;
-                background: transparent;
-                width: 100%;
-                text-align: left;
-                font-family: inherit;
-                transition: background 0.15s;
-            }
-
-            .dropdown-item:hover {
-                background: var(--card-soft);
-            }
-
-            .dropdown-item svg {
-                width: 18px;
-                height: 18px;
-            }
-
-            .dropdown-item.logout {
-                color: var(--red);
-                border-top: 1px solid var(--line);
-                margin-top: 4px;
-                padding-top: 12px;
-            }
-
-            .greeting {
-                padding: 10px 0 24px 0;
-            }
-
-            .greeting h1 {
-                font-size: 34px;
-                font-weight: 700;
-                letter-spacing: -.5px;
-            }
-
-            .greeting p {
-                color: var(--muted);
-                font-size: 14.5px;
-                margin-top: 6px;
-            }
-
-            .main-content {
-                min-height: 400px;
-            }
-
-            @@media (max-width: 820px) {
-                .nav-pill {
-                    display: none;
-                }
-
-                body {
-                    padding: 10px;
-                }
-
-                .app {
-                    padding: 14px;
-                }
-            }
-    </style>
+    <meta name="csrf-token" content="@csrfToken" />
+    <title>@ViewData["Title"] - QSHC Financial</title>
+    <partial name="_Icons" />
+    <link rel="preload" href="~/fonts/kanit/kanit-thai-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
 </head>
+<body class="min-h-screen">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">ข้ามไปยังเนื้อหา</a>
 
-<body>
-    <div class="app">
-        <!-- ================= NAVBAR ================= -->
-        <header class="navbar">
-            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
-                ☰
-            </button>
-            <div class="brand">
-                <div class="brand-logo">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M5 19L19 5M19 5H9M19 5V15" stroke="#fff" stroke-width="2.6" stroke-linecap="round"
-                              stroke-linejoin="round" />
-                    </svg>
-                </div>
-                <span class="brand-name">Finexy</span>
+    <!-- ================= Sidebar ================= -->
+    <div id="sidebar-backdrop" class="fixed inset-0 z-30 hidden bg-stone-900/40 lg:hidden" data-sidebar-close></div>
+    <aside id="sidebar"
+           class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-sand-200 bg-white transition-transform duration-200 lg:translate-x-0">
+        <div class="flex h-16 items-center gap-3 border-b border-sand-200 px-5">
+            <img src="~/images/qshclogo.png" alt="" class="size-9 rounded-lg object-contain" />
+            <div class="leading-tight">
+                <div class="font-semibold text-stone-900">QSHC Financial</div>
+                <div class="text-xs text-stone-500">ระบบการเงิน ศูนย์หัวใจสิริกิติ์ฯ</div>
             </div>
+        </div>
+        @await Component.InvokeAsync("SidebarMenu")
+        <div class="border-t border-sand-200 p-4 text-xs text-stone-400">
+            &copy; @DateTime.Now.Year ศูนย์หัวใจสิริกิติ์ฯ
+        </div>
+    </aside>
 
-            @await Component.InvokeAsync("NavbarMenu")
+    <!-- ================= Main ================= -->
+    <div class="flex min-h-screen flex-col lg:pl-64">
+        <header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-sand-200 bg-sand-100/90 px-4 backdrop-blur sm:px-6">
+            <button type="button" class="btn-ghost -ml-2 p-2 lg:hidden" data-sidebar-open aria-controls="sidebar" aria-label="เปิดเมนู">
+                <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <h1 class="truncate text-lg font-semibold text-stone-900">@ViewData["Title"]</h1>
 
-            <div class="nav-right">
-                <div class="icon-group">
-                    <button class="icon-btn" aria-label="Search">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round">
-                            <circle cx="11" cy="11" r="7" />
-                            <path d="M20 20l-3.5-3.5" />
-                        </svg>
-                    </button>
-                    <button class="icon-btn" aria-label="Notifications">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.7 21a2 2 0 01-3.4 0" />
-                        </svg>
-                        <span class="dot"></span>
-                    </button>
-                    <button class="icon-btn" aria-label="Alerts">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round">
-                            <circle cx="12" cy="12" r="9" />
-                            <path d="M12 8v4" />
-                            <circle cx="12" cy="16" r=".5" fill="currentColor" />
-                        </svg>
-                    </button>
-                </div>
-
+            <div class="ml-auto flex items-center gap-2">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <div class="profile" id="profile-btn">
-                        @{
-                            var fullName = User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "User";
-                            var jobPosition = User.Claims.FirstOrDefault(c => c.Type == "JobPosition")?.Value ?? "Member";
-                            var loginName = User.Claims.FirstOrDefault(c => c.Type == "LoginName")?.Value ?? "";
-                            var firstChar = fullName.Length > 0 ? fullName.Substring(0, 1) : "U";
-                        }
-                        <div class="avatar">@firstChar</div>
-                        <div class="profile-info">
-                            <div class="profile-name">@fullName</div>
-                            <div class="profile-mail">@loginName</div>
-                        </div>
-                        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round">
-                            <path d="M6 9l6 6 6-6" />
-                        </svg>
-
-                        <div class="user-dropdown" id="user-dropdown">
-                            <div class="dropdown-header">
-                                <div class="dropdown-user">
-                                    <div class="dropdown-avatar">@firstChar</div>
-                                    <div class="dropdown-user-info">
-                                        <div class="dropdown-user-name">@fullName</div>
-                                        <div class="dropdown-user-role">@jobPosition</div>
-                                    </div>
-                                </div>
+                    <details class="relative" data-user-menu>
+                        <summary class="flex cursor-pointer list-none items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-white [&::-webkit-details-marker]:hidden">
+                            <span class="grid size-9 place-items-center rounded-full bg-brand-500 font-semibold text-white">@initial</span>
+                            <span class="hidden text-left leading-tight sm:block">
+                                <span class="block max-w-48 truncate text-sm font-medium text-stone-900">@fullName</span>
+                                <span class="block max-w-48 truncate text-xs text-stone-500">@jobPosition</span>
+                            </span>
+                            <svg class="size-4 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div class="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-lg">
+                            <div class="border-b border-sand-100 px-4 py-3">
+                                <div class="truncate font-medium text-stone-900">@fullName</div>
+                                <span class="badge mt-1 @accessBadge" data-access-level="@accessLevel">@accessLevelName</span>
                             </div>
-                            <div class="dropdown-body">
-                                <a href="#" class="dropdown-item">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round">
-                                        <circle cx="12" cy="8" r="4" />
-                                        <path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2" />
-                                    </svg>
-                                    <span>My Profile</span>
-                                </a>
-                                <a href="#" class="dropdown-item">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round">
-                                        <circle cx="12" cy="12" r="3" />
-                                        <path
-                                        d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z" />
-                                    </svg>
-                                    <span>Settings</span>
-                                </a>
-                                <a href="#" class="dropdown-item">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round">
-                                        <circle cx="12" cy="12" r="9" />
-                                        <path d="M9.5 9a2.5 2.5 0 015 .5c0 1.5-2.5 2-2.5 3.5" />
-                                        <circle cx="12" cy="17" r=".5" fill="currentColor" />
-                                    </svg>
-                                    <span>Help</span>
-                                </a>
-                                <form asp-controller="Account" asp-action="Logout" method="post" style="margin: 0;">
-                                    <button type="submit" class="dropdown-item logout">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M9 21H6a3 3 0 01-3-3V6a3 3 0 013-3h3" />
-                                            <path d="M16 17l5-5-5-5M21 12H9" />
-                                        </svg>
-                                        <span>Logout</span>
-                                    </button>
-                                </form>
+                            <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-b border-sand-100 px-4 py-3 text-xs">
+                                @foreach (var (label, value) in profile.Where(p => !string.IsNullOrWhiteSpace(p.Value) && p.Value != "-"))
+                                {
+                                    <dt class="text-stone-500">@label</dt>
+                                    <dd class="truncate text-stone-800" title="@value">@value</dd>
+                                }
+                            </dl>
+                            <div class="border-b border-sand-100 px-4 py-3">
+                                <div class="mb-1.5 text-xs text-stone-500">Role จากระบบยืนยันตัวตน</div>
+                                @if (roles.Count == 0)
+                                {
+                                    <span class="text-xs text-stone-400">ไม่มี role</span>
+                                }
+                                else
+                                {
+                                    <ul class="flex flex-wrap gap-1.5" aria-label="Role">
+                                        @foreach (var role in roles)
+                                        {
+                                            <li class="badge bg-stone-100 font-mono text-stone-700" data-role>@role</li>
+                                        }
+                                    </ul>
+                                }
                             </div>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="p-2">
+                                <button type="submit" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h3M16 17l5-5-5-5M21 12H9" /></svg>
+                                    ออกจากระบบ
+                                </button>
+                            </form>
                         </div>
-                    </div>
-                }
-                else
-                {
-                    <a asp-controller="Account" asp-action="Login" class="profile" style="text-decoration: none;">
-                        <div class="avatar">?</div>
-                        <div class="profile-info">
-                            <div class="profile-name">Login</div>
-                            <div class="profile-mail">Click to login</div>
-                        </div>
-                    </a>
+                    </details>
                 }
             </div>
         </header>
 
-        <!-- ================= GREETING ================= -->
-        <section class="greeting">
-            @if (User.Identity?.IsAuthenticated == true)
+        <main id="main" class="flex-1 p-4 sm:p-6">
+            @if (TempData["Error"] is string tempError)
             {
-                var fullName = User.Claims.FirstOrDefault(c => c.Type == "FullName")?.Value ?? "User";
-                <h1>Good morning, @fullName</h1>
+                <div class="alert-error mb-4" role="alert">@tempError</div>
             }
-            else
-            {
-                <h1>Welcome to Finexy</h1>
-            }
-            <p>Stay on top of your tasks, monitor progress, and track status.</p>
-        </section>
-
-        <!-- Page Content -->
-        <main class="main-content">
             @RenderBody()
         </main>
     </div>
 
-    <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const profileBtn = document.getElementById('profile-btn');
-                const userDropdown = document.getElementById('user-dropdown');
-
-                if (profileBtn && userDropdown) {
-                    profileBtn.addEventListener('click', function (e) {
-                        e.stopPropagation();
-                        userDropdown.classList.toggle('active');
-                    });
-
-                    document.addEventListener('click', function (e) {
-                        if (!profileBtn.contains(e.target)) {
-                            userDropdown.classList.remove('active');
-                        }
-                    });
-
-                    // Prevent dropdown close when clicking inside
-                    userDropdown.addEventListener('click', function (e) {
-                        if (e.target.tagName !== 'BUTTON' && !e.target.closest('form')) {
-                            e.stopPropagation();
-                        }
-                    });
-                }
-            });
-    </script>
-
-    @await Component.InvokeAsync("SidebarMenu")
-
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-
 </html>

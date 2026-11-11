@@ -1,0 +1,23 @@
+@{
+    ViewData["Title"] = "ผู้ป่วยจำหน่าย (IPD/OPD)";
+}
+<div class="grid gap-5 md:grid-cols-2">
+    <a asp-action="IPD" class="card card-body group flex items-start gap-4 transition hover:-translate-y-0.5 hover:shadow-md">
+        <span class="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-500 text-white">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 7v11m0-4h18v4M7 10a2 2 0 1 0 0-.01M11 14V9h6a4 4 0 0 1 4 4v1" /></svg>
+        </span>
+        <span>
+            <span class="block text-lg font-semibold text-stone-900 group-hover:text-brand-600">Discharge IPD</span>
+            <span class="mt-1 block text-sm text-stone-500">ผู้ป่วยในที่จำหน่าย (In-Patient) ค้นหาตามช่วงวันที่และส่งออก Excel</span>
+        </span>
+    </a>
+    <a asp-action="OPD" class="card card-body group flex items-start gap-4 transition hover:-translate-y-0.5 hover:shadow-md">
+        <span class="grid size-12 shrink-0 place-items-center rounded-2xl bg-stone-900 text-white">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M13 4a1.5 1.5 0 1 0 0-.01M9 21l2.5-6.5L14 17v4m-6-9 3-3.5 3 1.5 2.5 3M11.5 14.5 10 9" /></svg>
+        </span>
+        <span>
+            <span class="block text-lg font-semibold text-stone-900 group-hover:text-brand-600">Discharge OPD</span>
+            <span class="mt-1 block text-sm text-stone-500">ผู้ป่วยนอก (Out-Patient) ค้นหาตามช่วงวันที่และส่งออก Excel</span>
+        </span>
+    </a>
+</div>

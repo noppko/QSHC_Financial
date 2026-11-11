@@ -1,356 +1,116 @@
 ﻿using Financial.Helpers;
-using Financial.Models.ViewModels;
+using Financial.Services.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using Financial.Models;
+using Financial.Models.ViewModels;
+using Financial.Services.Discharges;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
-using System.Data;
-using System.Drawing;
-using System.Globalization;
 
 namespace Financial.Controllers
 {
     /// <summary>
     /// Controller สำหรับจัดการข้อมูล Discharges (IPD/OPD)
     /// </summary>
-    [Authorize]
+    [Authorize(Policy = AppPolicies.FINANCE)]
     public class DischargesController : Controller
     {
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<DischargesController> _logger;
+        private const string EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-        public DischargesController(
-            IConfiguration configuration,
-            ILogger<DischargesController> logger)
+        private readonly IDischargeService _dischargeService;
+        private readonly TimeProvider _timeProvider;
+
+        public DischargesController(IDischargeService dischargeService, TimeProvider timeProvider)
         {
-            _configuration = configuration;
-            _logger = logger;
+            _dischargeService = dischargeService;
+            _timeProvider = timeProvider;
         }
 
-        // GET: DischargesController
-        public ActionResult Index()
-        {
-            return View();
-        }
+        // GET: /Discharges
+        public IActionResult Index() => View();
 
-        // GET: DischargesController/Details/5
-        public ActionResult Details(int id)
-        {
-            return View();
-        }
+        // GET: /Discharges/IPD?start=yyyy-MM-dd&end=yyyy-MM-dd&right=สิทธิ์
+        public Task<IActionResult> IPD(string? start, string? end, string? right, CancellationToken cancellationToken)
+            => List(PatientTypeCodes.IPD, start, end, right, cancellationToken);
+
+        // GET: /Discharges/OPD?start=yyyy-MM-dd&end=yyyy-MM-dd&right=สิทธิ์
+        public Task<IActionResult> OPD(string? start, string? end, string? right, CancellationToken cancellationToken)
+            => List(PatientTypeCodes.OPD, start, end, right, cancellationToken);
 
         /// <summary>
-        /// ดึงข้อมูลจาก Stored Procedure
+        /// Export ข้อมูลเป็น Excel ตามตัวกรองเดียวกับหน้าจอ (ช่วงวันที่ + สิทธิ์) — ใช้ผลลัพธ์จาก cache ถ้าเพิ่งค้นหา
         /// </summary>
-        private List<VmDischargesPD>? GetSPData(string PD, string SPName, string startdate, string enddate)
+        [HttpPost]
+        public async Task<IActionResult> Export(string? type, string? start, string? end, string? right, CancellationToken cancellationToken)
         {
-            // ใช้ connection string จาก configuration แทน hardcode
-            var connstr = _configuration.GetConnectionString("HealthObject")
-                ?? "Server=10.67.67.64;user id=sa;password=Password@HO2021;Database=HealthObject;Trusted_Connection=False;TrustServerCertificate=True;Max Pool Size=400;Connect Timeout=600;";
-
-            try
+            type = PatientTypeCodes.Normalize(type);
+            if (!DateRange.TryParse(start, end, Today(), out var range, out var error))
             {
-                using SqlConnection conn = new(connstr);
-                conn.Open();
+                TempData["Error"] = error;
+                return RedirectToAction(PatientTypeCodes.Abbreviation(type), new { start, end, right });
+            }
 
-                // ใช้ parameterized query เพื่อป้องกัน SQL Injection
-                string sql = $"EXEC {SPName} @Date_From = @StartDate, @Date_To = @EndDate";
-                using SqlCommand cmdPatient = new(sql, conn);
-                cmdPatient.CommandType = CommandType.Text;
-                cmdPatient.Parameters.AddWithValue("@StartDate", startdate);
-                cmdPatient.Parameters.AddWithValue("@EndDate", enddate);
+            var result = (await _dischargeService.GetAsync(type, range, cancellationToken)).FilterByRight(right);
+            if (!result.Succeeded || result.Items.Count == 0)
+            {
+                TempData["Error"] = result.ErrorMessage ?? "ไม่พบข้อมูลสำหรับส่งออก";
+                return RedirectToAction(PatientTypeCodes.Abbreviation(type), new { start = range.StartInput, end = range.EndInput, right });
+            }
 
-                using SqlDataReader rdr = cmdPatient.ExecuteReader();
-                List<VmDischargesPD> results = new();
-
-                if (rdr.HasRows)
+            var content = type == PatientTypeCodes.IPD
+                ? ExcelHelper.CreateExcel(result.Items.ToList(), "IPD", new Dictionary<string, Func<VmDischargesPD, object>>
                 {
-                    while (rdr.Read())
-                    {
-                        if (PD == "IPD")
-                        {
-                            results.Add(new VmDischargesPD
-                            {
-                                Id = Convert.ToInt32(rdr["ลำดับที่"]),
-                                FullName = rdr["รายชื่อ"]?.ToString() ?? "",
-                                TreatmentRight = rdr["สิทธิ์การรักษา"]?.ToString() ?? "",
-                                HN = rdr["HN"]?.ToString() ?? "",
-                                AN = rdr["AN"]?.ToString() ?? "",
-                                Admit = rdr["Admit"]?.ToString() ?? "",
-                                DCDate = rdr["D/C"]?.ToString() ?? "",
-                                Amount = rdr["จำนวนเงิน"]?.ToString() ?? "",
-                            });
-                        }
-                        else
-                        {
-                            results.Add(new VmDischargesPD
-                            {
-                                Id = Convert.ToInt32(rdr["ลำดับที่"]),
-                                FullName = rdr["รายชื่อ"]?.ToString() ?? "",
-                                TreatmentRight = rdr["สิทธิ์การรักษา"]?.ToString() ?? "",
-                                BillCon = rdr["เงื่อนไขการเรียกเก็บ"]?.ToString() ?? "",
-                                HN = rdr["HN"]?.ToString() ?? "",
-                                AN = rdr["VN"]?.ToString() ?? "",
-                                DCDate = rdr["วันที่"]?.ToString() ?? "",
-                                Amount = rdr["จำนวนเงิน"]?.ToString() ?? "",
-                                Clinic = rdr["คลินิก"]?.ToString() ?? "",
-                            });
-                        }
-                    }
-                }
-
-                return results;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting discharge data for {PD} from {StartDate} to {EndDate}",
-                    PD, startdate, enddate);
-                return null;
-            }
-        }
-
-        // GET: DischargesController/IPD
-        public ActionResult IPD(string? start, string? end)
-        {
-            var DNow = DateTime.Now.Date.AddDays(-1);
-            var cStart = DNow.ToString("yyyy-MM-dd 00:00:00", CultureInfo.InvariantCulture);
-            var cEnd = DNow.ToString("yyyy-MM-dd 23:59:59", CultureInfo.InvariantCulture);
-
-            var startdate = string.IsNullOrEmpty(start) ? cStart : $"{start} 00:00:00.000";
-            var enddate = string.IsNullOrEmpty(end) ? cEnd : $"{end} 23:59:59.999";
-
-            ViewBag.fSdate = startdate;
-            ViewBag.fEdate = enddate;
-
-            var results = GetSPData("IPD", "pGetQSHCPatientDischarge", startdate, enddate);
-
-            return View(results);
-        }
-
-        /// <summary>
-        /// Export ข้อมูล IPD เป็น Excel
-        /// </summary>
-        [HttpPost]
-        public IActionResult ExportExcelIP(string start, string end)
-        {
-            var results = GetSPData("IPD", "pGetQSHCPatientDischarge", start, end);
-
-            if (results == null || results.Count == 0)
-            {
-                return NotFound("ไม่พบข้อมูล");
-            }
-
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-            using var package = new ExcelPackage();
-            var worksheet = package.Workbook.Worksheets.Add("IPD");
-
-            // Header
-            var headers = new[] { "ลำดับที่", "รายชื่อ", "สิทธิ์การรักษา", "HN", "AN", "Admit", "D/C", "จำนวนเงิน" };
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var cell = worksheet.Cells[1, i + 1];
-                cell.Value = headers[i];
-                cell.Style.Font.Bold = true;
-                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cell.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-                cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
-            }
-
-            // Data
-            int row = 2;
-            foreach (var item in results)
-            {
-                worksheet.Cells[row, 1].Value = item.Id;
-                worksheet.Cells[row, 2].Value = item.FullName;
-                worksheet.Cells[row, 3].Value = item.TreatmentRight;
-                worksheet.Cells[row, 4].Value = item.HN;
-                worksheet.Cells[row, 5].Value = item.AN;
-                worksheet.Cells[row, 6].Value = item.Admit;
-                worksheet.Cells[row, 7].Value = item.DCDate;
-                worksheet.Cells[row, 8].Value = item.Amount;
-
-                for (int col = 1; col <= 8; col++)
+                    ["ลำดับที่"] = x => x.Id,
+                    ["รายชื่อ"] = x => x.FullName,
+                    ["สิทธิ์การรักษา"] = x => x.TreatmentRight,
+                    ["HN"] = x => x.HN,
+                    ["AN"] = x => x.AN,
+                    ["Admit"] = x => x.Admit,
+                    ["D/C"] = x => x.DCDate,
+                    ["จำนวนเงิน"] = x => DischargeQueryResult.ParseAmount(x.Amount),
+                })
+                : ExcelHelper.CreateExcel(result.Items.ToList(), "OPD", new Dictionary<string, Func<VmDischargesPD, object>>
                 {
-                    worksheet.Cells[row, col].Style.Border.BorderAround(ExcelBorderStyle.Thin);
-                }
+                    ["ลำดับที่"] = x => x.Id,
+                    ["รายชื่อ"] = x => x.FullName,
+                    ["สิทธิ์การรักษา"] = x => x.TreatmentRight,
+                    ["เงื่อนไขการเรียกเก็บ"] = x => x.BillCon,
+                    ["HN"] = x => x.HN,
+                    ["VN"] = x => x.AN,
+                    ["วันที่"] = x => x.DCDate,
+                    ["จำนวนเงิน"] = x => DischargeQueryResult.ParseAmount(x.Amount),
+                    ["คลินิก"] = x => x.Clinic,
+                });
 
-                row++;
-            }
-
-            // Auto-fit columns
-            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-
-            var content = package.GetAsByteArray();
-            var fileName = $"DC_IPD_{start}_{end}.xlsx";
-
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            return File(content, EXCEL_CONTENT_TYPE, ExportFileName(type, range, result.RightFilter));
         }
 
-        // GET: DischargesController/OPD
-        public ActionResult OPD(string? start, string? end)
+        private async Task<IActionResult> List(string type, string? start, string? end, string? right, CancellationToken cancellationToken)
         {
-            var DNow = DateTime.Now.Date.AddDays(-1);
-            var cStart = DNow.ToString("yyyy-MM-dd 00:00:00", CultureInfo.InvariantCulture);
-            var cEnd = DNow.ToString("yyyy-MM-dd 23:59:59", CultureInfo.InvariantCulture);
+            DischargeQueryResult result;
+            if (DateRange.TryParse(start, end, Today(), out var range, out var error))
+            {
+                result = await _dischargeService.GetAsync(type, range, cancellationToken);
+            }
+            else
+            {
+                result = new DischargeQueryResult(type, range, [], error);
+            }
 
-            var startdate = string.IsNullOrEmpty(start) ? cStart : $"{start} 00:00:00.000";
-            var enddate = string.IsNullOrEmpty(end) ? cEnd : $"{end} 23:59:59.999";
-
-            ViewBag.fSdate = startdate;
-            ViewBag.fEdate = enddate;
-
-            var results = GetSPData("OPD", "pGetQSHCPatientDischargeOPD", startdate, enddate);
-
-            return View(results);
+            return View("List", result.FilterByRight(right));
         }
 
-        /// <summary>
-        /// Export ข้อมูล OPD เป็น Excel
-        /// </summary>
-        [HttpPost]
-        public IActionResult ExportExcelOP(string start, string end)
+        /// <summary>เช่น DC_OPD_2026-10-01_2026-10-31_บัตรทอง.xlsx (ตัดอักขระที่ใช้ในชื่อไฟล์ไม่ได้)</summary>
+        internal static string ExportFileName(string type, DateRange range, string? right)
         {
-            var results = GetSPData("OPD", "pGetQSHCPatientDischargeOPD", start, end);
-
-            if (results == null || results.Count == 0)
+            var name = $"DC_{PatientTypeCodes.Abbreviation(type)}_{range.StartInput}_{range.EndInput}";
+            if (!string.IsNullOrWhiteSpace(right))
             {
-                return NotFound("ไม่พบข้อมูล");
+                var safe = new string(right.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c).ToArray()).Trim();
+                name += "_" + (safe.Length > 50 ? safe[..50] : safe);
             }
-
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-            using var package = new ExcelPackage();
-            var worksheet = package.Workbook.Worksheets.Add("OPD");
-
-            // Header
-            var headers = new[] { "ลำดับที่", "รายชื่อ", "สิทธิ์การรักษา", "เงื่อนไขการเรียกเก็บ", "HN", "VN", "D/C", "จำนวนเงิน", "คลินิก" };
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var cell = worksheet.Cells[1, i + 1];
-                cell.Value = headers[i];
-                cell.Style.Font.Bold = true;
-                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cell.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-                cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
-            }
-
-            // Data
-            int row = 2;
-            foreach (var item in results)
-            {
-                worksheet.Cells[row, 1].Value = item.Id;
-                worksheet.Cells[row, 2].Value = item.FullName;
-                worksheet.Cells[row, 3].Value = item.TreatmentRight;
-                worksheet.Cells[row, 4].Value = item.BillCon;
-                worksheet.Cells[row, 5].Value = item.HN;
-                worksheet.Cells[row, 6].Value = item.AN;
-                worksheet.Cells[row, 7].Value = item.DCDate;
-                worksheet.Cells[row, 8].Value = item.Amount;
-                worksheet.Cells[row, 9].Value = item.Clinic;
-
-                for (int col = 1; col <= 9; col++)
-                {
-                    worksheet.Cells[row, col].Style.Border.BorderAround(ExcelBorderStyle.Thin);
-                }
-
-                row++;
-            }
-
-            // Auto-fit columns
-            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-
-            var content = package.GetAsByteArray();
-            var fileName = $"DC_OPD_{start}_{end}.xlsx";
-
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            return name + ".xlsx";
         }
 
-        // GET: DischargesController/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: DischargesController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-
-        // GET: DischargesController/Edit/5
-        public ActionResult Edit(int id)
-        {
-            return View();
-        }
-
-        // POST: DischargesController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-
-        // GET: DischargesController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
-
-        // POST: DischargesController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-
-        /// <summary>
-        /// ดึงข้อมูลจาก Stored Procedure แบบ DataTable (ใช้สำหรับ legacy code)
-        /// </summary>
-        private static DataTable GetSPDataVal(string vConPro, string ProcedureName, DateTime DateFrom, DateTime DateTo)
-        {
-            using SqlConnection vConnection = new(vConPro);
-            using SqlCommand vCommand = new(ProcedureName, vConnection)
-            {
-                CommandTimeout = 2000,
-                CommandType = CommandType.StoredProcedure
-            };
-
-            vCommand.Parameters.Add(new SqlParameter("@Date_From", SqlDbType.NVarChar) { Value = DateFrom });
-            vCommand.Parameters.Add(new SqlParameter("@Date_To", SqlDbType.NVarChar) { Value = DateTo });
-
-            vConnection.Open();
-            using SqlDataReader reader = vCommand.ExecuteReader();
-            DataTable result = new();
-            result.Load(reader);
-
-            return result;
-        }
+        private DateOnly Today() => DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
     }
 }

@@ -1,236 +1,29 @@
+@model IReadOnlyList<AppMenu.Group>
 @{
-    ViewData["Title"] = "All Pages - Navigation";
+    ViewData["Title"] = "แผนผังระบบ";
 }
-
-<style>
-    .pages-container {
-        background: var(--card);
-        border-radius: var(--radius-xl);
-        padding: 28px;
-    }
-
-    .pages-container h1 {
-        font-size: 32px;
-        font-weight: 700;
-        color: var(--ink);
-        margin-bottom: 8px;
-    }
-
-    .pages-container > p {
-        color: var(--muted);
-        font-size: 14px;
-        margin-bottom: 28px;
-    }
-
-    .pages-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 16px;
-        margin-bottom: 28px;
-    }
-
-    .page-card {
-        background: linear-gradient(135deg, rgba(244,85,31,0.05), rgba(34,181,115,0.05));
-        border: 1px solid var(--line);
-        border-radius: var(--radius-lg);
-        padding: 20px;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .page-card:hover {
-        background: linear-gradient(135deg, rgba(244,85,31,0.1), rgba(34,181,115,0.1));
-        border-color: var(--orange);
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(244,85,31,0.1);
-    }
-
-    .page-card-icon {
-        font-size: 28px;
-    }
-
-    .page-card-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--ink);
-    }
-
-    .page-card-desc {
-        font-size: 13px;
-        color: var(--muted);
-        line-height: 1.4;
-    }
-
-    .page-card-meta {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-        font-size: 11px;
-        flex-wrap: wrap;
-    }
-
-    .page-card-meta span {
-        background: var(--card-soft);
-        color: var(--ink-2);
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: 500;
-    }
-
-    .section-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--ink);
-        margin: 28px 0 16px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid var(--line);
-    }
-
-    .quick-links {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .quick-link {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-        background: var(--card-soft);
-        border-radius: var(--radius-md);
-        text-decoration: none;
-        color: var(--ink-2);
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    .quick-link:hover {
-        background: rgba(244,85,31,0.1);
-        color: var(--orange);
-        padding-left: 20px;
-    }
-
-    .quick-link span:first-child {
-        font-size: 18px;
-        min-width: 24px;
-    }
-</style>
-
-<div class="pages-container">
-    <h1>🗺️ All Pages & Controllers</h1>
-    <p>Quick navigation to all available pages in the system</p>
-
-    <div class="section-title">📱 Main Pages</div>
-    <div class="pages-grid">
-        <a href="/" class="page-card">
-            <div class="page-card-icon">🏠</div>
-            <div class="page-card-title">Home - Dashboard</div>
-            <div class="page-card-desc">Main dashboard with financial overview and statistics</div>
-            <div class="page-card-meta">
-                <span>HomeController</span>
-                <span>Index</span>
+<div class="space-y-8">
+    <p class="text-sm text-stone-500">แสดงเฉพาะหน้าที่บัญชีของคุณมีสิทธิ์ใช้งาน</p>
+    @foreach (var group in Model)
+    {
+        <section>
+            <h2 class="mb-3 text-sm font-semibold tracking-wide text-stone-500 uppercase">@group.Title</h2>
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach (var item in group.Items)
+                {
+                    <a asp-controller="@item.Controller" asp-action="@item.Action"
+                       class="card card-body group flex items-start gap-4 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
+                        </span>
+                        <span>
+                            <span class="block font-semibold text-stone-900 group-hover:text-brand-600">@item.Name</span>
+                            <span class="mt-0.5 block text-sm text-stone-500">@item.Description</span>
+                            <span class="mt-2 block font-mono text-xs text-stone-400">/@item.Controller/@item.Action</span>
+                        </span>
+                    </a>
+                }
             </div>
-        </a>
-
-        <a href="/Home/Privacy" class="page-card">
-            <div class="page-card-icon">🔒</div>
-            <div class="page-card-title">Privacy Policy</div>
-            <div class="page-card-desc">Privacy policy and user information</div>
-            <div class="page-card-meta">
-                <span>HomeController</span>
-                <span>Privacy</span>
-            </div>
-        </a>
-
-        <a href="/Discharges" class="page-card">
-            <div class="page-card-icon">🏥</div>
-            <div class="page-card-title">Discharges (IPD/OPD)</div>
-            <div class="page-card-desc">Hospital discharge records management for inpatient and outpatient</div>
-            <div class="page-card-meta">
-                <span>DischargesController</span>
-                <span>Index</span>
-            </div>
-        </a>
-
-        <a href="/InterfaceSystem" class="page-card">
-            <div class="page-card-icon">🔗</div>
-            <div class="page-card-title">Interface System</div>
-            <div class="page-card-desc">File upload and interface management system</div>
-            <div class="page-card-meta">
-                <span>InterfaceSystemController</span>
-                <span>Index</span>
-            </div>
-        </a>
-
-        <a href="/InterfaceEDC" class="page-card">
-            <div class="page-card-icon">💳</div>
-            <div class="page-card-title">Interface EDC</div>
-            <div class="page-card-desc">EDC (Electronic Data Capture) interface management</div>
-            <div class="page-card-meta">
-                <span>InterfaceEDCController</span>
-                <span>Index</span>
-            </div>
-        </a>
-
-        <a href="/Account/Login" class="page-card">
-            <div class="page-card-icon">🔐</div>
-            <div class="page-card-title">Login</div>
-            <div class="page-card-desc">User authentication and login page</div>
-            <div class="page-card-meta">
-                <span>AccountController</span>
-                <span>Login</span>
-            </div>
-        </a>
-    </div>
-
-    <div class="section-title">⚡ Quick Links</div>
-    <div class="quick-links">
-        <a href="/" class="quick-link">
-            <span>🏠</span>
-            <span>Home / Dashboard</span>
-        </a>
-        <a href="/Discharges" class="quick-link">
-            <span>🏥</span>
-            <span>Discharges (IPD/OPD)</span>
-        </a>
-        <a href="/InterfaceSystem" class="quick-link">
-            <span>🔗</span>
-            <span>Interface System - File Upload</span>
-        </a>
-        <a href="/InterfaceEDC" class="quick-link">
-            <span>💳</span>
-            <span>Interface EDC</span>
-        </a>
-        <a href="/Home/Privacy" class="quick-link">
-            <span>🔒</span>
-            <span>Privacy Policy</span>
-        </a>
-        <a href="/Account/Login" class="quick-link">
-            <span>🔐</span>
-            <span>Login</span>
-        </a>
-    </div>
-
-    <div class="section-title">📋 Controller Information</div>
-    <div class="quick-links">
-        <div style="padding: 12px 16px; background: var(--card-soft); border-radius: var(--radius-md); color: var(--ink-2);">
-            <strong style="color: var(--ink);">HomeController</strong> - Dashboard and privacy policy
-        </div>
-        <div style="padding: 12px 16px; background: var(--card-soft); border-radius: var(--radius-md); color: var(--ink-2);">
-            <strong style="color: var(--ink);">DischargesController</strong> - IPD/OPD discharge management
-        </div>
-        <div style="padding: 12px 16px; background: var(--card-soft); border-radius: var(--radius-md); color: var(--ink-2);">
-            <strong style="color: var(--ink);">InterfaceSystemController</strong> - File upload and interface management
-        </div>
-        <div style="padding: 12px 16px; background: var(--card-soft); border-radius: var(--radius-md); color: var(--ink-2);">
-            <strong style="color: var(--ink);">InterfaceEDCController</strong> - EDC interface operations
-        </div>
-        <div style="padding: 12px 16px; background: var(--card-soft); border-radius: var(--radius-md); color: var(--ink-2);">
-            <strong style="color: var(--ink);">AccountController</strong> - User authentication and account management
-        </div>
-    </div>
+        </section>
+    }
 </div>

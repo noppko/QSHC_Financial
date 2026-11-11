@@ -4,15 +4,18 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Financial.Controllers
 {
     /// <summary>
     /// Controller สำหรับจัดการ Authentication (Login, Logout)
     /// </summary>
+    [AllowAnonymous]
     public class AccountController : Controller
     {
+        public const string LOGIN_RATE_LIMIT_POLICY = "login";
+
         private readonly IAuthService _authService;
         private readonly ILogger<AccountController> _logger;
 
@@ -28,103 +31,57 @@ namespace Financial.Controllers
         /// แสดงหน้า Login
         /// </summary>
         [HttpGet]
-        [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
-            var model = new LoginRequest
+            if (User.Identity?.IsAuthenticated == true)
             {
-                ReturnUrl = returnUrl
-            };
-            return View(model);
+                return RedirectToLocal(returnUrl);
+            }
+
+            return View(new LoginRequest { ReturnUrl = returnUrl });
         }
 
         /// <summary>
         /// ประมวลผล Login ผ่าน External Auth API
         /// </summary>
         [HttpPost]
-        [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginRequest login)
+        [EnableRateLimiting(LOGIN_RATE_LIMIT_POLICY)]
+        public async Task<IActionResult> Login(LoginRequest login, CancellationToken cancellationToken)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(login);
-            }
-
-            if (string.IsNullOrWhiteSpace(login.Username) || string.IsNullOrWhiteSpace(login.Password))
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(login.Username) || string.IsNullOrWhiteSpace(login.Password))
             {
                 ModelState.AddModelError(string.Empty, "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
-                return View(login);
+                return View(ClearPassword(login));
             }
 
-            try
+            var authResponse = await _authService.AuthenticateAsync(login.Username.Trim(), login.Password, cancellationToken);
+
+            if (authResponse is null)
             {
-                // เรียก External Auth API
-                var authResponse = await _authService.AuthenticateAsync(login.Username, login.Password);
-
-                if (authResponse?.IsSuccess == true && authResponse.Data != null)
-                {
-                    var userData = authResponse.Data;
-
-                    // สร้าง Claims สำหรับ Cookie Authentication
-                    var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, userData.LoginName ?? "Unknown"),
-                        new Claim("LoginName", userData.LoginName ?? "Unknown"),
-                        new Claim("FullName", userData.FullName ?? "Unknown"),
-                        new Claim("Gender", userData.Gender ?? "Unknown"),
-                        new Claim("JobPosition", userData.JobPosition ?? "Unknown"),
-                        new Claim("Division", userData.Division ?? "Unknown"),
-                        new Claim(ClaimTypes.Email, userData.Email ?? "unknown@local")
-                    };
-
-                    // เพิ่ม Roles ทั้งหมด
-                    if (userData.Roles != null)
-                    {
-                        foreach (var role in userData.Roles)
-                        {
-                            if (!string.IsNullOrWhiteSpace(role))
-                            {
-                                claims.Add(new Claim(ClaimTypes.Role, role));
-                            }
-                        }
-                    }
-
-                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                    var authProperties = new AuthenticationProperties
-                    {
-                        IsPersistent = login.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
-                    };
-
-                    await HttpContext.SignInAsync(
-                        CookieAuthenticationDefaults.AuthenticationScheme,
-                        new ClaimsPrincipal(claimsIdentity),
-                        authProperties);
-
-                    _logger.LogInformation("User {Username} logged in successfully", userData.LoginName);
-
-                    // Redirect ไปยังหน้าที่ต้องการหรือหน้า Home
-                    if (!string.IsNullOrEmpty(login.ReturnUrl) && Url.IsLocalUrl(login.ReturnUrl))
-                    {
-                        return Redirect(login.ReturnUrl);
-                    }
-
-                    return RedirectToAction("Index", "Home");
-                }
-                else
-                {
-                    _logger.LogWarning("Login failed for user: {Username}", login.Username);
-                    ModelState.AddModelError(string.Empty, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-                    return View(login);
-                }
+                ModelState.AddModelError(string.Empty, "ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนได้ กรุณาลองใหม่อีกครั้ง");
+                return View(ClearPassword(login));
             }
-            catch (Exception ex)
+
+            if (!authResponse.IsSuccess || authResponse.Data is null)
             {
-                _logger.LogError(ex, "Error during login process for user: {Username}", login.Username);
-                ModelState.AddModelError(string.Empty, "เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง");
-                return View(login);
+                _logger.LogWarning("Login failed for user: {Username}", login.Username);
+                ModelState.AddModelError(string.Empty, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+                return View(ClearPassword(login));
             }
+
+            var principal = UserClaimsFactory.Create(authResponse.Data);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = login.RememberMe,
+                AllowRefresh = true,
+            };
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+
+            _logger.LogInformation("User {Username} logged in successfully", principal.Identity?.Name);
+
+            return RedirectToLocal(login.ReturnUrl);
         }
 
         /// <summary>
@@ -140,16 +97,36 @@ namespace Financial.Controllers
 
             _logger.LogInformation("User {Username} logged out", username ?? "Unknown");
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction(nameof(Login));
         }
 
         /// <summary>
         /// หน้า Access Denied
         /// </summary>
         [HttpGet]
-        public IActionResult AccessDenied()
+        public IActionResult AccessDenied(string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
+        }
+
+        /// <summary>
+        /// Redirect เฉพาะ URL ภายในระบบเท่านั้น (ป้องกัน Open Redirect)
+        /// </summary>
+        private IActionResult RedirectToLocal(string? returnUrl)
+        {
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return LocalRedirect(returnUrl);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        private static LoginRequest ClearPassword(LoginRequest login)
+        {
+            login.Password = string.Empty;
+            return login;
         }
     }
 }

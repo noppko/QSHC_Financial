@@ -1,1075 +1,201 @@
-﻿@{
-    ViewData["Title"] = "หน้าหลัก";
+﻿@using Financial.Models.Dashboard
+@using System.Text.Json
+@model FinanceDashboard
+@{
+    ViewData["Title"] = "Dashboard การเงิน";
+    var pendingO = Model.PendingPayments.Where(p => p.Type == "O").ToList();
+    var pendingI = Model.PendingPayments.Where(p => p.Type == "I").ToList();
+    var monthChange = Model.RevenuePreviousMonthToDate.Total == 0 ? 0
+        : (Model.RevenueMonth.Total - Model.RevenuePreviousMonthToDate.Total) / Model.RevenuePreviousMonthToDate.Total * 100;
+    var initialJson = JsonSerializer.Serialize(Model);
+    var showIdentity = ViewData["ShowPatientIdentity"] is true;
 }
 
-<style>
-    .card {
-        background: var(--card);
-        border-radius: var(--radius-xl);
-        padding: 22px;
-    }
-
-    .label {
-        font-size: 14.5px;
-        font-weight: 600;
-        color: var(--ink-2);
-    }
-
-    /* -------- GRID LAYOUT -------- */
-    .grid {
-        display: grid;
-        gap: 20px;
-        grid-template-columns: minmax(300px, 380px) minmax(380px, 1fr) minmax(340px, 390px);
-        grid-template-areas:
-            "balance stats income"
-            "limit  recent recent"
-            "cards  recent recent";
-        align-items: start;
-    }
-
-    /* -------- TOTAL BALANCE -------- */
-    .balance {
-        grid-area: balance;
-    }
-
-    .balance-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .currency {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 7px 12px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        background: #fff;
-    }
-
-    .flag {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #3C3B6E;
-        display: block;
-    }
-
-    .balance-amount {
-        font-size: 38px;
-        font-weight: 700;
-        letter-spacing: -1px;
-        margin: 14px 0 8px;
-    }
-
-    .trend {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12.5px;
-        color: var(--muted);
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        font-size: 11.5px;
-        font-weight: 700;
-        padding: 3px 8px;
-        border-radius: 999px;
-    }
-
-    .badge.up {
-        background: #E8F7EF;
-        color: var(--green);
-    }
-
-    .badge.down {
-        background: #FDEBEA;
-        color: var(--red);
-    }
-
-    .balance-actions {
-        display: flex;
-        gap: 10px;
-        margin: 18px 0;
-    }
-
-    .btn {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 14px;
-        border-radius: 999px;
-        border: none;
-        font-size: 14.5px;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
-        transition: filter .15s;
-    }
-
-    .btn:hover {
-        filter: brightness(0.95);
-    }
-
-    .btn-dark {
-        background: var(--ink);
-        color: #fff;
-    }
-
-    .btn-light {
-        background: var(--card-soft);
-        color: var(--ink);
-    }
-
-    .wallets {
-        background: var(--card-soft);
-        border-radius: var(--radius-lg);
-        padding: 16px;
-    }
-
-    .wallets-head {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 13.5px;
-        margin-bottom: 12px;
-    }
-
-    .wallets-head b {
-        font-weight: 700;
-    }
-
-    .wallets-head span {
-        color: var(--muted);
-    }
-
-    .wallets-head .sep {
-        color: #D6D6D3;
-    }
-
-    .wallet-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-    }
-
-    .wallet {
-        background: #fff;
-        border-radius: var(--radius-md);
-        padding: 12px 10px;
-        position: relative;
-    }
-
-    .wallet-cur {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12.5px;
-        font-weight: 700;
-    }
-
-    .wallet-amt {
-        font-size: 14px;
-        font-weight: 700;
-        margin: 8px 0 3px;
-        letter-spacing: -.2px;
-    }
-
-    .wallet-limit {
-        font-size: 9.5px;
-        color: var(--muted);
-    }
-
-    .wallet-status {
-        font-size: 10px;
-        font-weight: 600;
-        margin-top: 7px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .wallet-status::before {
-        content: "";
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: currentColor;
-    }
-
-    .wallet-status.active {
-        color: var(--green);
-    }
-
-    /* -------- STATS 2x2 -------- */
-    .stats {
-        grid-area: stats;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-    }
-
-    .stat {
-        background: var(--card);
-        border-radius: var(--radius-xl);
-        padding: 22px;
-        min-height: 170px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .stat.hero {
-        background: linear-gradient(150deg, #FF8A50 0%, var(--orange) 55%, #E8430F 100%);
-        color: #fff;
-    }
-
-    .stat-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .stat-title {
-        font-size: 14.5px;
-        font-weight: 600;
-    }
-
-    .stat.hero .stat-title {
-        color: #fff;
-    }
-
-    .stat-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: var(--card-soft);
-        display: grid;
-        place-items: center;
-        color: var(--ink-2);
-    }
-
-    .stat.hero .stat-icon {
-        background: rgba(255, 255, 255, .22);
-        color: #fff;
-    }
-
-    .stat-icon svg {
-        width: 17px;
-        height: 17px;
-    }
-
-    .stat-amount {
-        font-size: 32px;
-        font-weight: 700;
-        letter-spacing: -.5px;
-        margin-top: 20px;
-    }
-
-    .stat-foot {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 10px;
-        font-size: 12.5px;
-        color: var(--muted);
-    }
-
-    .stat.hero .stat-foot {
-        color: rgba(255, 255, 255, .85);
-    }
-
-    .stat.hero .badge {
-        background: rgba(255, 255, 255, .25);
-        color: #fff;
-    }
-
-    /* -------- INCOME CHART -------- */
-    .income {
-        grid-area: income;
-    }
-
-    .income h3 {
-        font-size: 17px;
-        font-weight: 700;
-    }
-
-    .income .sub {
-        font-size: 12.5px;
-        color: var(--muted);
-        margin: 5px 0 16px;
-    }
-
-    .chart-card {
-        background: var(--card-soft);
-        border-radius: var(--radius-lg);
-        padding: 16px;
-    }
-
-    .chart-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 14px;
-    }
-
-    .chart-title {
-        font-size: 13.5px;
-        font-weight: 700;
-    }
-
-    .legend {
-        display: flex;
-        gap: 14px;
-        font-size: 11.5px;
-        color: var(--ink-2);
-    }
-
-    .legend span {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .legend i {
-        width: 9px;
-        height: 9px;
-        border-radius: 3px;
-        display: inline-block;
-    }
-
-    .legend .profit i {
-        background: var(--orange);
-    }
-
-    .legend .loss i {
-        background: var(--ink);
-    }
-
-    .chart {
-        display: flex;
-        gap: 4px;
-    }
-
-    .bars {
-        flex: 1;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        height: 190px;
-    }
-
-    .bar-col {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 24px;
-    }
-
-    .bar-stack {
-        position: relative;
-        width: 22px;
-        height: 172px;
-    }
-
-    .bar {
-        position: absolute;
-        left: 0;
-        width: 100%;
-        border-radius: 7px;
-    }
-
-    .bar.profit {
-        background: var(--orange);
-    }
-
-    .bar.loss {
-        background: var(--ink);
-    }
-
-    .x-label {
-        font-size: 10px;
-        color: var(--muted);
-        margin-top: 8px;
-    }
-
-    /* -------- SPENDING LIMIT -------- */
-    .limit {
-        grid-area: limit;
-    }
-
-    .limit h3 {
-        font-size: 16px;
-        font-weight: 700;
-        margin-bottom: 18px;
-    }
-
-    .progress {
-        height: 12px;
-        border-radius: 999px;
-        overflow: hidden;
-        background: #EFEFEC;
-    }
-
-    .progress i {
-        display: block;
-        height: 100%;
-        width: 26%;
-        background: var(--orange);
-        border-radius: 999px;
-    }
-
-    .limit-foot {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 12px;
-        font-size: 12.5px;
-        color: var(--muted);
-    }
-
-    .limit-foot b {
-        color: var(--ink);
-        font-weight: 700;
-        font-size: 13px;
-    }
-
-    /* -------- MY CARDS -------- */
-    .mycards {
-        grid-area: cards;
-    }
-
-    .mycards-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-    }
-
-    .mycards-title {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 16px;
-        font-weight: 700;
-    }
-
-    .mycards-title .stat-icon {
-        width: 34px;
-        height: 34px;
-    }
-
-    .addnew {
-        background: var(--card-soft);
-        border: none;
-        border-radius: 999px;
-        padding: 10px 16px;
-        font-family: inherit;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .addnew:hover {
-        background: #ECECEA;
-    }
-
-    .cards-row {
-        display: flex;
-        gap: 12px;
-        overflow: hidden;
-    }
-
-    .bank-card {
-        min-width: 230px;
-        flex: 1;
-        border-radius: 20px;
-        padding: 16px;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        height: 150px;
-        position: relative;
-    }
-
-    .bank-card.black {
-        background: linear-gradient(145deg, #2A2A27, #151513);
-    }
-
-    .bank-card.orange {
-        background: linear-gradient(145deg, #FF8A50, #F4551F);
-        min-width: 150px;
-        flex: 0 0 46%;
-    }
-
-    .bc-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .chip-active {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(255, 255, 255, .16);
-        border-radius: 999px;
-        padding: 5px 12px 5px 8px;
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .chip-icon {
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
-        background: linear-gradient(135deg, #FFD700, #FFA500);
-    }
-
-    .bc-bottom {
-        display: flex;
-        gap: 18px;
-        font-size: 11px;
-    }
-
-    .bc-field span {
-        display: block;
-        color: rgba(255, 255, 255, .65);
-        font-size: 9.5px;
-        margin-bottom: 4px;
-    }
-
-    .bc-field b {
-        font-weight: 600;
-        letter-spacing: .5px;
-    }
-
-    /* -------- RECENT ACTIVITIES -------- */
-    .recent {
-        grid-area: recent;
-    }
-
-    .recent-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 18px;
-        gap: 14px;
-        flex-wrap: wrap;
-    }
-
-    .recent-head h3 {
-        font-size: 19px;
-        font-weight: 700;
-    }
-
-    .recent-tools {
-        display: flex;
-        gap: 10px;
-    }
-
-    .search-box {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 10px 16px;
-        width: 220px;
-        color: var(--muted);
-    }
-
-    .search-box input {
-        border: none;
-        outline: none;
-        font-family: inherit;
-        font-size: 13.5px;
-        width: 100%;
-        background: transparent;
-        color: var(--ink);
-    }
-
-    .filter-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid var(--line);
-        background: #fff;
-        border-radius: 999px;
-        padding: 10px 18px;
-        font-family: inherit;
-        font-size: 13.5px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .filter-btn:hover {
-        background: var(--card-soft);
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13.5px;
-    }
-
-    thead th {
-        text-align: left;
-        font-size: 12.5px;
-        font-weight: 600;
-        color: var(--muted);
-        background: var(--card-soft);
-        padding: 13px 14px;
-    }
-
-    thead th:first-child {
-        border-radius: 12px 0 0 12px;
-        width: 44px;
-    }
-
-    thead th:last-child {
-        border-radius: 0 12px 12px 0;
-        width: 44px;
-    }
-
-    tbody td {
-        padding: 16px 14px;
-        border-bottom: 1px solid var(--line);
-    }
-
-    tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .act {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 600;
-    }
-
-    .act-ic {
-        width: 30px;
-        height: 30px;
-        border-radius: 8px;
-        display: grid;
-        place-items: center;
-        font-size: 14px;
-        flex-shrink: 0;
-    }
-
-    .status {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        font-weight: 500;
-        color: var(--ink-2);
-    }
-
-    .status::before {
-        content: "";
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-    }
-
-    .status.done::before {
-        background: var(--green);
-    }
-
-    .status.pending::before {
-        background: var(--red);
-    }
-
-    .status.progress::before {
-        background: var(--yellow);
-    }
-
-    .date-cell {
-        color: var(--ink-2);
-    }
-
-    @@media (max-width: 1200px) {
-        .grid {
-            grid-template-columns: 1fr 1fr;
-            grid-template-areas:
-                "balance stats" "income income" "limit cards" "recent recent";
-        }
-    }
-
-    @@media (max-width: 820px) {
-        .grid {
-            grid-template-columns: 1fr;
-            grid-template-areas: "balance" "stats" "income" "limit" "cards" "recent";
-        }
-
-        .recent {
-            overflow-x: auto;
-        }
-
-        table {
-            min-width: 720px;
-        }
-    }
-</style>
-
-<!-- ================= MAIN GRID ================= -->
-<main class="grid">
-
-    <!-- Total Balance -->
-    <section class="card balance">
-        <div class="balance-head">
-            <span class="label">Total Balance</span>
-            <button class="currency">
-                <span class="flag"></span>
-                USD
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                     stroke-linecap="round">
-                    <path d="M6 9l6 6 6-6" />
-                </svg>
-            </button>
+@section Head {
+    @* "!" ปิด tag helper ของ .NET (ถ้าไม่ปิด มันจะลบ type="importmap" ทิ้ง ทำให้ import "three" ไม่ได้และ 3D ไม่แสดง) *@
+    <!script type="importmap">
+        { "imports": { "three": "@Url.Content("~/lib/three/three.module.min.js")", "three/addons/": "@Url.Content("~/lib/three/addons/")" } }
+    </!script>
+}
+
+<div class="space-y-5" id="dashboard" data-source="@Url.Action("DashboardData")" data-identity="@(showIdentity ? "true" : "false")">
+    @if (Model.IsSample)
+    {
+        <div class="alert-info" role="status">
+            <svg class="mt-0.5 size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg>
+            <span><strong>ข้อมูลตัวอย่าง</strong> — ตั้งค่า <code>Dashboard:Source = "His"</code> เพื่อใช้ข้อมูลจริงจาก HIS HealthObject ตัวเลขบนหน้านี้ใช้สำหรับทดสอบหน้าจอเท่านั้น</span>
         </div>
-        <div class="balance-amount">$689,372.00</div>
-        <div class="trend"><span class="badge up">↑ 5%</span> than last month</div>
+    }
 
-        <div class="balance-actions">
-            <button class="btn btn-dark">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M7 10h13m0 0l-3-3m3 3l-3 3M17 14H4m0 0l3 3m-3-3l3-3" />
-                </svg>
-                Transfer
-            </button>
-            <button class="btn btn-light">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M7 10h13m0 0l-3-3m3 3l-3 3M17 14H4m0 0l3 3m-3-3l3-3" />
-                </svg>
-                Request
-            </button>
+    <div id="dashboardWarnings" class="alert-error @(Model.Warnings.Count == 0 ? "hidden" : "")" role="alert">
+        <svg class="mt-0.5 size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 8v4m0 4h.01" /></svg>
+        <span data-field="Warnings">@string.Join(" · ", Model.Warnings)</span>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-stone-500">
+        <span>
+            <span class="badge bg-sand-200 text-stone-600" data-field="DataSource">@Model.DataSource</span>
+            ข้อมูล ณ <time data-field="GeneratedAt">@Model.GeneratedAt.ToString("d MMM yyyy HH:mm:ss", System.Globalization.CultureInfo.GetCultureInfo("th-TH"))</time> น. · อัปเดตอัตโนมัติทุก 60 วินาที
+        </span>
+        <button type="button" class="btn-outline py-1.5" id="refreshBtn">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg>
+            รีเฟรช
+        </button>
+    </div>
+
+    <!-- ================= KPI ================= -->
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="ตัวชี้วัดหลัก">
+        <div class="card card-body">
+            <div class="text-sm text-stone-500">รายได้วันนี้</div>
+            <div class="mt-1 text-2xl font-semibold text-stone-900 tabular-nums" data-field="RevenueToday.Total">฿@Model.RevenueToday.Total.ToString("N0")</div>
+            <div class="mt-2 flex gap-3 text-xs text-stone-500">
+                <span><span class="inline-block size-2 rounded-full bg-brand-500"></span> OPD <b class="tabular-nums" data-field="RevenueToday.Opd">฿@Model.RevenueToday.Opd.ToString("N0")</b></span>
+                <span><span class="inline-block size-2 rounded-full bg-stone-800"></span> IPD <b class="tabular-nums" data-field="RevenueToday.Ipd">฿@Model.RevenueToday.Ipd.ToString("N0")</b></span>
+            </div>
         </div>
-
-        <div class="wallets">
-            <div class="wallets-head"><b>Wallets</b><span class="sep">|</span><span>Total 6 wallets</span></div>
-            <div class="wallet-row">
-                <div class="wallet">
-                    <div class="wallet-cur">🇺🇸 USD</div>
-                    <div class="wallet-amt">$22,678.00</div>
-                    <div class="wallet-limit">Limit is $10k a month</div>
-                    <div class="wallet-status active">Active</div>
-                </div>
-                <div class="wallet">
-                    <div class="wallet-cur">🇪🇺 EUR</div>
-                    <div class="wallet-amt">€18,345.00</div>
-                    <div class="wallet-limit">Limit is €8k a month</div>
-                    <div class="wallet-status active">Active</div>
-                </div>
-                <div class="wallet">
-                    <div class="wallet-cur">🇬🇧 GBP</div>
-                    <div class="wallet-amt">£15,000.00</div>
-                    <div class="wallet-limit">Limit is £7.5k a month</div>
-                    <div class="wallet-status active">Active</div>
-                </div>
+        <div class="card card-body">
+            <div class="text-sm text-stone-500">รายได้เดือนนี้</div>
+            <div class="mt-1 text-2xl font-semibold text-stone-900 tabular-nums" data-field="RevenueMonth.Total">฿@Model.RevenueMonth.Total.ToString("N0")</div>
+            <div class="mt-2 text-xs text-stone-500">
+                <span class="badge @(monthChange >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")" data-field="MonthChange">@(monthChange >= 0 ? "▲" : "▼") @Math.Abs(monthChange).ToString("N1")%</span>
+                เทียบช่วงเดียวกันของเดือนก่อน
+            </div>
+        </div>
+        <div class="card card-body">
+            <div class="text-sm text-stone-500" title="บิลเครดิต (CREDBL) ที่ออกเดือนนี้ — ยอดรับชำระจากผู้จ่ายสิทธิอยู่ในระบบบัญชี ไม่อยู่ใน HIS">ตั้งลูกหนี้สิทธิเดือนนี้</div>
+            <div class="mt-1 text-2xl font-semibold text-stone-900 tabular-nums" data-field="CreditBilledMonth.Total">฿@Model.CreditBilledMonth.Total.ToString("N0")</div>
+            <div class="mt-2 text-xs text-stone-500">
+                บิลเครดิต <b data-field="CreditBillsMonth">@Model.CreditBillsMonth.ToString("N0")</b> ใบ ·
+                เงินสด <b data-field="CashBilledMonth.Total">฿@Model.CashBilledMonth.Total.ToString("N0")</b>
+            </div>
+        </div>
+        <div class="card card-body border-brand-200 bg-brand-50/40">
+            <div class="text-sm text-brand-700">ผู้ป่วยรอชำระเงิน</div>
+            <div class="mt-1 text-2xl font-semibold text-stone-900 tabular-nums" data-field="PendingTotal">฿@Model.PendingPayments.Sum(p => p.Amount).ToString("N0")</div>
+            <div class="mt-2 flex gap-3 text-xs text-stone-600">
+                <span>OPD <b data-field="PendingOCount">@pendingO.Count</b> ราย</span>
+                <span>IPD <b data-field="PendingICount">@pendingI.Count</b> ราย</span>
             </div>
         </div>
     </section>
 
-    <!-- Stats 2x2 -->
-    <section class="stats">
-        <div class="stat hero">
-            <div class="stat-head">
-                <span class="stat-title">Total Earnings</span>
-                <span class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                         stroke-linejoin="round">
-                        <rect x="3" y="7" width="18" height="13" rx="3" />
-                        <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
-                        <path d="M3 12h18" />
-                    </svg>
-                </span>
-            </div>
+    <!-- ================= 3D Digital Twin ================= -->
+    <section class="card overflow-hidden" aria-labelledby="twinTitle">
+        <div class="flex flex-wrap items-center gap-3 border-b border-sand-200 px-5 py-3">
             <div>
-                <div class="stat-amount">$950</div>
-                <div class="stat-foot"><span class="badge">↑ 7%</span> This month</div>
+                <h2 id="twinTitle" class="font-semibold text-stone-900">3D Digital Twin — เงินที่รอชำระ แยก OPD / IPD</h2>
+                <p class="text-xs text-stone-500">แต่ละคนคือผู้ป่วย 1 ราย · สีเสื้อ = ระยะเวลารอ · เหรียญเหนือศีรษะ = ค่าใช้จ่ายรวม (ยิ่งสูงยิ่งมาก) · ยืนที่เคาน์เตอร์ = การเงินรับเรื่องแล้ว · OPD นับจากออกจากห้องตรวจ (CHKOUT) ถึงปิดบัญชี (FINDIS) · IPD นับจาก Medical Discharge</p>
+            </div>
+            <div class="ml-auto flex flex-wrap items-center gap-2" role="group" aria-label="ตัวกรอง 3D">
+                <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="all" aria-pressed="true">ทั้งหมด</button>
+                <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="O" aria-pressed="false">OPD</button>
+                <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="I" aria-pressed="false">IPD</button>
+                <button type="button" class="btn-ghost px-3 py-1.5" id="twinRotate" aria-pressed="false">หมุนอัตโนมัติ</button>
             </div>
         </div>
-
-        <div class="stat">
-            <div class="stat-head">
-                <span class="stat-title">Total Spending</span>
-                <span class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                         stroke-linejoin="round">
-                        <path d="M6 3h12l1 5H5l1-5z" />
-                        <rect x="5" y="8" width="14" height="13" rx="2" />
-                        <path d="M9 12a3 3 0 006 0" />
-                    </svg>
-                </span>
+        <div class="grid lg:grid-cols-[1fr_280px]">
+            <div class="relative h-135 bg-linear-to-b from-sand-50 to-sand-200" id="twinStage">
+                <canvas id="twinCanvas" class="absolute inset-0 size-full" aria-label="แบบจำลอง 3 มิติของยอดเงินผู้ป่วยรอชำระ"></canvas>
+                <div id="twinTooltip" class="pointer-events-none absolute hidden min-w-48 rounded-xl border border-sand-200 bg-white/95 px-3 py-2 text-xs shadow-lg"></div>
+                <div class="absolute right-3 bottom-3 flex flex-col gap-1.5" role="group" aria-label="ควบคุมมุมมอง 3D">
+                    <button type="button" id="twinZoomIn" class="grid size-9 place-items-center rounded-xl border border-sand-200 bg-white/95 text-lg text-stone-700 shadow hover:bg-white" aria-label="ซูมเข้า">+</button>
+                    <button type="button" id="twinZoomOut" class="grid size-9 place-items-center rounded-xl border border-sand-200 bg-white/95 text-lg text-stone-700 shadow hover:bg-white" aria-label="ซูมออก">−</button>
+                    <button type="button" id="twinHome" class="grid size-9 place-items-center rounded-xl border border-sand-200 bg-white/95 text-stone-700 shadow hover:bg-white" aria-label="กลับมุมมองเริ่มต้น">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10" /></svg>
+                    </button>
+                </div>
+                <div id="twinFallback" class="absolute inset-0 hidden place-items-center p-6 text-center text-sm text-stone-500">เบราว์เซอร์นี้ไม่รองรับ WebGL จึงแสดงภาพ 3 มิติไม่ได้ — ดูข้อมูลจากตารางด้านล่างแทน</div>
+                <div class="absolute bottom-3 left-3 flex flex-wrap gap-2 text-[11px]">
+                    <span class="badge bg-white/90 text-stone-600"><span class="mr-1 inline-block size-2 rounded-full bg-emerald-500"></span>รอไม่นาน</span>
+                    <span class="badge bg-white/90 text-stone-600"><span class="mr-1 inline-block size-2 rounded-full bg-amber-500"></span>เริ่มนาน</span>
+                    <span class="badge bg-white/90 text-stone-600"><span class="mr-1 inline-block size-2 rounded-full bg-red-500"></span>รอนาน</span>
+                    <span class="badge bg-white/90 text-stone-500"><span class="mr-1 inline-block size-2 rounded-full bg-amber-400"></span>เหรียญ = ค่าใช้จ่าย</span>
+                    <span class="badge bg-white/90 text-stone-500">คลิกซ้ายลาก = เลื่อน · คลิกขวาลาก = หมุน · scroll = ซูม</span>
+                </div>
             </div>
-            <div>
-                <div class="stat-amount">$700</div>
-                <div class="stat-foot"><span class="badge down">↓ 5%</span> This month</div>
-            </div>
-        </div>
-
-        <div class="stat">
-            <div class="stat-head">
-                <span class="stat-title">Total Income</span>
-                <span class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <ellipse cx="12" cy="6" rx="7" ry="3" />
-                        <path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
-                        <path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
-                    </svg>
-                </span>
-            </div>
-            <div>
-                <div class="stat-amount">$1,050</div>
-                <div class="stat-foot"><span class="badge up">↑ 8%</span> This month</div>
-            </div>
-        </div>
-
-        <div class="stat">
-            <div class="stat-head">
-                <span class="stat-title">Total Revenue</span>
-                <span class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                         stroke-linejoin="round">
-                        <path d="M12 3c-4 3-6 5.5-6 9a6 6 0 0012 0c0-3.5-2-6-6-9z" />
-                        <path d="M9 4h6" />
-                    </svg>
-                </span>
-            </div>
-            <div>
-                <div class="stat-amount">$850</div>
-                <div class="stat-foot"><span class="badge up">↑ 4%</span> This month</div>
-            </div>
+            <aside class="space-y-4 border-t border-sand-200 p-5 lg:border-t-0 lg:border-l">
+                <div>
+                    <div class="flex items-center justify-between text-sm"><span class="font-medium text-brand-700">OPD รอชำระ</span><span class="text-stone-500" data-field="PendingOCount2">@pendingO.Count ราย</span></div>
+                    <div class="text-xl font-semibold tabular-nums" data-field="PendingOAmount">฿@pendingO.Sum(p => p.Amount).ToString("N0")</div>
+                    <div class="text-xs text-stone-500">รอเฉลี่ย <span data-field="PendingOWait">@(pendingO.Count == 0 ? 0 : (int)pendingO.Average(p => p.WaitingMinutes))</span> นาที (เป้าหมาย 15 นาที: เขียว &lt; 15, เหลือง &lt; 30)</div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-sm"><span class="font-medium text-stone-800">IPD จำหน่ายแล้ว รอปิดบัญชี</span><span class="text-stone-500" data-field="PendingICount2">@pendingI.Count ราย</span></div>
+                    <div class="text-xl font-semibold tabular-nums" data-field="PendingIAmount">฿@pendingI.Sum(p => p.Amount).ToString("N0")</div>
+                    <div class="text-xs text-stone-500">รอเฉลี่ย <span data-field="PendingIWait">@(pendingI.Count == 0 ? 0 : (int)pendingI.Average(p => p.WaitingMinutes) / 60)</span> ชม. (เกณฑ์: เขียว &lt; 6, เหลือง &lt; 24 ชม.)</div>
+                </div>
+                <div id="twinSelection" class="rounded-xl bg-sand-50 p-3 text-xs text-stone-500">คลิกที่ตัวคนเพื่อดูรายละเอียด</div>
+            </aside>
         </div>
     </section>
 
-    <!-- Total Income chart -->
-    <section class="card income">
-        <h3>Total Income</h3>
-        <p class="sub">View your income in a certain period of time</p>
-        <div class="chart-card">
-            <div class="chart-head">
-                <span class="chart-title">Profit and Loss</span>
-                <div class="legend">
-                    <span class="profit"><i></i>Profit</span>
-                    <span class="loss"><i></i>Loss</span>
+    <!-- ================= รายการผู้ป่วยรอชำระเงิน แยก OPD / IPD (ใต้ 3D) ================= -->
+    <section class="grid gap-5 xl:grid-cols-2" aria-label="รายการผู้ป่วยรอชำระเงิน">
+        @foreach (var (type, title, location, accent) in new[] { ("O", "OPD — ผู้ป่วยนอกรอชำระเงิน", "คลินิก", "bg-brand-50 text-brand-700"), ("I", "IPD — ผู้ป่วยในรอปิดบัญชี", "หอผู้ป่วย", "bg-stone-800 text-white") })
+        {
+            <div class="card card-body">
+                <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="font-semibold text-stone-900"><span class="badge mr-1 @accent">@(type == "O" ? "OPD" : "IPD")</span>@title.Split(" — ")[1]</h2>
+                    <span class="text-sm text-stone-500"><b class="tabular-nums text-stone-800" data-field="Pending@(type)Count3">0</b> ราย · <b class="tabular-nums text-stone-800" data-field="Pending@(type)Amount2">฿0</b></span>
+                </div>
+                <div class="table-wrap max-h-96">
+                    <table class="data-table">
+                        <thead><tr><th>อ้างอิง</th>@if (showIdentity) { <th>HN</th><th>ชื่อ-สกุล</th> }<th class="text-right">ยอดเงิน</th><th class="text-right">รอมาแล้ว</th><th>กลุ่มผู้จ่าย</th><th>@location</th><th>สถานะ</th></tr></thead>
+                        <tbody id="pendingBody@(type)" data-pending-body></tbody>
+                    </table>
                 </div>
             </div>
-            <div class="chart">
-                <div class="bars">
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 80px;"></div>
-                            <div class="bar loss" style="bottom: 80px; height: 40px;"></div>
-                        </div>
-                        <div class="x-label">Jan</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 95px;"></div>
-                            <div class="bar loss" style="bottom: 95px; height: 35px;"></div>
-                        </div>
-                        <div class="x-label">Feb</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 110px;"></div>
-                            <div class="bar loss" style="bottom: 110px; height: 30px;"></div>
-                        </div>
-                        <div class="x-label">Mar</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 90px;"></div>
-                            <div class="bar loss" style="bottom: 90px; height: 45px;"></div>
-                        </div>
-                        <div class="x-label">Apr</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 120px;"></div>
-                            <div class="bar loss" style="bottom: 120px; height: 28px;"></div>
-                        </div>
-                        <div class="x-label">May</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 105px;"></div>
-                            <div class="bar loss" style="bottom: 105px; height: 38px;"></div>
-                        </div>
-                        <div class="x-label">Jun</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 115px;"></div>
-                            <div class="bar loss" style="bottom: 115px; height: 32px;"></div>
-                        </div>
-                        <div class="x-label">Jul</div>
-                    </div>
-                    <div class="bar-col">
-                        <div class="bar-stack">
-                            <div class="bar profit" style="bottom: 0; height: 100px;"></div>
-                            <div class="bar loss" style="bottom: 100px; height: 42px;"></div>
-                        </div>
-                        <div class="x-label">Aug</div>
-                    </div>
-                </div>
-            </div>
+        }
+        <p class="text-xs text-stone-500 xl:col-span-2">เรียงตามยอดเงินจากมากไปน้อย · @(showIdentity ? "แสดง HN/ชื่อ-สกุลเฉพาะผู้ดูแลระบบ (บันทึกการเข้าถึงทุกครั้ง)" : "ไม่แสดง HN/ชื่อผู้ป่วย") · ยอดเงิน = ค่าใช้จ่ายรวมของ visit · คลิกตัวคนใน 3D เพื่อไฮไลต์แถว</p>
+    </section>
+
+    <!-- ================= Charts ================= -->
+    <section class="grid gap-5 xl:grid-cols-3">
+        <div class="card card-body xl:col-span-2">
+            <h2 class="mb-3 font-semibold text-stone-900">รายได้รายวัน 30 วันล่าสุด (OPD / IPD)</h2>
+            <div class="h-72"><canvas id="dailyChart" aria-label="กราฟรายได้รายวัน"></canvas></div>
+        </div>
+        <div class="card card-body">
+            <h2 class="mb-3 font-semibold text-stone-900">รายได้เดือนนี้ตามสิทธิการรักษา</h2>
+            <div class="h-72"><canvas id="payerChart" aria-label="กราฟรายได้ตามสิทธิ"></canvas></div>
         </div>
     </section>
 
-    <!-- Monthly Spending Limit -->
-    <section class="card limit">
-        <h3>Monthly Spending Limit</h3>
-        <div class="progress"><i></i></div>
-        <div class="limit-foot">
-            <span><b>$1,400.00</b> spent out of</span>
-            <b>$5,500.00</b>
+    <section class="grid gap-5 xl:grid-cols-3">
+        <div class="card card-body">
+            <div class="mb-3 flex items-baseline justify-between gap-2">
+                <h2 class="font-semibold text-stone-900">เงินรับวันนี้ตามวิธีชำระ</h2>
+                <b class="tabular-nums text-brand-600" data-field="CollectionsTotal">฿@Model.CollectionsToday.Sum(c => c.NetCollected).ToString("N0")</b>
+            </div>
+            <div class="h-60"><canvas id="collectionChart" aria-label="กราฟเงินรับวันนี้ตามวิธีชำระ"></canvas></div>
+            <p class="mt-2 text-xs text-stone-500">สุทธิหลังหักคืนเงิน · ตามวันที่ชำระ (PatientPaymentDetail)</p>
+        </div>
+        <div class="card card-body">
+            <h2 class="mb-3 font-semibold text-stone-900">รายได้เดือนนี้: เงินสด / เครดิต</h2>
+            <dl class="space-y-4 text-sm">
+                <div class="flex items-baseline justify-between"><dt class="text-stone-500">บิลเงินสด OPD / IPD</dt><dd class="text-right tabular-nums"><b data-field="CashBilledMonth.Opd">฿@Model.CashBilledMonth.Opd.ToString("N0")</b> / <b data-field="CashBilledMonth.Ipd">฿@Model.CashBilledMonth.Ipd.ToString("N0")</b></dd></div>
+                <div class="flex items-baseline justify-between"><dt class="text-stone-500">บิลเครดิต (ลูกหนี้สิทธิ) OPD / IPD</dt><dd class="text-right tabular-nums"><b data-field="CreditBilledMonth.Opd">฿@Model.CreditBilledMonth.Opd.ToString("N0")</b> / <b data-field="CreditBilledMonth.Ipd">฿@Model.CreditBilledMonth.Ipd.ToString("N0")</b></dd></div>
+                <div class="flex items-baseline justify-between"><dt class="text-stone-500">สัดส่วนเครดิต</dt><dd class="text-right"><b class="tabular-nums" data-field="CreditShare">@((Model.RevenueMonth.Total == 0 ? 0 : Model.CreditBilledMonth.Total / Model.RevenueMonth.Total * 100).ToString("N1"))%</b></dd></div>
+            </dl>
+            <p class="mt-4 text-xs text-stone-500">ยอดรับชำระจากผู้จ่ายสิทธิ (สปสช./กรมบัญชีกลาง ฯลฯ) อยู่ในระบบบัญชีภายนอก จึงยังแสดงลูกหนี้คงค้าง/อายุลูกหนี้ไม่ได้</p>
+        </div>
+        <div class="card card-body">
+            <h2 class="mb-3 font-semibold text-stone-900">ปริมาณผู้ป่วย</h2>
+            <dl class="grid grid-cols-2 gap-4 text-sm">
+                <div><dt class="text-stone-500">OPD visit วันนี้</dt><dd class="text-xl font-semibold tabular-nums" data-field="Volume.OpdVisitsToday">@Model.Volume.OpdVisitsToday.ToString("N0")</dd></div>
+                <div><dt class="text-stone-500">ผู้ป่วยในขณะนี้</dt><dd class="text-xl font-semibold tabular-nums" data-field="Volume.IpdAdmittedNow">@Model.Volume.IpdAdmittedNow.ToString("N0")</dd></div>
+                <div><dt class="text-stone-500">จำหน่าย IPD วันนี้</dt><dd class="text-xl font-semibold tabular-nums" data-field="Volume.IpdDischargesToday">@Model.Volume.IpdDischargesToday.ToString("N0")</dd></div>
+                <div><dt class="text-stone-500">ยอดเฉลี่ยต่อบิลเดือนนี้ OPD / IPD</dt><dd class="font-semibold tabular-nums"><span data-field="Volume.AvgBillOpd">฿@Model.Volume.AvgBillOpd.ToString("N0")</span> / <span data-field="Volume.AvgBillIpd">฿@Model.Volume.AvgBillIpd.ToString("N0")</span></dd></div>
+            </dl>
         </div>
     </section>
 
-    <!-- My Cards -->
-    <section class="card mycards">
-        <div class="mycards-head">
-            <div class="mycards-title">
-                <span class="stat-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <rect x="2" y="5" width="20" height="14" rx="3" />
-                        <path d="M2 10h20" />
-                        <path d="M6 15h4" />
-                    </svg>
-                </span>
-                My Cards
-            </div>
-            <button class="addnew">＋ Add new</button>
-        </div>
-        <div class="cards-row">
-            <div class="bank-card black">
-                <div class="bc-top">
-                    <span class="chip-active">
-                        <span class="chip-icon"></span>
-                        Active
-                    </span>
-                </div>
-                <div class="bc-bottom">
-                    <div class="bc-field"><span>Card Number</span><b>**** **** 6782</b></div>
-                    <div class="bc-field"><span>EXP</span><b>09/29</b></div>
-                    <div class="bc-field"><span>CVV</span><b>611</b></div>
-                </div>
-            </div>
-            <div class="bank-card orange">
-                <div class="bc-top">
-                    <span class="chip-active">
-                        <span class="chip-icon"></span>
-                        Active
-                    </span>
-                </div>
-                <div class="bc-bottom">
-                    <div class="bc-field"><span>Card Number</span><b>**** **** 4356</b></div>
-                </div>
-            </div>
-        </div>
-    </section>
+</div>
 
-    <!-- Recent Activities -->
-    <section class="card recent">
-        <div class="recent-head">
-            <h3>Recent Activities</h3>
-            <div class="recent-tools">
-                <div class="search-box">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round">
-                        <circle cx="11" cy="11" r="7" />
-                        <path d="M20 20l-3.5-3.5" />
-                    </svg>
-                    <input type="text" placeholder="Search">
-                </div>
-                <button class="filter-btn">
-                    Filter
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round">
-                        <path d="M4 6h16M7 12h10M10 18h4" />
-                    </svg>
-                </button>
-            </div>
-        </div>
+<script type="application/json" id="dashboardInitial">@Html.Raw(initialJson)</script>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Order ID</th>
-                    <th>Activity</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>INV_000076</td>
-                    <td>
-                        <div class="act"><span class="act-ic" style="background:#E7F0FE">📱</span>Mobile App Purchase
-                        </div>
-                    </td>
-                    <td>$25,500</td>
-                    <td><span class="status done">Completed</span></td>
-                    <td class="date-cell">17 Apr, 2026 03:45 PM</td>
-                </tr>
-                <tr>
-                    <td>INV_000075</td>
-                    <td>
-                        <div class="act"><span class="act-ic" style="background:#EDEAFB">🏨</span>Hotel Booking</div>
-                    </td>
-                    <td>$32,750</td>
-                    <td><span class="status pending">Pending</span></td>
-                    <td class="date-cell">15 Apr, 2026 11:30 AM</td>
-                </tr>
-                <tr>
-                    <td>INV_000074</td>
-                    <td>
-                        <div class="act"><span class="act-ic" style="background:#FFF3E0">✈️</span>Flight Ticket Booking
-                        </div>
-                    </td>
-                    <td>$40,200</td>
-                    <td><span class="status done">Completed</span></td>
-                    <td class="date-cell">15 Apr, 2026 12:00 PM</td>
-                </tr>
-                <tr>
-                    <td>INV_000073</td>
-                    <td>
-                        <div class="act"><span class="act-ic" style="background:#E8F5E9">🛒</span>Grocery Purchase</div>
-                    </td>
-                    <td>$50,200</td>
-                    <td><span class="status progress">In Progress</span></td>
-                    <td class="date-cell">14 Apr, 2026 09:15 PM</td>
-                </tr>
-                <tr>
-                    <td>INV_000073</td>
-                    <td>
-                        <div class="act"><span class="act-ic" style="background:#FFE8E8">💻</span>Software License</div>
-                    </td>
-                    <td>$15,900</td>
-                    <td><span class="status done">Completed</span></td>
-                    <td class="date-cell">10 Apr, 2026 08:00 AM</td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
-
-</main>
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/finance-twin.js" asp-append-version="true"></script>
+}

@@ -6,41 +6,55 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-Financial-46669941-e2ce-4ff5-91d7-5e055f582acc</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <SkipWorkloadResolve>true</SkipWorkloadResolve>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Excel Export -->
-    <PackageReference Include="EPPlus" Version="7.5.2" />
-    
-    <!-- PDF Generation -->
-    <PackageReference Include="QuestPDF" Version="2024.12.3" />
-    
+    <PackageReference Include="EPPlus" Version="7.7.4" />
+
     <!-- EF Core & Database -->
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.13">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    
+
     <!-- Logging -->
-    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-    
-    <!-- HTTP Client -->
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.10" />
-    
-    <!-- Development Tools -->
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+
+    <!-- HTTP Client (retry / timeout / circuit breaker) -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
+
+    <!-- Development Tools (ไม่ถูก publish ไปกับแอป) -->
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- บังคับเวอร์ชันที่แก้ช่องโหว่ GHSA-g4vj-cjjj-v7hg (transitive จาก CodeGeneration.Design ซึ่งยังอ้าง 6.12.1) -->
+    <PackageReference Include="NuGet.Packaging" Version="6.14.3" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Protocol" Version="6.14.3" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- Tailwind CSS Build Automation -->
-  <Target Name="BuildTailwind" BeforeTargets="Build">
-    <Exec Command="npx tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --minify" ContinueOnError="true" IgnoreExitCode="true" />
+  <ItemGroup>
+    <InternalsVisibleTo Include="Financial.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SQL ของ Dashboard (HIS HealthObject) — ไฟล์เดียวกันใช้ตรวจด้วย tools/query.mjs ได้ -->
+    <EmbeddedResource Include="Database\his\queries\*.sql" />
+  </ItemGroup>
+
+  <!--
+    Tailwind CSS v4 (CLI) — สร้าง wwwroot/css/site.css ก่อน compile เพื่อให้ MapStaticAssets ทำ fingerprint/compress ไฟล์ล่าสุด
+    เครื่องที่ไม่มี node_modules (เช่น build server บน Intranet) จะข้ามขั้นตอนนี้และใช้ site.css ที่ commit ไว้แล้ว
+  -->
+  <Target Name="BuildTailwind" BeforeTargets="BeforeBuild" Condition="Exists('node_modules/@tailwindcss/cli')">
+    <Exec Command="npm run build:css --silent" />
   </Target>
 
 </Project>

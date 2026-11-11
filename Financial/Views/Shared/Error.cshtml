@@ -1,67 +1,21 @@
-﻿@model ErrorViewModel
+@model ErrorViewModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @{
-    ViewData["Title"] = "Error";
-    Layout = "_Layout";
+    ViewData["Title"] = "เกิดข้อผิดพลาด";
 }
-
-<div class="min-h-screen flex items-center justify-center">
-    <div class="bg-white rounded-3xl shadow-2xl p-12 max-w-2xl w-full text-center">
-        <!-- Error Icon -->
-        <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i class="fas fa-exclamation-triangle text-red-600 text-4xl"></i>
-        </div>
-
-        <!-- Error Message -->
-        <h1 class="text-4xl font-bold text-gray-800 mb-4">Oops! Something went wrong</h1>
-        <p class="text-lg text-gray-600 mb-8">เกิดข้อผิดพลาดในการประมวลผลคำขอของคุณ</p>
-
-        @if (Model?.ShowRequestId == true)
-        {
-            <div class="bg-gray-50 rounded-xl p-4 mb-8">
-                <p class="text-sm text-gray-500 mb-1">Request ID</p>
-                <code class="text-sm font-mono text-gray-800">@Model.RequestId</code>
-            </div>
-        }
-
-        <!-- Actions -->
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a asp-controller="Home" asp-action="Index"
-               class="px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors inline-flex items-center justify-center space-x-2">
-                <i class="fas fa-home"></i>
-                <span>กลับหน้าหลัก</span>
-            </a>
-            <button onclick="history.back()"
-                    class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors inline-flex items-center justify-center space-x-2">
-                <i class="fas fa-arrow-left"></i>
-                <span>ย้อนกลับ</span>
-            </button>
-        </div>
-
-        <!-- Development Info -->
-        @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-        {
-            <div class="mt-12 p-6 bg-yellow-50 border border-yellow-200 rounded-xl text-left">
-                <div class="flex items-start space-x-3 mb-4">
-                    <i class="fas fa-info-circle text-yellow-600 mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold text-yellow-800 mb-2">Development Mode</h3>
-                        <p class="text-sm text-yellow-700">
-                            This detailed error information is only shown in Development environment.
-                            Do not enable this for deployed applications.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        }
-
-        <!-- Support Info -->
-        <div class="mt-8 pt-8 border-t border-gray-200">
-            <p class="text-sm text-gray-500">
-                หากปัญหายังคงมีอยู่ กรุณาติดต่อฝ่ายสนับสนุนระบบ
-            </p>
-            <a href="http://10.67.67.169/" class="text-sm text-primary-600 hover:text-primary-700 mt-2 inline-block">
-                www.sirikit.go.th
-            </a>
-        </div>
+<div class="mx-auto max-w-lg py-16 text-center">
+    <div class="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-red-100 text-red-600">
+        <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 8v4m0 4h.01" /></svg>
     </div>
+    <h2 class="text-xl font-semibold text-stone-900">ขออภัย เกิดข้อผิดพลาดในระบบ</h2>
+    <p class="mt-2 text-sm text-stone-500">กรุณาลองใหม่อีกครั้ง หากยังพบปัญหา โปรดแจ้งฝ่ายเทคโนโลยีสารสนเทศพร้อมรหัสอ้างอิงด้านล่าง</p>
+    @if (Model?.ShowRequestId == true)
+    {
+        <p class="mt-4 text-xs text-stone-500">รหัสอ้างอิง: <code class="rounded bg-sand-200 px-2 py-0.5">@Model.RequestId</code></p>
+    }
+    <a asp-controller="Home" asp-action="Index" class="btn-primary mt-6">กลับหน้าหลัก</a>
+    @if (Env.IsDevelopment())
+    {
+        <p class="alert-info mt-8 text-left">โหมด Development: ดูรายละเอียดข้อผิดพลาดใน Logs/log-*.txt</p>
+    }
 </div>

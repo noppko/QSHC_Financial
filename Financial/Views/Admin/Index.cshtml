@@ -1,0 +1,215 @@
+@using Financial.Controllers
+@using Financial.Services.Authorization
+@model AdminSettingsViewModel
+@{
+    ViewData["Title"] = "ตั้งค่าระบบ";
+    var roles = AppPolicies.Roles(User).ToList();
+}
+<div class="space-y-5">
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert-success" role="status">@message</div>
+    }
+
+    <!-- ================= สิทธิ์การใช้งาน ================= -->
+    <section class="card card-body">
+        <h2 class="mb-1 font-semibold text-stone-900">สิทธิ์การใช้งานตาม Role</h2>
+        <p class="mb-4 text-sm text-stone-500">Role มาจาก External Auth API (<code>data.roles[]</code>) — แก้ได้ที่ <code>appsettings.json</code> section <code>Authorization</code> แล้ว restart แอป</p>
+        <div class="table-wrap max-h-none">
+            <table class="data-table">
+                <thead><tr><th>ระดับ</th><th>เงื่อนไข Role</th><th>Dashboard</th><th>Discharge / Interface EDC</th><th>ตั้งค่าระบบ</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge bg-red-50 text-red-700">ผู้ดูแลระบบ</span></td>
+                        <td class="font-mono text-xs">@string.Join(", ", Model.Roles.AdminRoles)</td>
+                        <td>✔</td><td>✔</td><td>✔</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-brand-50 text-brand-700">เจ้าหน้าที่การเงิน</span></td>
+                        <td class="font-mono text-xs">ขึ้นต้นด้วย @string.Join(" / ", Model.Roles.FinanceRolePrefixes.Select(p => p + "*"))</td>
+                        <td>✔</td><td>✔</td><td>–</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-sand-100 text-stone-600">ผู้ใช้งานทั่วไป</span></td>
+                        <td class="text-xs text-stone-500">Login ได้ แต่ไม่มี role ข้างต้น</td>
+                        <td>✔</td><td>–</td><td>–</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="mt-3 text-xs text-stone-500">Role ของคุณ: @(roles.Count == 0 ? "ไม่มี" : string.Join(", ", roles))</p>
+    </section>
+
+    <!-- ================= การแสดงกลุ่มเมนู ================= -->
+    <section class="card card-body" id="menu-visibility">
+        <div class="mb-4 flex flex-wrap items-start justify-between gap-2">
+            <div>
+                <h2 class="font-semibold text-stone-900">การแสดงกลุ่มเมนู</h2>
+                <p class="text-sm text-stone-500">เปิด/ปิดการมองเห็นกลุ่มเมนูด้านซ้ายและหน้าแผนผังระบบ มีผลกับผู้ใช้ทุกคนทันที · ซ่อนจากเมนูเท่านั้น สิทธิ์เข้าหน้ายังเป็นไปตาม Role</p>
+            </div>
+            @if (Model.Setting.UpdatedAt is DateTime updatedAt)
+            {
+                <span class="text-xs text-stone-500">แก้ไขล่าสุด @updatedAt.ToString("d MMM yyyy HH:mm", System.Globalization.CultureInfo.GetCultureInfo("th-TH")) น. โดย @Model.Setting.UpdatedBy</span>
+            }
+        </div>
+        <form asp-action="SaveMenuVisibility" method="post">
+            <ul class="divide-y divide-sand-100 rounded-xl border border-sand-200">
+                @foreach (var group in Model.MenuGroups)
+                {
+                    <li class="flex items-center gap-4 px-4 py-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-medium text-stone-900">@group.Title</div>
+                            <div class="truncate text-xs text-stone-500">@string.Join(" · ", group.Items)</div>
+                        </div>
+                        @if (!group.CanHide)
+                        {
+                            <span class="text-xs text-stone-400">แสดงเสมอ</span>
+                            <input type="hidden" name="visibleGroups" value="@group.Key" />
+                        }
+                        <label class="relative inline-flex cursor-pointer items-center @(group.CanHide ? "" : "pointer-events-none opacity-50")">
+                            <input type="checkbox" name="visibleGroups" value="@group.Key" class="peer sr-only"
+                                   checked="@group.Visible" disabled="@(!group.CanHide)" aria-label="แสดงกลุ่มเมนู @group.Title" />
+                            <span class="h-6 w-11 rounded-full bg-sand-300 transition peer-checked:bg-brand-500 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-100"></span>
+                            <span class="absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+                        </label>
+                    </li>
+                }
+            </ul>
+            <div class="mt-4 flex justify-end">
+                <button type="submit" class="btn-primary">บันทึกการแสดงเมนู</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- ================= ประมวลผลรายงาน สปสช. ================= -->
+    <section class="card card-body" id="nhso-summary">
+        <h2 class="mb-1 font-semibold text-stone-900">ประมวลผลรายงาน สปสช. ตามปีงบประมาณ</h2>
+        <p class="mb-4 text-sm text-stone-500">
+            ดึงตัวเลขรวมจาก HIS (อ่านอย่างเดียว) แล้วบันทึกลงตาราง <code>NhsoFiscalSummaries</code> ในฐาน QSHC_Financial —
+            ระบบประมวลผลปีงบปัจจุบันอัตโนมัติทุกคืน · ปีงบย้อนหลังกดประมวลผลครั้งเดียว
+        </p>
+        @if (Model.NhsoSummaryError is string summaryError)
+        {
+            <div class="alert-error mb-4">@summaryError</div>
+        }
+        @{
+            var currentFy = Financial.Services.Reports.FiscalYear.Of(Model.Now).BuddhistYear;
+            var statusByYear = Model.RefreshQueue.ToDictionary(s => s.FiscalYear);
+            var summaryByYear = Model.NhsoSummaries.ToDictionary(s => s.FiscalYear);
+        }
+        <div class="table-wrap max-h-none">
+            <table class="data-table">
+                <thead><tr><th>ปีงบ</th><th class="text-right">แถวสรุป</th><th class="text-right">ยอดรวม (บาท)</th><th>ประมวลผลล่าสุด</th><th>สถานะงาน</th><th></th></tr></thead>
+                <tbody>
+                    @for (var fy = currentFy; fy >= currentFy - 5; fy--)
+                    {
+                        summaryByYear.TryGetValue(fy, out var summary);
+                        statusByYear.TryGetValue(fy, out var job);
+                        var busy = job?.State is Financial.Services.Reports.RefreshStatus.QUEUED or Financial.Services.Reports.RefreshStatus.RUNNING;
+                        <tr>
+                            <td class="font-medium">@fy @(fy == currentFy ? "(ปัจจุบัน)" : "")</td>
+                            <td class="num">@(summary?.Rows.ToString("N0") ?? "–")</td>
+                            <td class="num">@(summary?.NetAmount.ToString("N2") ?? "–")</td>
+                            <td>@(summary is null ? "ยังไม่เคยประมวลผล" : summary.RefreshedAt.ToString("d MMM yyyy HH:mm", System.Globalization.CultureInfo.GetCultureInfo("th-TH")) + " น.")</td>
+                            <td>
+                                @switch (job?.State)
+                                {
+                                    case Financial.Services.Reports.RefreshStatus.QUEUED: <span class="badge bg-sky-50 text-sky-700">รอคิว</span> break;
+                                    case Financial.Services.Reports.RefreshStatus.RUNNING: <span class="badge bg-amber-50 text-amber-700"><span class="spinner mr-1 size-3"></span>กำลังประมวลผล</span> break;
+                                    case Financial.Services.Reports.RefreshStatus.DONE: <span class="badge bg-emerald-50 text-emerald-700">สำเร็จ · @job.Message</span> break;
+                                    case Financial.Services.Reports.RefreshStatus.FAILED: <span class="badge bg-red-50 text-red-700" title="ดูรายละเอียดใน log">ล้มเหลว · @job.Message</span> break;
+                                    default: <span class="text-xs text-stone-400">–</span> break;
+                                }
+                            </td>
+                            <td class="text-right">
+                                <form asp-action="RefreshNhsoSummary" method="post">
+                                    <input type="hidden" name="fiscalYear" value="@fy" />
+                                    <button type="submit" class="btn-ghost px-3 py-1.5" disabled="@busy">ประมวลผล</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="grid gap-5 xl:grid-cols-2">
+        <!-- ================= Auth API ================= -->
+        <section class="card card-body space-y-3">
+            <h2 class="font-semibold text-stone-900">ระบบยืนยันตัวตน (External Auth API)</h2>
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt class="text-stone-500">Endpoint</dt><dd class="font-mono text-xs break-all">POST @Model.Auth.AuthEndpoint</dd>
+                <dt class="text-stone-500">Timeout</dt><dd>@Model.Auth.TimeoutSeconds วินาที (retry 1 ครั้ง)</dd>
+                <dt class="text-stone-500">Session</dt><dd>8 ชั่วโมง (ต่ออายุเมื่อใช้งาน) · จำกัด Login 10 ครั้ง/นาที/IP</dd>
+            </dl>
+            <button type="button" class="btn-outline" data-test="@Url.Action("TestAuthApi")" data-target="authStatus">ทดสอบการเชื่อมต่อ</button>
+            <div id="authStatus" aria-live="polite"></div>
+        </section>
+
+        <!-- ================= การตั้งค่าอื่น ================= -->
+        <section class="card card-body space-y-3">
+            <h2 class="font-semibold text-stone-900">การตั้งค่าอื่น</h2>
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt class="text-stone-500">แหล่งข้อมูล Dashboard</dt><dd>@Model.DashboardSource @(Model.DashboardSource.Equals("Sample", StringComparison.OrdinalIgnoreCase) ? "(ข้อมูลตัวอย่าง)" : "(HIS HealthObject)")</dd>
+                <dt class="text-stone-500">โฟลเดอร์อัปโหลด</dt><dd class="font-mono text-xs break-all">@Model.Upload.DefaultDestinationPath</dd>
+                <dt class="text-stone-500">ขนาดไฟล์สูงสุด</dt><dd>@(Model.Upload.MaxFileSizeInBytes / 1024 / 1024) MB · @string.Join(", ", Model.Upload.AllowedExtensions)</dd>
+            </dl>
+            <form asp-action="ClearCache" method="post">
+                <button type="submit" class="btn-outline">ล้าง cache ข้อมูล (Dashboard / Discharge)</button>
+            </form>
+        </section>
+    </div>
+
+    <!-- ================= ฐานข้อมูล ================= -->
+    <section class="card card-body">
+        <h2 class="mb-1 font-semibold text-stone-900">ฐานข้อมูล</h2>
+        <p class="mb-4 text-sm text-stone-500">ปุ่มทดสอบจะเปิด connection อย่างเดียว ไม่รันคำสั่ง SQL · ไม่แสดงรหัสผ่าน</p>
+        <div class="table-wrap max-h-none">
+            <table class="data-table">
+                <thead><tr><th>ชื่อ</th><th>Server</th><th>Database</th><th>User</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var db in Model.Databases)
+                    {
+                        <tr>
+                            <td class="font-medium">@db.Name</td>
+                            <td class="font-mono text-xs">@db.Server</td>
+                            <td class="font-mono text-xs">@db.Database</td>
+                            <td>
+                                @db.User
+                                @if (db.UsesSaAccount)
+                                {
+                                    <span class="badge ml-1 bg-amber-50 text-amber-700" title="ควรใช้ user ที่มีสิทธิ์อ่านอย่างเดียว">ใช้บัญชี sa</span>
+                                }
+                            </td>
+                            <td class="text-right">
+                                <button type="button" class="btn-ghost px-3 py-1.5" data-test="@Url.Action("TestDatabase", new { name = db.Name })" data-target="db-@db.Name">ทดสอบ</button>
+                                <div id="db-@db.Name" class="mt-1 text-left whitespace-normal" aria-live="polite"></div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll("[data-test]").forEach(btn => btn.addEventListener("click", async () => {
+            const target = document.getElementById(btn.dataset.target);
+            const label = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+            try {
+                const r = await app.json(btn.dataset.test, { method: "POST" });
+                target.innerHTML = `<div class="${r.success ? "alert-success" : "alert-error"} py-2 text-xs">${app.escapeHtml(r.message)}</div>`;
+            } catch (err) {
+                target.innerHTML = `<div class="alert-error py-2 text-xs">${app.escapeHtml(err.message)}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = label;
+            }
+        }));
+    </script>
+}

@@ -1,0 +1,187 @@
+@using Financial.Services.Discharges
+@model DischargeQueryResult
+@{
+    var isIpd = Model.Type == PatientTypeCodes.IPD;
+    ViewData["Title"] = isIpd ? "Discharge IPD — ผู้ป่วยใน" : "Discharge OPD — ผู้ป่วยนอก";
+    var th = System.Globalization.CultureInfo.GetCultureInfo("th-TH");
+    var columnCount = isIpd ? 8 : 9;
+}
+
+<div class="space-y-5">
+    <!-- ตัวกรอง -->
+    <section class="card card-body">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <form method="get" asp-action="@PatientTypeCodes.Abbreviation(Model.Type)" class="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.4fr_auto]" data-loading="กำลังค้นหา...">
+                <div>
+                    <label for="start" class="label">จากวันที่</label>
+                    <input type="date" id="start" name="start" class="input" value="@Model.Range.StartInput" required />
+                </div>
+                <div>
+                    <label for="end" class="label">ถึงวันที่</label>
+                    <input type="date" id="end" name="end" class="input" value="@Model.Range.EndInput" required />
+                </div>
+                <div>
+                    <label for="right" class="label">สิทธิ์การรักษา</label>
+                    <select id="right" name="right" class="input" data-autosubmit>
+                        <option value="">ทุกสิทธิ์ (@Model.UnfilteredCount.ToString("N0") รายการ)</option>
+                        @foreach (var r in Model.Rights)
+                        {
+                            <option value="@r.Name" selected="@(r.Name == Model.RightFilter)">@r.Name (@r.Count.ToString("N0"))</option>
+                        }
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="btn-primary w-full sm:w-auto">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                        ค้นหา
+                    </button>
+                </div>
+            </form>
+
+            <form method="post" asp-action="Export" data-loading="กำลังสร้างไฟล์..." data-download>
+                <input type="hidden" name="type" value="@Model.Type" />
+                <input type="hidden" name="start" value="@Model.Range.StartInput" />
+                <input type="hidden" name="end" value="@Model.Range.EndInput" />
+                <input type="hidden" name="right" value="@Model.RightFilter" />
+                <button type="submit" class="btn-dark w-full lg:w-auto" disabled="@(Model.Items.Count == 0)"
+                        title="@(Model.RightFilter is null ? "ส่งออกทุกสิทธิ์" : "ส่งออกเฉพาะสิทธิ์ " + Model.RightFilter)">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16" /></svg>
+                    ส่งออก Excel@(Model.RightFilter is null ? "" : " (ตามสิทธิ์ที่เลือก)")
+                </button>
+            </form>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+            @foreach (var (label, days) in new[] { ("เมื่อวาน", 1), ("7 วัน", 7), ("30 วัน", 30) })
+            {
+                var to = DateOnly.FromDateTime(DateTime.Today).AddDays(-1);
+                <a class="badge bg-sand-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700"
+                   asp-action="@PatientTypeCodes.Abbreviation(Model.Type)" asp-route-start="@to.AddDays(1 - days).ToString("yyyy-MM-dd")" asp-route-end="@to.ToString("yyyy-MM-dd")" asp-route-right="@Model.RightFilter">@label</a>
+            }
+        </div>
+    </section>
+
+    @if (!Model.Succeeded)
+    {
+        <div class="alert-error" role="alert">@Model.ErrorMessage</div>
+    }
+
+    <!-- สรุป -->
+    <section class="grid gap-4 sm:grid-cols-3">
+        <div class="card card-body">
+            <div class="text-sm text-stone-500">ช่วงวันที่</div>
+            <div class="mt-1 font-semibold text-stone-900">@Model.Range.Start.ToString("d MMM yyyy", th) – @Model.Range.End.ToString("d MMM yyyy", th)</div>
+        </div>
+        <div class="card card-body">
+            <div class="text-sm text-stone-500">จำนวนรายการ@(Model.RightFilter is null ? "" : " (กรองสิทธิ์)")</div>
+            <div class="mt-1 text-2xl font-semibold text-stone-900 tabular-nums">@Model.Items.Count.ToString("N0")</div>
+            @if (Model.RightFilter is not null)
+            {
+                <div class="mt-1 text-xs text-stone-500">จากทั้งหมด @Model.UnfilteredCount.ToString("N0") รายการ</div>
+            }
+        </div>
+        <div class="card card-body">
+            <div class="text-sm text-stone-500">ยอดรวม</div>
+            <div class="mt-1 text-2xl font-semibold text-brand-600 tabular-nums">฿@Model.TotalAmount.ToString("N2")</div>
+        </div>
+    </section>
+
+    @if (Model.Rights.Count > 1)
+    {
+        <!-- สรุปตามสิทธิ์ -->
+        <section class="card card-body">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold text-stone-900">สรุปตามสิทธิ์การรักษา</h2>
+                @if (Model.RightFilter is not null)
+                {
+                    <a class="btn-ghost px-3 py-1.5 text-xs" asp-action="@PatientTypeCodes.Abbreviation(Model.Type)" asp-route-start="@Model.Range.StartInput" asp-route-end="@Model.Range.EndInput">ล้างตัวกรองสิทธิ์</a>
+                }
+            </div>
+            <div class="flex flex-wrap gap-2">
+                @foreach (var r in Model.Rights)
+                {
+                    var active = r.Name == Model.RightFilter;
+                    <a asp-action="@PatientTypeCodes.Abbreviation(Model.Type)" asp-route-start="@Model.Range.StartInput" asp-route-end="@Model.Range.EndInput" asp-route-right="@(active ? null : r.Name)"
+                       class="rounded-xl border px-3 py-2 text-sm transition @(active ? "border-brand-500 bg-brand-50 text-brand-700" : "border-sand-200 bg-white text-stone-700 hover:border-brand-300")"
+                       aria-pressed="@(active ? "true" : "false")">
+                        <span class="font-medium">@r.Name</span>
+                        <span class="ml-1 text-xs text-stone-500 tabular-nums">@r.Count.ToString("N0") ราย · ฿@r.Amount.ToString("N0")</span>
+                    </a>
+                }
+            </div>
+        </section>
+    }
+
+    <!-- ตาราง -->
+    <section class="card card-body">
+        <div class="mb-3 flex items-center gap-3">
+            <input type="search" id="tableFilter" class="input max-w-xs" placeholder="กรองในตาราง (ชื่อ, HN, สิทธิ์...)" aria-label="กรองข้อมูลในตาราง" />
+            <span id="filterCount" class="text-sm text-stone-500"></span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>ลำดับ</th>
+                        <th>ชื่อ-สกุล</th>
+                        <th>สิทธิ์</th>
+                        @if (!isIpd) { <th>เงื่อนไขการเรียกเก็บ</th> }
+                        <th>HN</th>
+                        <th>@(isIpd ? "AN" : "VN")</th>
+                        @if (isIpd) { <th>วันรับ</th> }
+                        <th>@(isIpd ? "วันจำหน่าย" : "วันที่")</th>
+                        <th class="text-right">จำนวนเงิน</th>
+                        @if (!isIpd) { <th>คลินิก</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="@columnCount" class="py-14 text-center text-stone-500">
+                                @(Model.Succeeded ? "ไม่พบข้อมูลในช่วงวันที่ที่เลือก" : "ไม่สามารถแสดงข้อมูลได้")
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-stone-500 tabular-nums">@item.Id</td>
+                            <td class="font-medium text-stone-900">@item.FullName</td>
+                            <td>@item.TreatmentRight</td>
+                            @if (!isIpd) { <td>@item.BillCon</td> }
+                            <td class="tabular-nums">@item.HN</td>
+                            <td class="tabular-nums">@item.AN</td>
+                            @if (isIpd) { <td>@item.Admit</td> }
+                            <td>@item.DCDate</td>
+                            <td class="num">@DischargeQueryResult.ParseAmount(item.Amount).ToString("N2")</td>
+                            @if (!isIpd) { <td>@item.Clinic</td> }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll("select[data-autosubmit]").forEach(el => el.addEventListener("change", () => el.form.requestSubmit()));
+
+        (function () {
+            const input = document.getElementById("tableFilter");
+            const rows = Array.from(document.querySelectorAll("#dataTable tbody tr"));
+            const count = document.getElementById("filterCount");
+            const texts = rows.map(r => r.textContent.toLowerCase());
+            let timer;
+            input.addEventListener("input", () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    const q = input.value.trim().toLowerCase();
+                    let shown = 0;
+                    rows.forEach((r, i) => { const ok = !q || texts[i].includes(q); r.hidden = !ok; if (ok) shown++; });
+                    count.textContent = q ? `แสดง ${shown.toLocaleString("th-TH")} จาก ${rows.length.toLocaleString("th-TH")} รายการ` : "";
+                }, 150);
+            });
+        })();
+    </script>
+}

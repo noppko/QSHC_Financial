@@ -1,279 +1,98 @@
-﻿@model IEnumerable<Financial.Database.InterfaceSystem.Models.PatientEdcregister>
-
+@model IEnumerable<Financial.Database.InterfaceSystem.Models.PatientEdcregister>
 @{
-    ViewData["Title"] = "EDC Interface";
+    ViewData["Title"] = "ข้อมูล EDC";
 }
-
-<!-- EDC Interface -->
-<div class="max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="bg-white rounded-3xl shadow-lg p-8 mb-6">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center space-x-3">
-                <div
-                    class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-credit-card text-white text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-800">EDC Interface</h1>
-                    <p class="text-sm text-gray-500">อัปโหลดและจัดการข้อมูล EDC</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Upload Form -->
-        <form asp-action="UploadEDCFile" enctype="multipart/form-data"
-              class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6">
-            <div class="flex space-x-3">
-                <input type="file" name="file" required
-                       class="flex-1 px-4 py-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white">
-                <button type="submit"
-                        class="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg">
-                    <i class="fas fa-upload mr-2"></i>Upload
-                </button>
-            </div>
+<div class="space-y-5">
+    <section class="card card-body">
+        <h2 class="mb-1 font-semibold text-stone-900">ตรวจไฟล์ก่อนนำเข้า</h2>
+        <p class="mb-4 text-sm text-stone-500">อ่านไฟล์ (คั่นด้วย |) เพื่อแสดงตัวอย่างเท่านั้น ยังไม่บันทึกลงฐานข้อมูล — นำเข้าจริงที่เมนู “นำเข้าไฟล์ EDC”</p>
+        <form id="previewForm" class="flex flex-col gap-3 sm:flex-row">
+            <input type="file" name="file" accept=".txt" required class="input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-brand-700" />
+            <button type="submit" class="btn-primary">แสดงตัวอย่าง</button>
         </form>
-    </div>
+        <div id="previewResult" class="mt-4" aria-live="polite"></div>
+    </section>
 
-    <!-- Data Table Card -->
-    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-        <div class="px-8 py-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Recent Records</h2>
-        </div>
-        @* <h1>เลือก Path Directory</h1>
-<input type="file" id="fileInput" webkitdirectory mozdirectory />
-<br>
-<br>
-<button onclick="getDirectory()">แสดง Path Directory</button>
-<p id="directoryPath"></p> *@
-
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Code)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.CompanyCode)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.CompanyName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.MerchantNo)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.MerchantName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Htype)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.TerminalId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.TransactionDate)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.PostDate)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.PersonalId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Name)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Surname)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.RefPid)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Pidcus)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.CusName)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.CusSurname)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Paidtype1)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Paidtype2)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.BirthDate)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.EditDate)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.TranAmt)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Batch)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Trace)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.TxnsCode)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.AppCode)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.TransRefId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.UserId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Cuser)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Muser)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Cwhen)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Mwhen)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.StatusFlag)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Timestamp)
-                    </th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
+    <section class="card card-body">
+        <h2 class="mb-4 font-semibold text-stone-900">รายการลงทะเบียน EDC ล่าสุด (50 รายการ)</h2>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Code)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.CompanyCode)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.CompanyName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.MerchantNo)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.MerchantName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Htype)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.TerminalId)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.TransactionDate)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.PostDate)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.PersonalId)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Name)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Surname)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.RefPid)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Pidcus)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.CusName)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.CusSurname)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Paidtype1)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Paidtype2)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.BirthDate)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.EditDate)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.TranAmt)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Batch)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Trace)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.TxnsCode)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.AppCode)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.TransRefId)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.UserId)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Cuser)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Muser)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Cwhen)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Mwhen)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.StatusFlag)
-                        </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Timestamp)
-                        </td>
-                        <td>
-                            <a asp-action="Edit" asp-route-id="@item.Uid">Edit</a> |
-                            <a asp-action="Details" asp-route-id="@item.Uid">Details</a> |
-                            <a asp-action="Delete" asp-route-id="@item.Uid">Delete</a>
-                        </td>
+                        <th>@Html.DisplayNameFor(m => m.Code)</th>
+                        <th>@Html.DisplayNameFor(m => m.TransactionDate)</th>
+                        <th>@Html.DisplayNameFor(m => m.PostDate)</th>
+                        <th>@Html.DisplayNameFor(m => m.MerchantName)</th>
+                        <th>@Html.DisplayNameFor(m => m.TerminalId)</th>
+                        <th>@Html.DisplayNameFor(m => m.Name)</th>
+                        <th>@Html.DisplayNameFor(m => m.Surname)</th>
+                        <th>@Html.DisplayNameFor(m => m.Paidtype1)</th>
+                        <th class="text-right">@Html.DisplayNameFor(m => m.TranAmt)</th>
+                        <th>@Html.DisplayNameFor(m => m.Batch)</th>
+                        <th>@Html.DisplayNameFor(m => m.Trace)</th>
+                        <th>@Html.DisplayNameFor(m => m.AppCode)</th>
+                        <th>@Html.DisplayNameFor(m => m.TransRefId)</th>
+                        <th>@Html.DisplayNameFor(m => m.StatusFlag)</th>
+                        <th>@Html.DisplayNameFor(m => m.Cwhen)</th>
                     </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="15" class="py-14 text-center text-stone-500">ยังไม่มีข้อมูล</td></tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Code</td>
+                            <td>@Html.DisplayFor(_ => item.TransactionDate)</td>
+                            <td>@Html.DisplayFor(_ => item.PostDate)</td>
+                            <td>@item.MerchantName</td>
+                            <td>@item.TerminalId</td>
+                            <td>@item.Name</td>
+                            <td>@item.Surname</td>
+                            <td>@item.Paidtype1</td>
+                            <td class="num">@Html.DisplayFor(_ => item.TranAmt)</td>
+                            <td>@item.Batch</td>
+                            <td>@item.Trace</td>
+                            <td>@item.AppCode</td>
+                            <td>@item.TransRefId</td>
+                            <td><span class="badge @(item.StatusFlag == "A" ? "bg-emerald-50 text-emerald-700" : "bg-sand-100 text-stone-600")">@item.StatusFlag</span></td>
+                            <td>@Html.DisplayFor(_ => item.Cwhen)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById("previewForm");
+            const result = document.getElementById("previewResult");
+            const { escapeHtml } = window.app;
+
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                const btn = form.querySelector("button");
+                btn.disabled = true;
+                result.innerHTML = '<div class="flex items-center gap-2 text-sm text-stone-500"><span class="spinner"></span> กำลังอ่านไฟล์...</div>';
+                try {
+                    const r = await app.json("@Url.Action("PreviewEDCFile")", { method: "POST", body: new FormData(form) });
+                    const cols = Math.max(0, ...r.data.map(row => row.length));
+                    const head = Array.from({ length: cols }, (_, i) => `<th>คอลัมน์ ${i + 1}</th>`).join("");
+                    const body = r.data.map(row => `<tr>${Array.from({ length: cols }, (_, i) => `<td>${escapeHtml(row[i])}</td>`).join("")}</tr>`).join("");
+                    result.innerHTML = `
+                        <p class="mb-2 text-sm text-stone-600">พบ ${r.total.toLocaleString("th-TH")} รายการ${r.total > r.data.length ? ` (แสดง ${r.data.length} รายการแรก)` : ""}</p>
+                        <div class="table-wrap max-h-96"><table class="data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+                } catch (err) {
+                    result.innerHTML = `<div class="alert-error">${escapeHtml(err.message)}</div>`;
+                } finally {
+                    btn.disabled = false;
                 }
-            </tbody>
-        </table>
-        @section Scripts {
-            @{
-                await Html.RenderPartialAsync("_ValidationScriptsPartial");
-            }
-            <script>
-                        function getDirectory() {
-                            const input = document.getElementById('fileInput');
-                            const directoryPath = input.files.length > 0 ? input.files[0].webkitRelativePath.split('/')[0] : '';
-                            document.getElementById('directoryPath').innerText = 'Path Directory: ' + directoryPath;
-                        }
-            </script>
-        }
+            });
+        })();
+    </script>
+}

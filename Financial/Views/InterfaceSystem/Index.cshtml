@@ -1,436 +1,114 @@
 ﻿@{
-    ViewData["Title"] = "Interface System - File Upload";
+    ViewData["Title"] = "นำเข้าไฟล์ EDC";
+    var destination = ViewData["DestinationPath"] as string;
 }
-
-<style>
-    .upload-container {
-        background: var(--card);
-        border-radius: var(--radius-xl);
-        padding: 28px;
-        max-width: 900px;
-    }
-
-    .upload-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .upload-header-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, var(--orange), var(--orange-2));
-        display: grid;
-        place-items: center;
-        font-size: 24px;
-        flex-shrink: 0;
-    }
-
-    .upload-header-text h1 {
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--ink);
-        margin-bottom: 4px;
-    }
-
-    .upload-header-text p {
-        font-size: 14px;
-        color: var(--muted);
-    }
-
-    .form-section {
-        margin-bottom: 28px;
-    }
-
-    .form-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--ink);
-        margin-bottom: 12px;
-    }
-
-    .form-label .icon {
-        width: 18px;
-        height: 18px;
-        display: grid;
-        place-items: center;
-        font-size: 14px;
-    }
-
-    .path-input-group {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 12px;
-    }
-
-    .form-input {
-        flex: 1;
-        padding: 12px 16px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius-md);
-        font-family: inherit;
-        font-size: 14px;
-        color: var(--ink);
-        background: #fff;
-        transition: all 0.2s;
-    }
-
-    .form-input::placeholder {
-        color: var(--muted);
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: var(--orange);
-        box-shadow: 0 0 0 3px rgba(244, 85, 31, 0.1);
-    }
-
-    .btn {
-        padding: 12px 20px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius-md);
-        font-family: inherit;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        background: #fff;
-        color: var(--ink-2);
-        transition: all 0.2s;
-    }
-
-    .btn:hover {
-        background: var(--card-soft);
-        border-color: var(--muted);
-    }
-
-    .btn-primary {
-        background: var(--orange);
-        color: #fff;
-        border-color: var(--orange);
-    }
-
-    .btn-primary:hover {
-        background: var(--orange-2);
-        border-color: var(--orange-2);
-    }
-
-    .connection-status {
-        padding: 12px 16px;
-        border-radius: var(--radius-md);
-        font-size: 13px;
-        margin-top: 12px;
-        display: none;
-    }
-
-    .connection-status.success {
-        display: block;
-        background: #E8F7EF;
-        color: var(--green);
-        border: 1px solid var(--green);
-    }
-
-    .connection-status.error {
-        display: block;
-        background: #FDEBEA;
-        color: var(--red);
-        border: 1px solid var(--red);
-    }
-
-    .upload-area {
-        border: 2px dashed var(--line);
-        border-radius: var(--radius-lg);
-        padding: 40px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-        background: #fff;
-    }
-
-    .upload-area:hover {
-        border-color: var(--orange);
-        background: rgba(244, 85, 31, 0.02);
-    }
-
-    .upload-area-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
-    }
-
-    .upload-area-text h5 {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--ink);
-        margin-bottom: 8px;
-    }
-
-    .upload-area-text p {
-        font-size: 13px;
-        color: var(--muted);
-    }
-
-    #fileInput {
-        display: none;
-    }
-
-    .file-info {
-        padding: 16px;
-        background: var(--card-soft);
-        border-radius: var(--radius-md);
-        margin-top: 16px;
-        display: none;
-    }
-
-    .file-info.show {
-        display: block;
-    }
-
-    .file-info-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--line);
-        font-size: 13.5px;
-    }
-
-    .file-info-row:last-child {
-        border-bottom: none;
-    }
-
-    .file-info-row span:first-child {
-        color: var(--muted);
-        font-weight: 600;
-    }
-
-    .file-info-row span:last-child {
-        color: var(--ink);
-        font-weight: 500;
-    }
-
-    .actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 28px;
-    }
-
-    .info-box {
-        background: rgba(244, 85, 31, 0.05);
-        border-left: 4px solid var(--orange);
-        border-radius: var(--radius-md);
-        padding: 16px;
-        margin-top: 24px;
-        font-size: 13.5px;
-        color: var(--ink-2);
-    }
-
-    .info-box strong {
-        color: var(--ink);
-        font-weight: 600;
-    }
-</style>
-
-<div class="upload-container">
-    <div class="upload-header">
-        <div class="upload-header-icon">☁️</div>
-        <div class="upload-header-text">
-            <h1>Interface System File Upload</h1>
-            <p>อัปโหลดไฟล์ไปยัง Network Path</p>
-        </div>
-    </div>
-
-    <form id="uploadForm" enctype="multipart/form-data">
-        <!-- Destination Path -->
-        <div class="form-section">
-            <label class="form-label">
-                <span class="icon">📁</span>
-                Destination Path
-            </label>
-            <div class="path-input-group">
-                <input type="text" id="destinationPath" class="form-input"
-                       placeholder="\\10.67.67.77\interface\CLAIM\EDC"
-                       value="\\10.67.67.77\interface\CLAIM\EDC">
-                <button type="button" id="testConnection" class="btn btn-primary">
-                    🔗 Test Connection
-                </button>
+<div class="grid gap-5 xl:grid-cols-[1fr_320px]">
+    <section class="card card-body space-y-6">
+        <div>
+            <div class="label">โฟลเดอร์ปลายทาง (ตั้งค่าที่ server)</div>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <code class="input flex-1 truncate bg-sand-50 font-mono text-xs leading-6">@(string.IsNullOrEmpty(destination) ? "ยังไม่ได้ตั้งค่า FileUpload:DefaultDestinationPath" : destination)</code>
+                <button type="button" id="testConnection" class="btn-outline">ทดสอบการเชื่อมต่อ</button>
             </div>
-            <div id="connectionStatus" class="connection-status"></div>
+            <div id="connectionStatus" class="mt-3" aria-live="polite"></div>
         </div>
 
-        <!-- File Upload Area -->
-        <div class="form-section">
-            <label class="form-label">
-                <span class="icon">📄</span>
-                Select File
+        <form id="uploadForm" class="space-y-4">
+            <label for="fileInput" id="dropZone"
+                   class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-sand-300 bg-sand-50 px-6 py-12 text-center transition hover:border-brand-400 hover:bg-brand-50/40">
+                <svg class="mb-3 size-10 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+                <span class="font-medium text-stone-800">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวาง</span>
+                <span class="mt-1 text-sm text-stone-500">ไฟล์ .txt ขึ้นต้นด้วย HCG14584 · สูงสุด @ViewData["MaxFileSizeMb"] MB</span>
+                <input type="file" id="fileInput" name="file" accept=".txt" class="sr-only" />
             </label>
-            <div id="uploadArea" class="upload-area">
-                <div class="upload-area-icon">⬆️</div>
-                <div class="upload-area-text">
-                    <h5>Click to select file or drag and drop</h5>
-                    <p>Maximum file size: 50MB</p>
-                </div>
-                <input type="file" id="fileInput" accept="*/*">
+
+            <dl id="fileInfo" class="hidden grid-cols-[auto_1fr] gap-x-6 gap-y-1 rounded-xl bg-sand-50 p-4 text-sm"></dl>
+
+            <div class="flex gap-3">
+                <button type="submit" id="uploadBtn" class="btn-primary" disabled>นำเข้าไฟล์</button>
+                <button type="reset" id="clearBtn" class="btn-ghost">ล้าง</button>
             </div>
-            <div id="fileInfo" class="file-info"></div>
-        </div>
+            <div id="uploadStatus" aria-live="polite"></div>
+        </form>
+    </section>
 
-        <!-- Action Buttons -->
-        <div class="actions">
-            <button type="button" id="clearForm" class="btn">
-                🔄 Clear
-            </button>
-            <button type="submit" id="uploadBtn" class="btn btn-primary">
-                ⬆️ Upload File
-            </button>
-        </div>
-    </form>
-
-    <div class="info-box">
-        <strong>ข้อมูลไฟล์:</strong><br>
-        • ไฟล์ต้องเป็น .txt เท่านั้น<br>
-        • ชื่อไฟล์ต้องขึ้นต้นด้วย HCG14584<br>
-        • ขนาดไฟล์สูงสุด 50MB
-    </div>
+    <aside class="alert-info h-fit flex-col">
+        <strong class="font-semibold">เงื่อนไขไฟล์</strong>
+        <ul class="list-disc space-y-1 pl-5">
+            <li>นามสกุล .txt เท่านั้น</li>
+            <li>ชื่อไฟล์ต้องขึ้นต้นด้วย <code>HCG14584</code></li>
+            <li>ขนาดไม่เกิน @ViewData["MaxFileSizeMb"] MB</li>
+            <li>ดูข้อมูลที่นำเข้าแล้วได้ที่เมนู “ข้อมูล EDC”</li>
+        </ul>
+    </aside>
 </div>
 
-<script>
-    const uploadForm = document.getElementById('uploadForm');
-    const fileInput = document.getElementById('fileInput');
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInfo = document.getElementById('fileInfo');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const testBtn = document.getElementById('testConnection');
-    const destinationInput = document.getElementById('destinationPath');
-    const connectionStatus = document.getElementById('connectionStatus');
-    const clearBtn = document.getElementById('clearForm');
+@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById("uploadForm");
+            const fileInput = document.getElementById("fileInput");
+            const dropZone = document.getElementById("dropZone");
+            const fileInfo = document.getElementById("fileInfo");
+            const uploadBtn = document.getElementById("uploadBtn");
+            const uploadStatus = document.getElementById("uploadStatus");
+            const testBtn = document.getElementById("testConnection");
+            const connectionStatus = document.getElementById("connectionStatus");
+            const { escapeHtml } = window.app;
 
-    uploadArea.addEventListener('click', () => fileInput.click());
+            const status = (el, ok, message) =>
+                el.innerHTML = `<div class="${ok ? "alert-success" : "alert-error"}">${escapeHtml(message)}</div>`;
 
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.style.borderColor = 'var(--orange)';
-        uploadArea.style.background = 'rgba(244, 85, 31, 0.02)';
-    });
+            function showFile() {
+                const file = fileInput.files[0];
+                uploadBtn.disabled = !file;
+                uploadStatus.innerHTML = "";
+                if (!file) { fileInfo.classList.add("hidden"); fileInfo.classList.remove("grid"); return; }
+                fileInfo.innerHTML = `
+                    <dt class="text-stone-500">ชื่อไฟล์</dt><dd class="truncate font-medium">${escapeHtml(file.name)}</dd>
+                    <dt class="text-stone-500">ขนาด</dt><dd>${(file.size / 1024 / 1024).toFixed(2)} MB</dd>`;
+                fileInfo.classList.remove("hidden"); fileInfo.classList.add("grid");
+            }
 
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.style.borderColor = 'var(--line)';
-        uploadArea.style.background = '#fff';
-    });
+            fileInput.addEventListener("change", showFile);
+            ["dragenter", "dragover"].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add("border-brand-500"); }));
+            ["dragleave", "drop"].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.remove("border-brand-500")));
+            dropZone.addEventListener("drop", e => { e.preventDefault(); fileInput.files = e.dataTransfer.files; showFile(); });
+            form.addEventListener("reset", () => setTimeout(showFile));
 
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.style.borderColor = 'var(--line)';
-        uploadArea.style.background = '#fff';
-        fileInput.files = e.dataTransfer.files;
-        displayFileInfo();
-    });
-
-    fileInput.addEventListener('change', displayFileInfo);
-
-    function displayFileInfo() {
-        if (fileInput.files.length === 0) {
-            fileInfo.classList.remove('show');
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-
-        fileInfo.innerHTML = `
-            <div class="file-info-row">
-                <span>File Name:</span>
-                <span>${file.name}</span>
-            </div>
-            <div class="file-info-row">
-                <span>File Size:</span>
-                <span>${fileSize} MB</span>
-            </div>
-            <div class="file-info-row">
-                <span>File Type:</span>
-                <span>${file.type || 'Unknown'}</span>
-            </div>
-        `;
-        fileInfo.classList.add('show');
-    }
-
-    testBtn.addEventListener('click', async () => {
-        const path = destinationInput.value;
-        if (!path) {
-            showStatus('Please enter a destination path', 'error');
-            return;
-        }
-
-        testBtn.disabled = true;
-        testBtn.textContent = '⏳ Testing...';
-
-        try {
-            const response = await fetch('/InterfaceSystem/CheckFileExists', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ destinationPath: path, fileName: 'test.txt' })
+            testBtn.addEventListener("click", async () => {
+                testBtn.disabled = true;
+                testBtn.innerHTML = '<span class="spinner"></span> กำลังทดสอบ...';
+                try {
+                    const r = await app.json("@Url.Action("TestConnection")", { method: "POST" });
+                    status(connectionStatus, r.success, r.message);
+                } catch (err) {
+                    status(connectionStatus, false, err.message);
+                } finally {
+                    testBtn.disabled = false;
+                    testBtn.textContent = "ทดสอบการเชื่อมต่อ";
+                }
             });
 
-            const result = await response.json();
-            if (result.error) {
-                showStatus('❌ ' + result.error, 'error');
-            } else {
-                showStatus('✅ Connection successful', 'success');
-            }
-        } catch (error) {
-            showStatus('❌ ' + error.message, 'error');
-        } finally {
-            testBtn.disabled = false;
-            testBtn.textContent = '🔗 Test Connection';
-        }
-    });
-
-    uploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        if (fileInput.files.length === 0) {
-            showStatus('Please select a file', 'error');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        uploadBtn.disabled = true;
-        uploadBtn.textContent = '⏳ Uploading...';
-
-        try {
-            const response = await fetch('/InterfaceSystem/ImportEDC', {
-                method: 'POST',
-                body: formData
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                const file = fileInput.files[0];
+                if (!file) return;
+                const data = new FormData();
+                data.append("file", file);
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<span class="spinner"></span> กำลังนำเข้า...';
+                try {
+                    const r = await app.json("@Url.Action("ImportEDC")", { method: "POST", body: data });
+                    if (r.success) { status(uploadStatus, true, `นำเข้าสำเร็จ ${r.records.toLocaleString("th-TH")} รายการ`); form.reset(); }
+                    else status(uploadStatus, false, r.error);
+                } catch (err) {
+                    status(uploadStatus, false, err.message);
+                } finally {
+                    uploadBtn.textContent = "นำเข้าไฟล์";
+                    uploadBtn.disabled = !fileInput.files[0];
+                }
             });
-
-            const result = await response.json();
-            if (result.error) {
-                showStatus('❌ ' + result.error, 'error');
-            } else {
-                showStatus('✅ File uploaded successfully', 'success');
-                uploadForm.reset();
-                fileInfo.classList.remove('show');
-            }
-        } catch (error) {
-            showStatus('❌ ' + error.message, 'error');
-        } finally {
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = '⬆️ Upload File';
-        }
-    });
-
-    clearBtn.addEventListener('click', () => {
-        uploadForm.reset();
-        fileInfo.classList.remove('show');
-        connectionStatus.classList.remove('success', 'error');
-    });
-
-    function showStatus(message, type) {
-        connectionStatus.textContent = message;
-        connectionStatus.className = `connection-status ${type}`;
-    }
-</script>
+        })();
+    </script>
+}

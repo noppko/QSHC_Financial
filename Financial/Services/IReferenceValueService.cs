@@ -18,6 +18,11 @@ namespace Financial.Services
         Task<ReferenceValue?> GetByCodeAsync(string category, string code);
 
         /// <summary>
+        /// ชื่อภาษาไทยของรหัส (ใช้ cache ของ category) — อ่านฐานไม่ได้หรือไม่พบรหัส คืนค่า fallback
+        /// </summary>
+        Task<string> GetNameAsync(string category, string code, string fallback);
+
+        /// <summary>
         /// เพิ่มหรืออัปเดต Reference Value
         /// </summary>
         Task<bool> SaveAsync(ReferenceValue value);

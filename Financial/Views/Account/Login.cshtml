@@ -1,201 +1,95 @@
-﻿@model Financial.DTOs.Account.LoginRequest
+@model Financial.DTOs.Account.LoginRequest
 @{
     ViewData["Title"] = "เข้าสู่ระบบ";
-    Layout = "";
+    Layout = null;
 }
-
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ - ระบบบัญชี</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>เข้าสู่ระบบ - QSHC Financial</title>
+    <partial name="_Icons" />
+    <link rel="preload" href="~/fonts/kanit/kanit-thai-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <style>
-            body {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .floating-shape {
-                position: absolute;
-                border-radius: 50%;
-                opacity: 0.1;
-                animation: float 20s infinite ease-in-out;
-            }
-
-            .shape-1 {
-                width: 300px;
-                height: 300px;
-                background: white;
-                top: -100px;
-                left: -100px;
-                animation-delay: 0s;
-            }
-
-            .shape-2 {
-                width: 200px;
-                height: 200px;
-                background: white;
-                bottom: -50px;
-                right: 10%;
-                animation-delay: 5s;
-            }
-
-            .shape-3 {
-                width: 150px;
-                height: 150px;
-                background: white;
-                top: 50%;
-                right: -50px;
-                animation-delay: 10s;
-            }
-
-            @@keyframes float {
-
-                0%,
-                100% {
-                    transform: translateY(0) rotate(0deg);
-                }
-
-                50% {
-                    transform: translateY(-30px) rotate(180deg);
-                }
-            }
-    </style>
 </head>
-
-<body>
-    <!-- Floating Shapes -->
-    <div class="floating-shape shape-1"></div>
-    <div class="floating-shape shape-2"></div>
-    <div class="floating-shape shape-3"></div>
-
-    <!-- Login Container -->
-    <div class="w-full max-w-md mx-4 relative z-10">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-10">
-            <!-- Logo & Title -->
-            <div class="text-center mb-8">
-                <div
-                    class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4 transform hover:rotate-12 transition-transform duration-300">
-                    <i class="fas fa-chart-line text-white text-2xl"></i>
+<body class="grid min-h-screen place-items-center bg-linear-to-br from-sand-100 via-sand-50 to-brand-50 p-4">
+    <main class="w-full max-w-md">
+        <div class="card p-8 sm:p-10">
+            <div class="mb-8 text-center">
+                <div class="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-linear-to-br from-brand-500 to-brand-400 shadow-lg shadow-brand-500/25">
+                    <img src="~/images/qshclogo.png" alt="QSHC" class="size-11 object-contain" />
                 </div>
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">ระบบบัญชี</h1>
-                <p class="text-gray-500">เข้าสู่ระบบเพื่อจัดการข้อมูลทางการเงิน</p>
+                <h1 class="text-2xl font-semibold text-stone-900">QSHC Financial</h1>
+                <p class="mt-1 text-sm text-stone-500">เข้าสู่ระบบด้วยบัญชีผู้ใช้ของโรงพยาบาล</p>
             </div>
 
-            <!-- Validation Summary -->
-            <div asp-validation-summary="All"
-                 class="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm hidden"></div>
+            <div asp-validation-summary="ModelOnly" class="alert-error mb-5 [&_ul]:list-none" role="alert"></div>
 
-            <!-- Login Form -->
-            <form asp-action="Login" method="post" id="loginForm">
-                <input asp-for="ReturnUrl" value="@ViewBag.ReturnUrl" type="hidden" />
+            <form asp-action="Login" method="post" id="loginForm" class="space-y-5" novalidate>
+                <input asp-for="ReturnUrl" type="hidden" />
 
-                <!-- Username -->
-                <div class="mb-6">
-                    <label asp-for="Username" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user mr-2 text-primary-600"></i>ชื่อผู้ใช้
-                    </label>
-                    <input asp-for="Username" class="input-field" placeholder="กรอกชื่อผู้ใช้หรืออีเมล" autofocus />
-                    <span asp-validation-for="Username" class="text-red-500 text-sm mt-1"></span>
+                <div>
+                    <label asp-for="Username" class="label">ชื่อผู้ใช้</label>
+                    <input asp-for="Username" class="input" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
+                    <span asp-validation-for="Username"></span>
                 </div>
 
-                <!-- Password -->
-                <div class="mb-6">
-                    <label asp-for="Password" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-2 text-primary-600"></i>รหัสผ่าน
-                    </label>
+                <div>
+                    <label asp-for="Password" class="label">รหัสผ่าน</label>
                     <div class="relative">
-                        <input asp-for="Password" type="password" id="password-input" class="input-field pr-12"
-                               placeholder="กรอกรหัสผ่าน" />
-                        <button type="button" onclick="togglePassword()"
-                                class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                            <i class="fas fa-eye" id="eye-icon"></i>
+                        <input asp-for="Password" class="input pr-11" autocomplete="current-password" />
+                        <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 grid w-11 place-items-center text-stone-400 hover:text-stone-600" aria-label="แสดงรหัสผ่าน" aria-pressed="false">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                         </button>
                     </div>
-                    <span asp-validation-for="Password" class="text-red-500 text-sm mt-1"></span>
+                    <span asp-validation-for="Password"></span>
+                    <p id="capsWarning" class="mt-1 hidden text-xs text-amber-600">Caps Lock เปิดอยู่</p>
                 </div>
 
-                <!-- Remember Me -->
-                <div class="mb-6 flex items-center justify-between">
-                    <label class="flex items-center cursor-pointer">
-                        <input asp-for="RememberMe" type="checkbox"
-                               class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
-                        <span class="ml-2 text-sm text-gray-600">จดจำการเข้าสู่ระบบ</span>
-                    </label>
-                </div>
+                <label class="flex items-center gap-2 text-sm text-stone-600">
+                    <input asp-for="RememberMe" class="size-4 rounded accent-brand-500" />
+                    จดจำการเข้าสู่ระบบ (8 ชั่วโมง)
+                </label>
 
-                <!-- Submit Button -->
-                <button type="submit"
-                        class="w-full btn-primary py-3 text-lg flex items-center justify-center space-x-2 group">
-                    <span>เข้าสู่ระบบ</span>
-                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-                </button>
+                <button type="submit" class="btn-primary w-full py-3 text-base">เข้าสู่ระบบ</button>
             </form>
-
-            <!-- Test Credentials Info -->
-            <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p class="text-xs text-blue-800 font-medium mb-1">
-                    <i class="fas fa-info-circle mr-1"></i>ข้อมูลทดสอบ:
-                </p>
-                <p class="text-xs text-blue-700">Username: <code class="bg-blue-100 px-2 py-1 rounded">it099</code></p>
-                <p class="text-xs text-blue-700">Password: <code class="bg-blue-100 px-2 py-1 rounded">abc12345</code>
-                </p>
-            </div>
         </div>
 
-        <!-- Footer -->
-        <div class="text-center mt-6 text-white text-sm">
-            <p>&copy; @DateTime.Now.Year ศูนย์หัวใจสิริกิติ์ฯ</p>
-            <a href="http://10.67.67.169/" target="_blank" class="hover:underline opacity-90">
-                www.sirikit.go.th
-            </a>
-        </div>
-    </div>
+        <p class="mt-6 text-center text-xs text-stone-500">
+            &copy; @DateTime.Now.Year ศูนย์หัวใจสิริกิติ์ภาคตะวันออกเฉียงเหนือ ·
+            <a href="http://10.67.67.169/" class="text-brand-600 hover:underline" target="_blank" rel="noopener">www.sirikit.go.th</a>
+        </p>
+    </main>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
     <script>
-        function togglePassword() {
-        const passwordInput = document.getElementById('password-input');
-        const eyeIcon = document.getElementById('eye-icon');
+        (function () {
+            const form = document.getElementById("loginForm");
+            const password = document.getElementById("Password");
+            const toggle = document.getElementById("togglePassword");
+            const caps = document.getElementById("capsWarning");
 
-        if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        eyeIcon.classList.remove('fa-eye');
-        eyeIcon.classList.add('fa-eye-slash');
-        } else {
-        passwordInput.type = 'password';
-        eyeIcon.classList.remove('fa-eye-slash');
-        eyeIcon.classList.add('fa-eye');
-        }
-        }
+            toggle.addEventListener("click", () => {
+                const show = password.type === "password";
+                password.type = show ? "text" : "password";
+                toggle.setAttribute("aria-pressed", String(show));
+                toggle.setAttribute("aria-label", show ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน");
+            });
 
-        // Show validation summary if there are errors
-        document.addEventListener('DOMContentLoaded', function () {
-        const validationSummary = document.querySelector('[data-valmsg-summary="true"]');
-        if (validationSummary && validationSummary.innerHTML.trim() !== '') {
-        validationSummary.classList.remove('hidden');
-        }
-        });
+            password.addEventListener("keyup", e => caps.classList.toggle("hidden", !e.getModifierState?.("CapsLock")));
 
-        // Form submission animation
-        document.getElementById('loginForm').addEventListener('submit', function (e) {
-        const submitBtn = this.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>กำลังตรวจสอบ...';
-        });
+            form.addEventListener("submit", e => {
+                const user = document.getElementById("Username");
+                if (!user.value.trim() || !password.value) {
+                    e.preventDefault();
+                    (user.value.trim() ? password : user).focus();
+                    return;
+                }
+                const btn = form.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span><span>กำลังตรวจสอบ...</span>';
+            });
+        })();
     </script>
 </body>
-
 </html>
-

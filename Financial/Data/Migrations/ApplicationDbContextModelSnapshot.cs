@@ -17,10 +17,129 @@ namespace Financial.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Financial.Models.AppSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Value")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("AppSettings");
+                });
+
+            modelBuilder.Entity("Financial.Models.NhsoFiscalSummary", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AgreementEncounterCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("AgreementName")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<int>("Bills")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("FiscalYear")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PatientTypeCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("PayorCategoryCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("RefreshedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Visits")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FiscalYear", "PatientTypeCode");
+
+                    b.ToTable("NhsoFiscalSummaries");
+                });
 
             modelBuilder.Entity("Financial.Models.ReferenceValue", b =>
                 {
@@ -56,7 +175,9 @@ namespace Financial.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
@@ -104,7 +225,7 @@ namespace Financial.Data.Migrations
                             Id = 1,
                             Category = "TITLE",
                             Code = "MR",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 1,
                             IsActive = true,
@@ -117,7 +238,7 @@ namespace Financial.Data.Migrations
                             Id = 2,
                             Category = "TITLE",
                             Code = "MRS",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 2,
                             IsActive = true,
@@ -130,7 +251,7 @@ namespace Financial.Data.Migrations
                             Id = 3,
                             Category = "TITLE",
                             Code = "MISS",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 3,
                             IsActive = true,
@@ -143,7 +264,7 @@ namespace Financial.Data.Migrations
                             Id = 4,
                             Category = "TITLE",
                             Code = "DR",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 4,
                             IsActive = true,
@@ -156,7 +277,7 @@ namespace Financial.Data.Migrations
                             Id = 5,
                             Category = "GENDER",
                             Code = "MALE",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 1,
                             IsActive = true,
@@ -169,7 +290,7 @@ namespace Financial.Data.Migrations
                             Id = 6,
                             Category = "GENDER",
                             Code = "FEMALE",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 2,
                             IsActive = true,
@@ -182,7 +303,7 @@ namespace Financial.Data.Migrations
                             Id = 7,
                             Category = "GENDER",
                             Code = "OTHER",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 3,
                             IsActive = true,
@@ -195,7 +316,7 @@ namespace Financial.Data.Migrations
                             Id = 8,
                             Category = "BLOOD_TYPE",
                             Code = "A",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 1,
                             IsActive = true,
@@ -208,7 +329,7 @@ namespace Financial.Data.Migrations
                             Id = 9,
                             Category = "BLOOD_TYPE",
                             Code = "B",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 2,
                             IsActive = true,
@@ -221,7 +342,7 @@ namespace Financial.Data.Migrations
                             Id = 10,
                             Category = "BLOOD_TYPE",
                             Code = "AB",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 3,
                             IsActive = true,
@@ -234,13 +355,81 @@ namespace Financial.Data.Migrations
                             Id = 11,
                             Category = "BLOOD_TYPE",
                             Code = "O",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             CreatedBy = "System",
                             DisplayOrder = 4,
                             IsActive = true,
                             IsSystem = true,
                             NameEN = "O",
                             NameTH = "O"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Category = "PATIENT_TYPE",
+                            Code = "O",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 1,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "OPD",
+                            NameTH = "ผู้ป่วยนอก"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Category = "PATIENT_TYPE",
+                            Code = "I",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 2,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "IPD",
+                            NameTH = "ผู้ป่วยใน"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Category = "ACCESS_LEVEL",
+                            Code = "ADMIN",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            Description = "ตั้งค่าระบบได้ และดูได้ทุกหน้า",
+                            DisplayOrder = 1,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Administrator",
+                            NameTH = "ผู้ดูแลระบบ"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Category = "ACCESS_LEVEL",
+                            Code = "FINANCE",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            Description = "role ขึ้นต้นด้วย Cashier — เข้าเมนูการเงินได้",
+                            DisplayOrder = 2,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Finance",
+                            NameTH = "เจ้าหน้าที่การเงิน"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Category = "ACCESS_LEVEL",
+                            Code = "GENERAL",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            Description = "ดูได้เฉพาะ Dashboard",
+                            DisplayOrder = 3,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "General",
+                            NameTH = "ผู้ใช้งานทั่วไป (Dashboard)"
                         });
                 });
 

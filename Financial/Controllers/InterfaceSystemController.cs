@@ -1,365 +1,292 @@
 ﻿using Financial.Database.InterfaceSystem.Contexts;
+using Financial.Services.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Financial.Database.InterfaceSystem.Models;
 using Financial.Models.ViewModels;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Financial.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Data;
-using System.Globalization;
 
 namespace Financial.Controllers
 {
     /// <summary>
     /// Controller สำหรับจัดการระบบ Interface (EDC, CSMBS, etc.)
     /// </summary>
-    [Authorize]
+    [Authorize(Policy = AppPolicies.FINANCE)]
     public class InterfaceSystemController : Controller
     {
-        private string? _connectionString;
-        private readonly IConfiguration _configuration;
+        private const string EDC_FILE_PREFIX = "HCG14584";
 
-        private InterfaceSystemDbContext _InterfaceSystemDbContext;
+        private readonly InterfaceSystemDbContext _db;
+        private readonly FileUploadOptions _uploadOptions;
+        private readonly ILogger<InterfaceSystemController> _logger;
 
-        public InterfaceSystemController(IConfiguration configuration, InterfaceSystemDbContext InterfaceSystemDbContext)
+        public InterfaceSystemController(
+            InterfaceSystemDbContext db,
+            IOptions<FileUploadOptions> uploadOptions,
+            ILogger<InterfaceSystemController> logger)
         {
-            _configuration = configuration;
-            _connectionString = _configuration.GetConnectionString("InterfaceSystem");
-            _InterfaceSystemDbContext = InterfaceSystemDbContext;
+            _db = db;
+            _uploadOptions = uploadOptions.Value;
+            _logger = logger;
         }
-        // GET: InterfaceEDC
+
+        // GET: /InterfaceSystem
         public IActionResult Index()
         {
+            ViewData["DestinationPath"] = _uploadOptions.DefaultDestinationPath;
+            ViewData["MaxFileSizeMb"] = _uploadOptions.MaxFileSizeInBytes / 1024 / 1024;
             return View();
         }
+
+        /// <summary>
+        /// ทดสอบการเชื่อมต่อโฟลเดอร์ปลายทางที่ตั้งค่าไว้ใน server
+        /// </summary>
         [HttpPost]
-        public IActionResult CheckFileExists(string destinationPath, string fileName)
+        public IActionResult TestConnection()
         {
+            var path = _uploadOptions.DefaultDestinationPath;
             try
             {
-                if (string.IsNullOrWhiteSpace(destinationPath) || string.IsNullOrWhiteSpace(fileName))
-                {
-                    return Json(new { exists = false, message = "Invalid parameters" });
-                }
-
-                var fullPath = Path.Combine(destinationPath, fileName);
-
-                if (System.IO.File.Exists(fullPath))
-                {
-                    var fileInfo = new FileInfo(fullPath);
-                    return Json(new
-                    {
-                        exists = true,
-                        fileName = fileName,
-                        filePath = fullPath,
-                        fileSize = fileInfo.Length,
-                        lastModified = fileInfo.LastWriteTime,
-                        createdDate = fileInfo.CreationTime
-                    });
-                }
-
-                return Json(new { exists = false });
+                return Directory.Exists(path)
+                    ? Json(new { success = true, message = "เชื่อมต่อโฟลเดอร์ปลายทางสำเร็จ" })
+                    : Json(new { success = false, message = "ไม่พบโฟลเดอร์ปลายทาง หรือไม่มีสิทธิ์เข้าถึง" });
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                return Json(new { exists = false, error = ex.Message });
+                _logger.LogWarning(ex, "Test connection failed for {Path}", path);
+                return Json(new { success = false, message = "ไม่มีสิทธิ์เข้าถึงโฟลเดอร์ปลายทาง" });
             }
         }
 
         [HttpPost]
-        public IActionResult ImportEDC(IFormFile file)
+        public IActionResult CheckFileExists(string fileName)
         {
-            var extension = Path.GetExtension(file.FileName);
-            if (string.IsNullOrEmpty(extension) || extension.ToLower() != ".txt")
+            if (!UploadPathGuard.TryResolve(_uploadOptions.DefaultDestinationPath, fileName, out var fullPath))
             {
-                return Json(new { exists = false, error = "ไฟล์ต้องเป็น .txt เท่านั้น" });
+                return Json(new { exists = false, message = "ชื่อไฟล์ไม่ถูกต้อง" });
             }
 
-            if (!file.FileName.StartsWith("HCG14584"))
+            if (!System.IO.File.Exists(fullPath))
             {
-                return Json(new { exists = false, error = "ชื่อไฟล์ต้องขึ้นต้นด้วย HCG14584" });
+                return Json(new { exists = false });
             }
 
-            string vInfCode = "EDC";
-            var userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "LoginUID")?.Value);
-            var MUser = userId;
-            var CUser = userId;
-            int vRecord = 1;
-            var _list = new List<InterfaceItem>();
+            var fileInfo = new FileInfo(fullPath);
+            return Json(new
+            {
+                exists = true,
+                fileName = fileInfo.Name,
+                fileSize = fileInfo.Length,
+                lastModified = fileInfo.LastWriteTime,
+                createdDate = fileInfo.CreationTime
+            });
+        }
+
+        /// <summary>
+        /// นำเข้าไฟล์ EDC (.txt) ลงตาราง InterfaceItem แล้วเรียก SP ประมวลผล
+        /// </summary>
+        [HttpPost]
+        [RequestSizeLimit(100 * 1024 * 1024)]
+        public async Task<IActionResult> ImportEDC(IFormFile? file, CancellationToken cancellationToken)
+        {
+            if (file is null || file.Length == 0)
+            {
+                return Json(new { success = false, error = "กรุณาเลือกไฟล์" });
+            }
+
+            if (file.Length > _uploadOptions.MaxFileSizeInBytes)
+            {
+                return Json(new { success = false, error = $"ขนาดไฟล์เกิน {_uploadOptions.MaxFileSizeInBytes / 1024 / 1024}MB" });
+            }
+
+            var fileName = Path.GetFileName(file.FileName);
+            if (!string.Equals(Path.GetExtension(fileName), ".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                return Json(new { success = false, error = "ไฟล์ต้องเป็น .txt เท่านั้น" });
+            }
+
+            if (!fileName.StartsWith(EDC_FILE_PREFIX, StringComparison.OrdinalIgnoreCase))
+            {
+                return Json(new { success = false, error = $"ชื่อไฟล์ต้องขึ้นต้นด้วย {EDC_FILE_PREFIX}" });
+            }
+
+            // หมายเหตุ: Auth API ยังไม่ส่ง LoginUID มา จึงได้ 0 — ต้องเพิ่ม claim เมื่อ API รองรับ
+            _ = int.TryParse(User.FindFirst("LoginUID")?.Value, out var userId);
+            var now = DateTime.Now;
+            var items = new List<InterfaceItem>();
 
             try
             {
-                var lines = new List<string>();
-                using (var streamReader = new StreamReader(file.OpenReadStream()))
+                using (var reader = new StreamReader(file.OpenReadStream()))
                 {
+                    var record = 1;
                     string? line;
-                    while ((line = streamReader.ReadLine()) != null)
+                    while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
                     {
-                        lines.Add(line);
+                        items.Add(new InterfaceItem
+                        {
+                            FileName = fileName,
+                            Record = record++,
+                            Data = line,
+                            InterfaceType = "EDC",
+                            Mwhen = now,
+                            Muser = userId,
+                            Cwhen = now,
+                            Cuser = userId,
+                            StatusFlag = "A",
+                            ProcessStatus = "Initial"
+                        });
                     }
                 }
 
-                foreach (var item in lines)
-                {
-                    var interfaceItem = new InterfaceItem
-                    {
-                        FileName = file.FileName,
-                        Record = vRecord++,
-                        Data = item,
-                        InterfaceType = vInfCode,
-                        Mwhen = DateTime.Now,
-                        Muser = MUser,
-                        Cwhen = DateTime.Now,
-                        Cuser = CUser,
-                        StatusFlag = "A",
-                        ProcessStatus = "Initial"
-                    };
-                    _list.Add(interfaceItem);
-                }
+                await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+                _db.InterfaceItems.AddRange(items);
+                await _db.SaveChangesAsync(cancellationToken);
 
-                _InterfaceSystemDbContext.InterfaceItems.AddRange(_list);
-                _InterfaceSystemDbContext.SaveChanges();
-
-                // Fix for CS0103: Define modeParameter explicitly
+                // TODO: ยืนยันค่า @Mode ที่ถูกต้องกับเจ้าของ SP (ค่าเดิมในโค้ดเป็นค่าตัวอย่าง)
                 var modeParameter = new SqlParameter("@Mode", SqlDbType.VarChar) { Value = "YourModeValue" };
+                await _db.Database.ExecuteSqlRawAsync("EXEC pGetQSHCInterfaceEDCResult @Mode", [modeParameter], cancellationToken);
 
-                // Fix for CS1061: Use ExecuteSqlRaw instead of ExecuteSqlCommand
-                _InterfaceSystemDbContext.Database.ExecuteSqlRaw("EXEC pGetQSHCInterfaceEDCResult @Mode", modeParameter);
+                await transaction.CommitAsync(cancellationToken);
 
-                return Json(new { exists = true });
+                _logger.LogInformation("Imported EDC file {FileName} ({Count} records) by {User}", fileName, items.Count, User.Identity?.Name);
+                return Json(new { success = true, records = items.Count });
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is DbUpdateException or SqlException or IOException or InvalidOperationException)
             {
-                return Json(new { exists = false, error = ex.Message });
+                _logger.LogError(ex, "Import EDC failed for {FileName}", fileName);
+                return Json(new { success = false, error = "นำเข้าข้อมูลไม่สำเร็จ กรุณาตรวจสอบไฟล์และลองใหม่" });
             }
         }
+
+        /// <summary>
+        /// อัปโหลดไฟล์ไปยังโฟลเดอร์ปลายทางที่ตั้งค่าไว้ (FileUpload:DefaultDestinationPath)
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> UploadFile(IFormFile file, string destinationPath, bool overwrite = false)
+        [RequestSizeLimit(100 * 1024 * 1024)]
+        public async Task<IActionResult> UploadFile(IFormFile? file, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             var result = new UploadResult();
 
+            if (file is null || file.Length == 0)
+            {
+                result.Message = "กรุณาเลือกไฟล์ที่ต้องการอัปโหลด";
+                return Json(result);
+            }
+
+            if (file.Length > _uploadOptions.MaxFileSizeInBytes)
+            {
+                result.Message = $"ขนาดไฟล์เกิน {_uploadOptions.MaxFileSizeInBytes / 1024 / 1024}MB";
+                return Json(result);
+            }
+
+            var fileName = Path.GetFileName(file.FileName);
+            if (!_uploadOptions.IsAllowedExtension(fileName))
+            {
+                result.Message = $"อนุญาตเฉพาะไฟล์ {string.Join(", ", _uploadOptions.AllowedExtensions)}";
+                return Json(result);
+            }
+
+            var destination = _uploadOptions.DefaultDestinationPath;
+            if (!UploadPathGuard.TryResolve(destination, fileName, out var fullPath))
+            {
+                result.Message = "ชื่อไฟล์ไม่ถูกต้อง";
+                return Json(result);
+            }
+
             try
             {
-                // ตรวจสอบว่ามีไฟล์หรือไม่
-                if (file == null || file.Length == 0)
+                if (!Directory.Exists(destination))
                 {
-                    result.Success = false;
-                    result.Message = "กรุณาเลือกไฟล์ที่ต้องการอัปโหลด";
+                    result.Message = "ไม่พบโฟลเดอร์ปลายทาง";
                     return Json(result);
                 }
 
-                // ตรวจสอบ destination path
-                if (string.IsNullOrWhiteSpace(destinationPath))
-                {
-                    result.Success = false;
-                    result.Message = "กรุณาระบุ destination path";
-                    return Json(result);
-                }
-
-                // ตรวจสอบขนาดไฟล์ (จำกัดที่ 50MB)
-                if (file.Length > 50 * 1024 * 1024)
-                {
-                    result.Success = false;
-                    result.Message = "ขนาดไฟล์เกิน 50MB";
-                    return Json(result);
-                }
-
-                // สร้าง full path
-                var fileName = Path.GetFileName(file.FileName);
-                var fullPath = Path.Combine(destinationPath, fileName);
-
-                // ตรวจสอบว่า directory มีอยู่หรือไม่
-                if (!Directory.Exists(destinationPath))
-                {
-                    result.Success = false;
-                    result.Message = $"ไม่พบ directory: {destinationPath}";
-                    return Json(result);
-                }
-
-                // ตรวจสอบว่าไฟล์มีอยู่แล้วหรือไม่
                 if (System.IO.File.Exists(fullPath) && !overwrite)
                 {
-                    var existingFileInfo = new FileInfo(fullPath);
-                    result.Success = false;
+                    var existing = new FileInfo(fullPath);
                     result.FileExists = true;
                     result.Message = $"มีไฟล์ '{fileName}' อยู่แล้ว";
                     result.ExistingFileInfo = new ExistingFileDetails
                     {
                         FileName = fileName,
                         FilePath = fullPath,
-                        FileSize = existingFileInfo.Length,
-                        LastModified = existingFileInfo.LastWriteTime,
-                        CreatedDate = existingFileInfo.CreationTime
+                        FileSize = existing.Length,
+                        LastModified = existing.LastWriteTime,
+                        CreatedDate = existing.CreationTime
                     };
                     return Json(result);
                 }
 
-                // อัปโหลดไฟล์
-                using (var stream = new FileStream(fullPath, FileMode.Create))
+                await using (var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
                 {
-                    await file.CopyToAsync(stream);
+                    await file.CopyToAsync(stream, cancellationToken);
                 }
 
-                // ตรวจสอบว่าไฟล์ถูกสร้างสำเร็จ
-                if (System.IO.File.Exists(fullPath))
-                {
-                    var fileInfo = new FileInfo(fullPath);
-                    result.Success = true;
-                    result.Message = "อัปโหลดไฟล์สำเร็จ";
-                    result.FileName = fileName;
-                    result.FilePath = fullPath;
-                    result.FileSize = fileInfo.Length;
-                    result.UploadTime = DateTime.Now;
+                var info = new FileInfo(fullPath);
+                result.Success = true;
+                result.Message = "อัปโหลดไฟล์สำเร็จ";
+                result.FileName = fileName;
+                result.FilePath = fullPath;
+                result.FileSize = info.Length;
+                result.UploadTime = DateTime.Now;
 
-                    //_logger.LogInformation($"File uploaded successfully: {fullPath}");
-                }
-                else
-                {
-                    result.Success = false;
-                    result.Message = "เกิดข้อผิดพลาดในการสร้างไฟล์";
-                }
+                _logger.LogInformation("File uploaded: {Path} by {User}", fullPath, User.Identity?.Name);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
-                result.Success = false;
-                result.Message = "ไม่มีสิทธิ์เข้าถึง directory ปลายทาง";
-                //_logger.LogError($"Unauthorized access to: {destinationPath}");
-            }
-            catch (DirectoryNotFoundException)
-            {
-                result.Success = false;
-                result.Message = "ไม่พบ directory ปลายทาง";
-                //_logger.LogError($"Directory not found: {destinationPath}");
+                _logger.LogError(ex, "Unauthorized access to: {Destination}", destination);
+                result.Message = "ไม่มีสิทธิ์เข้าถึงโฟลเดอร์ปลายทาง";
             }
             catch (IOException ex)
             {
-                result.Success = false;
-                result.Message = $"เกิดข้อผิดพลาดในการเขียนไฟล์: {ex.Message}";
-                //_logger.LogError(ex, "IO Exception during file upload");
-            }
-            catch (Exception ex)
-            {
-                result.Success = false;
-                result.Message = $"เกิดข้อผิดพลาดไม่คาดคิด: {ex.Message}";
-                //_logger.LogError(ex, "Unexpected error during file upload");
+                _logger.LogError(ex, "IO error during file upload to {Destination}", destination);
+                result.Message = "เกิดข้อผิดพลาดในการเขียนไฟล์";
             }
 
             return Json(result);
         }
 
-        public class PathRequest
+        // GET: /InterfaceSystem/EDCIndex
+        public async Task<IActionResult> EDCIndex(CancellationToken cancellationToken)
         {
-            public string Path { get; set; } = null!;
+            var records = await _db.PatientEdcregisters
+                .AsNoTracking()
+                .OrderByDescending(o => o.Uid)
+                .Take(50)
+                .ToListAsync(cancellationToken);
+            return View(records);
         }
+
+        /// <summary>
+        /// อ่านไฟล์ EDC (คั่นด้วย |) เพื่อแสดงตัวอย่างก่อนนำเข้า — ไม่บันทึกลงฐานข้อมูล
+        /// </summary>
         [HttpPost]
-        public IActionResult TestConnection([FromBody] PathRequest request)
+        public async Task<IActionResult> PreviewEDCFile(IFormFile? file, CancellationToken cancellationToken)
         {
-            try
+            if (file is null || file.Length == 0)
             {
-                if (Directory.Exists(request.Path))
-                {
-                    return Json(new { success = true, message = "เชื่อมต่อสำเร็จ" });
-                }
-                else
-                {
-                    return Json(new { success = false, message = $"ไม่พบ directory:{request.Path}" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"เกิดข้อผิดพลาด: {ex.Message}" });
-            }
-        }
-        public async Task<IActionResult> EDCIndex()
-        {
-            var patientEDCRegister = await _InterfaceSystemDbContext.PatientEdcregisters.OrderByDescending(o => o.Uid).Take(50).ToListAsync();
-            return View(patientEDCRegister);
-        }
-
-
-
-        [HttpPost]
-        public async Task<IActionResult> UploadEDCFile(IFormFile file)
-        {
-            if (file == null || file.Length == 0)
-            {
-                return BadRequest("No file uploaded.");
+                return BadRequest(new { message = "กรุณาเลือกไฟล์" });
             }
 
+            const int MAX_ROWS = 500;
+            var data = new List<string[]>();
+            var total = 0;
 
-            var path = await (from i in _InterfaceSystemDbContext.Interfaces
-                              join ic in _InterfaceSystemDbContext.InterfaceConfigs on i.Uid equals ic.InterfaceUid
-                              where i.Code == "EDC" && !string.IsNullOrEmpty(ic.SourceDirectory)
-                              select ic.SourceDirectory)
-                  .FirstOrDefaultAsync();
-
-
-            List<string[]> data = new List<string[]>();
-
-            using (var stream = new StreamReader(file.OpenReadStream()))
+            using var stream = new StreamReader(file.OpenReadStream());
+            string? line;
+            while ((line = await stream.ReadLineAsync(cancellationToken)) != null)
             {
-                string? line;
-                while ((line = await stream.ReadLineAsync()) != null)
-                {
-                    if (!string.IsNullOrWhiteSpace(line))
-                    {
-                        var values = line.Split('|'); // แยกค่าด้วย "|"
-                        data.Add(values);
-                    }
-                }
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                total++;
+                if (data.Count < MAX_ROWS) data.Add(line.Split('|'));
             }
 
-            return Ok(new { message = "อัปโหลดสำเร็จ", data });
-            //var filePath = Path.Combine("Uploads", file.FileName);
-
-            //using (var stream = new FileStream(filePath, FileMode.Create))
-            //{
-            //    await file.CopyToAsync(stream);
-            //}
-
-            //string result = await ImportEDCAsync(_connectionString, filePath);
-            //return Ok(new { Message = result });
-        }
-
-
-        private async Task<string> ImportEDCAsync(string connectionString, string filePath)
-        {
-            string interfaceCode = "EDC";
-            string interfaceName = "Electronic Data Capture";
-
-            try
-            {
-                string query = "INSERT INTO InterfaceItem (Filename, Record, Data, InterfaceType, MWhen, MUser, CWhen, CUser, StatusFlag, ProcessStatus) VALUES (@filename, @record, @data, @interfaceType, GETDATE(), '1', GETDATE(), '1', 'A', 'Initial')";
-
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                {
-                    await connection.OpenAsync();
-                    int recordCount = 1;
-                    string[] lines = await System.IO.File.ReadAllLinesAsync(filePath);
-
-                    foreach (string line in lines)
-                    {
-                        using (SqlCommand command = new SqlCommand(query, connection))
-                        {
-                            command.Parameters.AddWithValue("@filename", Path.GetFileName(filePath));
-                            command.Parameters.AddWithValue("@record", recordCount);
-                            command.Parameters.AddWithValue("@data", line);
-                            command.Parameters.AddWithValue("@interfaceType", interfaceCode);
-
-                            await command.ExecuteNonQueryAsync();
-                        }
-                        recordCount++;
-                    }
-                }
-
-                return interfaceName + " import complete.";
-            }
-            catch (Exception ex)
-            {
-                //_logger.LogError(ex, "Error importing file.");
-                return interfaceName + " error: " + ex.Message;
-            }
+            return Ok(new { message = "อ่านไฟล์สำเร็จ", total, data });
         }
     }
 }

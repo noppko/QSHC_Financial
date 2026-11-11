@@ -1,12 +1,19 @@
 {
   "name": "financial",
   "version": "1.0.0",
-  "description": "Financial System - .NET 10",
+  "private": true,
+  "description": "QSHC Financial System - ASP.NET Core 10",
   "scripts": {
     "build:css": "tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --minify",
-    "watch:css": "tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --watch"
+    "watch:css": "tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --watch",
+    "copy:vendor": "node scripts/copy-vendor.mjs",
+    "build:icons": "node scripts/build-favicon.mjs"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.0"
+    "@fontsource/kanit": "^5.3.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "chart.js": "^4.5.1",
+    "tailwindcss": "^4.3.3",
+    "three": "^0.170.0"
   }
 }

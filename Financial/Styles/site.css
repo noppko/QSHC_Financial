@@ -1,76 +1,93 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * QSHC Financial — Tailwind CSS v4 source
+ * Build:  npm run build:css   (output: wwwroot/css/site.css)
+ * ทุก asset (ฟอนต์/ไอคอน) อยู่ในเครื่อง ใช้งานบน Intranet ได้โดยไม่ต้องมี Internet
+ */
+@import "tailwindcss" source(none);
 
-/* Kanit Font */
-@font-face {
-  font-family: "Kanit";
-  src: url("../fonts/kanit/Kanit-Light.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
+@source "../Views";
+@source "../Components";
+@source "../wwwroot/js";
+
+/* ==================== Kanit (self-hosted, Thai + Latin subsets) ==================== */
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 300; src: url("../fonts/kanit/kanit-thai-300-normal.woff2") format("woff2"); unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 300; src: url("../fonts/kanit/kanit-latin-300-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 400; src: url("../fonts/kanit/kanit-thai-400-normal.woff2") format("woff2"); unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 400; src: url("../fonts/kanit/kanit-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 500; src: url("../fonts/kanit/kanit-thai-500-normal.woff2") format("woff2"); unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 500; src: url("../fonts/kanit/kanit-latin-500-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 600; src: url("../fonts/kanit/kanit-thai-600-normal.woff2") format("woff2"); unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 600; src: url("../fonts/kanit/kanit-latin-600-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 700; src: url("../fonts/kanit/kanit-thai-700-normal.woff2") format("woff2"); unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: "Kanit"; font-style: normal; font-display: swap; font-weight: 700; src: url("../fonts/kanit/kanit-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+/* ==================== Design tokens ==================== */
+@theme {
+  --font-sans: "Kanit", ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
+
+  --color-brand-50: #fff4ed;
+  --color-brand-100: #ffe6d4;
+  --color-brand-200: #ffc9a8;
+  --color-brand-300: #ffa371;
+  --color-brand-400: #fb7a45;
+  --color-brand-500: #f4551f;
+  --color-brand-600: #e23d12;
+  --color-brand-700: #bb2c11;
+  --color-brand-800: #952516;
+  --color-brand-900: #782215;
+
+  --color-sand-50: #faf9f6;
+  --color-sand-100: #f3f1ec;
+  --color-sand-200: #e7e3da;
+  --color-sand-300: #d6d0c3;
 }
 
-@font-face {
-  font-family: "Kanit";
-  src: url("../fonts/kanit/Kanit-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-sand-100 font-sans text-stone-800 antialiased; }
+  [x-cloak], [hidden] { display: none !important; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-brand-500; }
 }
 
-@font-face {
-  font-family: "Kanit";
-  src: url("../fonts/kanit/Kanit-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Kanit";
-  src: url("../fonts/kanit/Kanit-SemiBold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Kanit";
-  src: url("../fonts/kanit/Kanit-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Global Styles */
-body {
-  font-family: "Kanit", sans-serif;
-}
-
-/* Custom Components */
+/* ==================== Components ==================== */
 @layer components {
-  .btn-primary {
-    @apply px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors duration-200 font-medium;
-  }
+  .card { @apply rounded-2xl border border-sand-200 bg-white shadow-sm; }
+  .card-body { @apply p-5 sm:p-6; }
 
-  .btn-secondary {
-    @apply px-4 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors duration-200 font-medium;
-  }
+  /* Tailwind v4 ไม่อนุญาต @apply คลาสใน @layer components จึงรวม base style ไว้ใน selector เดียว */
+  .btn, .btn-primary, .btn-dark, .btn-outline, .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-150 select-none disabled:cursor-not-allowed disabled:opacity-60; }
+  .btn-primary { @apply bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700; }
+  .btn-dark { @apply bg-stone-900 text-white hover:bg-stone-700; }
+  .btn-outline { @apply border border-sand-300 bg-white text-stone-700 hover:bg-sand-50; }
+  .btn-ghost { @apply text-stone-600 hover:bg-sand-100; }
 
-  .btn-outline {
-    @apply px-4 py-2 border-2 border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors duration-200 font-medium;
-  }
+  .label { @apply mb-1.5 block text-sm font-medium text-stone-700; }
+  .input { @apply block w-full rounded-xl border border-sand-300 bg-white px-3.5 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100 focus:outline-none disabled:bg-sand-100; }
 
-  .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200;
-  }
+  .alert, .alert-error, .alert-success, .alert-info { @apply flex items-start gap-3 rounded-xl border px-4 py-3 text-sm; }
+  .alert-error { @apply border-red-200 bg-red-50 text-red-700; }
+  .alert-success { @apply border-emerald-200 bg-emerald-50 text-emerald-700; }
+  .alert-info { @apply border-sky-200 bg-sky-50 text-sky-800; }
 
-  .card {
-    @apply bg-white rounded-lg shadow-md p-6;
-  }
+  .badge { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
 
-  .card-header {
-    @apply text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200;
-  }
+  .table-wrap { @apply max-h-[70vh] overflow-auto rounded-xl border border-sand-200; }
+  .data-table { @apply w-full border-collapse text-left text-sm; }
+  .data-table thead th { @apply sticky top-0 z-10 bg-sand-50 px-3 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap text-stone-500 uppercase shadow-[inset_0_-1px_0] shadow-sand-200; }
+  .data-table tbody td { @apply border-b border-sand-100 px-3 py-2 whitespace-nowrap; }
+  .data-table tbody tr:hover { @apply bg-brand-50/50; }
+  .data-table .num { @apply text-right tabular-nums; }
+
+  .nav-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:bg-sand-100 hover:text-stone-900; }
+  .nav-link[aria-current="page"] { @apply bg-brand-50 text-brand-700; }
+  .nav-link svg { @apply size-5 shrink-0; }
+
+  .field-validation-error { @apply mt-1 block text-xs text-red-600; }
+  .input-validation-error { @apply border-red-400 focus:ring-red-100; }
+  .validation-summary-valid { @apply hidden; }
+}
+
+/* ==================== Utilities ==================== */
+@utility spinner {
+  @apply inline-block size-4 animate-spin rounded-full border-2 border-current border-r-transparent;
 }

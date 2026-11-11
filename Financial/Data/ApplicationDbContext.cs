@@ -1,6 +1,7 @@
 ﻿using Financial.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Financial.Data
 {
@@ -19,12 +20,35 @@ namespace Financial.Data
             _httpContextAccessor = httpContextAccessor;
         }
 
-        // DbSets
+        // DbSets (ฐาน QSHC_Financial — ข้อมูลของระบบ Financial แยกจาก HIS)
         public DbSet<ReferenceValue> ReferenceValues { get; set; } = null!;
+        public DbSet<AppSetting> AppSettings { get; set; } = null!;
+        public DbSet<NhsoFiscalSummary> NhsoFiscalSummaries { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // ตาราง Identity เดิม (ไม่ได้ใช้งาน) สร้างไว้ด้วย key ยาว 128 — คงไว้ตามเดิม ไม่ให้ migration ไปแก้ primary key
+            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>(b =>
+            {
+                b.Property(l => l.LoginProvider).HasMaxLength(128);
+                b.Property(l => l.ProviderKey).HasMaxLength(128);
+            });
+            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>(b =>
+            {
+                b.Property(t => t.LoginProvider).HasMaxLength(128);
+                b.Property(t => t.Name).HasMaxLength(128);
+            });
+
+            // Global Query Filter สำหรับ Soft Delete ของทุก Entity ที่ inherit BaseEntity - กรองเฉพาะ IsActive = true
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes().Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)))
+            {
+                var parameter = Expression.Parameter(entityType.ClrType, "e");
+                var body = Expression.Property(parameter, nameof(BaseEntity.IsActive));
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(Expression.Lambda(body, parameter));
+                modelBuilder.Entity(entityType.ClrType).Property(nameof(BaseEntity.IsActive)).HasDefaultValue(true);
+            }
 
             // กำหนด Unique Composite Index สำหรับ ReferenceValue (Category + Code)
             modelBuilder.Entity<ReferenceValue>()
@@ -32,9 +56,13 @@ namespace Financial.Data
                 .IsUnique()
                 .HasFilter("[IsActive] = 1"); // Unique เฉพาะ records ที่ IsActive = true
 
-            // Global Query Filter สำหรับ Soft Delete - กรองเฉพาะ IsActive = true
-            modelBuilder.Entity<ReferenceValue>()
-                .HasQueryFilter(e => e.IsActive);
+            modelBuilder.Entity<AppSetting>()
+                .HasIndex(s => s.Key)
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+
+            modelBuilder.Entity<NhsoFiscalSummary>()
+                .HasIndex(s => new { s.FiscalYear, s.PatientTypeCode });
 
             // Self-referencing relationship สำหรับ ReferenceValue
             modelBuilder.Entity<ReferenceValue>()
@@ -62,14 +90,14 @@ namespace Financial.Data
                 if (entry.State == EntityState.Added)
                 {
                     // เพิ่ม record ใหม่
-                    entry.Entity.CreatedAt = DateTime.UtcNow; // ใช้ UTC time
+                    entry.Entity.CreatedAt = DateTime.Now; // เวลาไทย (ห้ามใช้ UtcNow)
                     entry.Entity.CreatedBy = currentUser;
                     entry.Entity.IsActive = true;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
                     // แก้ไข record
-                    entry.Entity.UpdatedAt = DateTime.UtcNow; // ใช้ UTC time
+                    entry.Entity.UpdatedAt = DateTime.Now; // เวลาไทย (ห้ามใช้ UtcNow)
                     entry.Entity.UpdatedBy = currentUser;
 
                     // ป้องกันไม่ให้แก้ไข CreatedAt และ CreatedBy
@@ -87,7 +115,7 @@ namespace Financial.Data
         private void SeedReferenceValues(ModelBuilder modelBuilder)
         {
             // ใช้ static datetime เพื่อป้องกัน model changes warning
-            var seedDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var seedDate = new DateTime(2025, 1, 1, 0, 0, 0);
 
             var referenceValues = new List<ReferenceValue>
             {
@@ -227,7 +255,16 @@ namespace Financial.Data
                     IsSystem = true,
                     CreatedBy = "System",
                     CreatedAt = seedDate
-                }
+                },
+
+                // PATIENT_TYPE - ประเภทผู้ป่วย (ใช้แทน enum; รหัสตรงกับฝั่งบิลใน HIS)
+                new ReferenceValue { Id = 12, Category = ReferenceCategories.PATIENT_TYPE, Code = PatientTypeCodes.OPD, NameTH = "ผู้ป่วยนอก", NameEN = "OPD", DisplayOrder = 1, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 13, Category = ReferenceCategories.PATIENT_TYPE, Code = PatientTypeCodes.IPD, NameTH = "ผู้ป่วยใน", NameEN = "IPD", DisplayOrder = 2, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+
+                // ACCESS_LEVEL - ระดับสิทธิ์การใช้งาน (ใช้แทน enum)
+                new ReferenceValue { Id = 14, Category = ReferenceCategories.ACCESS_LEVEL, Code = AccessLevelCodes.ADMIN, NameTH = "ผู้ดูแลระบบ", NameEN = "Administrator", Description = "ตั้งค่าระบบได้ และดูได้ทุกหน้า", DisplayOrder = 1, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 15, Category = ReferenceCategories.ACCESS_LEVEL, Code = AccessLevelCodes.FINANCE, NameTH = "เจ้าหน้าที่การเงิน", NameEN = "Finance", Description = "role ขึ้นต้นด้วย Cashier — เข้าเมนูการเงินได้", DisplayOrder = 2, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 16, Category = ReferenceCategories.ACCESS_LEVEL, Code = AccessLevelCodes.GENERAL, NameTH = "ผู้ใช้งานทั่วไป (Dashboard)", NameEN = "General", Description = "ดูได้เฉพาะ Dashboard", DisplayOrder = 3, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
             };
 
             modelBuilder.Entity<ReferenceValue>().HasData(referenceValues);
