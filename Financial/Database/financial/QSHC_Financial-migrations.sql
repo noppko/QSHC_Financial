@@ -1,5 +1,8 @@
 ﻿-- ตารางของระบบ Financial — รันบนฐาน QSHC_Financial (10.67.67.162) เท่านั้น ไม่ใช่ HIS
 -- สร้างจาก: dotnet ef migrations script --idempotent (รันซ้ำได้) | แอปจะ migrate เองเมื่อ Database:AutoMigrate = true
+-- RemoveAspNetIdentity: ลบตาราง AspNet* (ไม่ได้ใช้ — ยืนยันตัวตนผ่าน External Auth API)
+-- FiscalReportsBySchemeAndPatients: แทน NhsoFiscalSummaries ด้วย FiscalSchemeTotals/FiscalPayorSummaries (ต้องกด "ดึงข้อมูลจาก HIS" ใหม่)
+-- AddLgoPayorScheme: เพิ่มสิทธิ์ อปท. (LGO) ใน ReferenceValues (PAYOR_SCHEME)
 USE QSHC_Financial;
 GO
 
@@ -428,6 +431,182 @@ IF NOT EXISTS (
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
     VALUES (N'20261024184703_RenameAgreementEncounterCode', N'10.0.13');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetRoleClaims];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetUserClaims];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetUserLogins];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetUserRoles];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetUserTokens];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetRoles];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    DROP TABLE [AspNetUsers];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111033718_RemoveAspNetIdentity'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261111033718_RemoveAspNetIdentity', N'10.0.13');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    DROP TABLE [NhsoFiscalSummaries];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    CREATE TABLE [FiscalPayorSummaries] (
+        [Id] int NOT NULL IDENTITY,
+        [FiscalYear] int NOT NULL,
+        [SchemeCode] nvarchar(20) NOT NULL,
+        [PatientTypeCode] nvarchar(10) NOT NULL,
+        [VisitEncounterCode] nvarchar(20) NULL,
+        [MovedFromBillSide] bit NOT NULL,
+        [PayorCategoryCode] nvarchar(20) NOT NULL,
+        [AgreementName] nvarchar(400) NOT NULL,
+        [Patients] int NOT NULL,
+        [Visits] int NOT NULL,
+        [Bills] int NOT NULL,
+        [NetAmount] decimal(18,2) NOT NULL,
+        [RefreshedAt] datetime2 NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_FiscalPayorSummaries] PRIMARY KEY ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    CREATE TABLE [FiscalSchemeTotals] (
+        [Id] int NOT NULL IDENTITY,
+        [FiscalYear] int NOT NULL,
+        [SchemeCode] nvarchar(20) NOT NULL,
+        [PatientTypeCode] nvarchar(10) NOT NULL,
+        [ZoneCode] nvarchar(10) NOT NULL,
+        [Patients] int NOT NULL,
+        [Visits] int NOT NULL,
+        [NetAmount] decimal(18,2) NOT NULL,
+        [RefreshedAt] datetime2 NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_FiscalSchemeTotals] PRIMARY KEY ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] ON;
+    EXEC(N'INSERT INTO [ReferenceValues] ([Id], [Category], [Code], [CreatedAt], [CreatedBy], [Description], [DisplayOrder], [IsActive], [IsSystem], [Metadata], [NameEN], [NameTH], [ParentCategory], [ParentId], [UpdatedAt], [UpdatedBy])
+    VALUES (17, N''PAYOR_SCHEME'', N''NHSO'', ''2025-01-01T00:00:00.0000000'', N''System'', N''หลักประกันสุขภาพถ้วนหน้า'', 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''NHSO (UCS)'', N''สปสช.'', NULL, NULL, NULL, NULL),
+    (18, N''PAYOR_SCHEME'', N''CSMBS'', ''2025-01-01T00:00:00.0000000'', N''System'', N''สวัสดิการรักษาพยาบาลข้าราชการ'', 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''CSMBS'', N''กรมบัญชีกลาง'', NULL, NULL, NULL, NULL),
+    (19, N''PAYOR_SCHEME'', N''SSO'', ''2025-01-01T00:00:00.0000000'', N''System'', N''สำนักงานประกันสังคม'', 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''SSO'', N''ประกันสังคม'', NULL, NULL, NULL, NULL),
+    (20, N''FISCAL_ZONE'', N''IN'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''In zone'', N''ในเขต'', NULL, NULL, NULL, NULL),
+    (21, N''FISCAL_ZONE'', N''OUT'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Out of zone'', N''นอกเขต'', NULL, NULL, NULL, NULL),
+    (22, N''FISCAL_ZONE'', N''ALL'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Total'', N''รวม'', NULL, NULL, NULL, NULL)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    CREATE INDEX [IX_FiscalPayorSummaries_FiscalYear_SchemeCode_PatientTypeCode] ON [FiscalPayorSummaries] ([FiscalYear], [SchemeCode], [PatientTypeCode]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    CREATE INDEX [IX_FiscalSchemeTotals_FiscalYear_SchemeCode_PatientTypeCode_ZoneCode] ON [FiscalSchemeTotals] ([FiscalYear], [SchemeCode], [PatientTypeCode], [ZoneCode]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261111041041_FiscalReportsBySchemeAndPatients'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261111041041_FiscalReportsBySchemeAndPatients', N'10.0.13');
 END;
 
 COMMIT;

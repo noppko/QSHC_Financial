@@ -8,7 +8,15 @@ namespace Financial.Navigation
     /// </summary>
     public static class AppMenu
     {
-        public sealed record Item(string Name, string Description, string Controller, string Action, string IconPath, string? Policy = null);
+        /// <param name="Children">เมนูระดับ 2 (ถ้ามี รายการนี้เป็นหัวข้อระดับ 1 ที่กางออกได้ — Controller/Action ของหัวข้อไม่ถูกใช้)</param>
+        public sealed record Item(string Name, string Description, string Controller, string Action, string IconPath, string? Policy = null, IReadOnlyList<Item>? Children = null)
+        {
+            public bool HasChildren => Children is { Count: > 0 };
+
+            /// <summary>หน้าจริงทั้งหมดของรายการนี้ (หัวข้อระดับ 1 → ลูกทั้งหมด, รายการปกติ → ตัวเอง) พร้อมชื่อเต็ม</summary>
+            public IEnumerable<(string FullName, Item Page)> Pages()
+                => HasChildren ? Children!.Select(c => ($"{Name} — {c.Name}", c)) : [(Name, this)];
+        }
 
         /// <param name="Key">รหัสถาวรของกลุ่ม (ใช้เก็บการตั้งค่าเปิด/ปิด ห้ามเปลี่ยน)</param>
         /// <param name="CanHide">false = ซ่อนไม่ได้ (กลุ่มผู้ดูแลระบบ กัน Admin หาหน้าตั้งค่าไม่เจอ)</param>
@@ -23,6 +31,7 @@ namespace Financial.Navigation
         private const string ICON_MAP = "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14";
         private const string ICON_REPORT = "M9 17v-6m4 6V7m4 10v-3M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z";
         private const string ICON_SHIELD = "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z";
+        private const string ICON_LIST = "M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01";
         private const string ICON_SETTINGS = "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.2-1.3L14.3 3h-4.6l-.4 2.4A7.6 7.6 0 0 0 7.1 6.7l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.2 1.3l.4 2.4h4.6l.4-2.4a7.6 7.6 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3Z";
 
         public static readonly IReadOnlyList<Group> Groups =
@@ -38,7 +47,14 @@ namespace Financial.Navigation
             ]),
             new("reports", "รายงาน",
             [
-                new("สปสช. ตามปีงบประมาณ", "สิทธิ สปสช. แยก OPD/IPD ในเขต/นอกเขต ตามปีงบประมาณ พร้อมส่งออก Excel", "Reports", "NhsoFiscal", ICON_REPORT, AppPolicies.FINANCE),
+                // ระดับ 1 = ตามปีงบประมาณ · ระดับ 2 = ชื่อสิทธิ์
+                new("ตามปีงบประมาณ", "รายงานสิทธิ์ตามปีงบประมาณ แยก OPD/IPD ในเขต/นอกเขต พร้อมส่งออก Excel", "", "", ICON_REPORT, AppPolicies.FINANCE,
+                [
+                    new("สปสช.", "สิทธิ สปสช. แยก OPD/IPD ในเขต/นอกเขต ตามปีงบประมาณ พร้อมส่งออก Excel", "Reports", "NhsoFiscal", ICON_REPORT, AppPolicies.FINANCE),
+                    new("กรมบัญชีกลาง", "สิทธิกรมบัญชีกลาง แยก OPD/IPD ในเขต/นอกเขต ตามปีงบประมาณ พร้อมส่งออก Excel", "Reports", "CsmbsFiscal", ICON_REPORT, AppPolicies.FINANCE),
+                    new("อปท.", "สิทธิ อปท. แยก OPD/IPD ในเขต/นอกเขต ตามปีงบประมาณ พร้อมส่งออก Excel", "Reports", "LgoFiscal", ICON_REPORT, AppPolicies.FINANCE),
+                    new("ประกันสังคม", "สิทธิประกันสังคม แยก OPD/IPD ในเขต/นอกเขต ตามปีงบประมาณ พร้อมส่งออก Excel", "Reports", "SsoFiscal", ICON_REPORT, AppPolicies.FINANCE),
+                ]),
             ]),
             new("interface", "Interface",
             [
@@ -48,6 +64,7 @@ namespace Financial.Navigation
             new("admin", "ผู้ดูแลระบบ",
             [
                 new("ตั้งค่าระบบ", "สถานะการเชื่อมต่อ การตั้งค่า และสิทธิ์การใช้งาน", "Admin", "Index", ICON_SETTINGS, AppPolicies.ADMIN),
+                new("ค่าอ้างอิง", "จัดการ Reference Values แยกตามหมวด และลากเรียงลำดับการแสดง", "ReferenceValues", "Index", ICON_LIST, AppPolicies.ADMIN),
             ], CanHide: false),
             new("other", "อื่นๆ",
             [

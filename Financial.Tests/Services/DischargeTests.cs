@@ -13,6 +13,65 @@ namespace Financial.Tests.Services
 {
     public class DischargeRecordMapperTests
     {
+        /// <summary>reader จำลอง SqlDataReader แบบ SequentialAccess: อ่านคอลัมน์ย้อนกลับ (ordinal น้อยกว่าที่อ่านไปแล้วในแถวเดียวกัน) แล้ว throw</summary>
+        private static IDataReader SequentialReader(string[] columns, object[][] rows)
+        {
+            var mock = new Mock<IDataReader>();
+            var row = -1;
+            var last = -1;
+            void Guard(int i)
+            {
+                if (i < last) throw new InvalidOperationException($"Invalid attempt to read from column ordinal {i}. With CommandBehavior.SequentialAccess, you may only read from column ordinal {last} or greater.");
+                last = i;
+            }
+            mock.Setup(r => r.FieldCount).Returns(columns.Length);
+            mock.Setup(r => r.GetName(It.IsAny<int>())).Returns((int i) => columns[i]);
+            mock.Setup(r => r.GetOrdinal(It.IsAny<string>())).Returns((string n) => Array.IndexOf(columns, n) is var i and >= 0 ? i : throw new IndexOutOfRangeException(n));
+            mock.Setup(r => r.Read()).Returns(() => { last = -1; return ++row < rows.Length; });
+            mock.Setup(r => r.IsDBNull(It.IsAny<int>())).Returns((int i) => { Guard(i); return rows[row][i] is DBNull; });
+            mock.Setup(r => r.GetValue(It.IsAny<int>())).Returns((int i) => rows[row][i]);
+            return mock.Object;
+        }
+
+        [Fact]
+        public void ReadAll_Ipd_ReadsColumnsInOrdinalOrder_ForSequentialAccess()
+        {
+            // ลำดับคอลัมน์จริงของ pGetQSHCPatientDischargeIPDAllPayor — เงื่อนไขการเรียกเก็บ/หอผู้ป่วยอยู่ก่อน AN/ยอดเงิน
+            string[] columns = ["ลำดับที่", "รายชื่อ", "สิทธิ์หลักของ visit", "กลุ่มผู้จ่าย", "สิทธิ์การรักษา", "รหัสเงื่อนไข", "เงื่อนไขการเรียกเก็บ", "HN", "AN", "Admit", "D/C", "วันนอน", "หอผู้ป่วย", "จำนวนบิล", "จำนวนเงิน"];
+            object[][] rows = [[1L, "นาย ก", "UC", "สปสช", "สปสช.", "C001", "ในจังหวัดขอนแก่น", "650001", "AN001", "2026-10-01", "2026-10-05", 4, "หอผู้ป่วย 5", 2, 12500.50m]];
+
+            var items = DischargeRecordMapper.ReadAll(SequentialReader(columns, rows), PatientTypeCodes.IPD);
+
+            items.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Id = 1, BillCon = "ในจังหวัดขอนแก่น", AN = "AN001", Clinic = "หอผู้ป่วย 5", Amount = "12500.50", HN = "650001" });
+        }
+
+        [Fact]
+        public void ReadAll_Opd_ReadsColumnsInOrdinalOrder_ForSequentialAccess()
+        {
+            string[] columns = ["ลำดับที่", "รายชื่อ", "สิทธิ์การรักษา", "เงื่อนไขการเรียกเก็บ", "HN", "VN", "วันที่", "จำนวนเงิน", "คลินิก"];
+            object[][] rows = [[1, "นาย ข", "UC", "นอกจังหวัด", "650002", "VN001", "2026-10-02", "300", DBNull.Value]];
+
+            var item = DischargeRecordMapper.ReadAll(SequentialReader(columns, rows), PatientTypeCodes.OPD).Single();
+
+            item.Should().BeEquivalentTo(new { BillCon = "นอกจังหวัด", AN = "VN001", DCDate = "2026-10-02", Clinic = "" });
+        }
+
+        [Fact]
+        public void ReadAll_IpdAllPayor_MapsBillingConditionAndWard()
+        {
+            // คอลัมน์ของ pGetQSHCPatientDischargeIPDAllPayor (ยอดเงินเป็นตัวเลข + คอลัมน์เพิ่ม)
+            var table = new DataTable();
+            foreach (var c in new[] { "ลำดับที่", "รายชื่อ", "สิทธิ์หลักของ visit", "สิทธิ์การรักษา", "เงื่อนไขการเรียกเก็บ", "HN", "AN", "Admit", "D/C", "หอผู้ป่วย", "จำนวนเงิน" })
+                table.Columns.Add(c, c switch { "ลำดับที่" => typeof(long), "จำนวนเงิน" => typeof(decimal), _ => typeof(string) });
+            table.Rows.Add(1L, "นาย ก", "UC", "สปสช.", "ค่าใช้จ่ายปกติในจังหวัดขอนแก่น", "650001", "AN001", "2026-10-01 08:00:00", "2026-10-05 10:00:00", "หอผู้ป่วย 5", 12500.50m);
+
+            using var reader = table.CreateDataReader();
+            var item = DischargeRecordMapper.ReadAll(reader, PatientTypeCodes.IPD).Single();
+
+            item.Should().BeEquivalentTo(new { Id = 1, TreatmentRight = "สปสช.", BillCon = "ค่าใช้จ่ายปกติในจังหวัดขอนแก่น", AN = "AN001", Clinic = "หอผู้ป่วย 5" });
+            DischargeQueryResult.ParseAmount(item.Amount).Should().Be(12500.50m);
+        }
+
         [Fact]
         public void ReadAll_Ipd_MapsThaiColumnsAndHandlesNulls()
         {

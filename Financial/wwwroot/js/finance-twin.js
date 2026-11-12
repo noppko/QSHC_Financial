@@ -1,4 +1,4 @@
-// 3D Digital Twin (isometric) — เงินที่รอชำระ แยก OPD / IPD
+// 3D Digital Twin (isometric) — เงินที่รอชำระ แยกห้อง OPD / Premium Clinic / IPD
 // แนวคิดผังเดียวกับ HOFLOW: ห้องกระจก + เคาน์เตอร์ + ที่นั่งรอ + ผู้ป่วยแต่ละคน + การ์ดสถานะลอยเหนือห้อง
 //   - ผู้ป่วย 1 คน = 1 ราย · สีเสื้อ = ระยะเวลารอ (เขียว/เหลือง/แดง) · เหรียญเหนือศีรษะ = ค่าใช้จ่ายรวม (สูง = มาก)
 //   - ผู้ป่วยที่การเงินรับเรื่องแล้ว (InBilling) ยืนที่เคาน์เตอร์ ที่เหลือนั่งรอ
@@ -17,7 +17,7 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 const HINT = "คลิกที่ตัวคนเพื่อดูรายละเอียด";
 
 // เกณฑ์ระยะเวลารอ (นาที): [เริ่มนาน, เกินเป้า] — OPD เป้าหมายจุดการเงิน 15 นาที (wait-definitions.md)
-const THRESHOLDS = { O: [15, 30], I: [6 * 60, 24 * 60] };
+const THRESHOLDS = { O: [15, 30], P: [15, 30], I: [6 * 60, 24 * 60] };
 const STATUS = {
   ok: { hex: "#10b981", soft: "#d7f3e8", label: "✓ ปกติ", badge: "bg-emerald-50 text-emerald-700", tone: "text-emerald-700" },
   warn: { hex: "#f59e0b", soft: "#fdecc8", label: "! เริ่มนาน", badge: "bg-amber-50 text-amber-700", tone: "text-amber-700" },
@@ -29,10 +29,14 @@ const TEAL = "#02a49f";
 const FLOOR = [-30, -18, 30, 18];
 const MARGIN = [5, 5, 5, 11]; // ซ้าย หลัง ขวา หน้า (หน้ามีที่ว่างสำหรับชื่อศูนย์)
 const ENTRANCE = [0, 18];
+// 3 ห้อง: การเงิน OPD (คลินิกทั่วไป) | การเงิน Premium Clinic (แยกห้อง) | ปิดบัญชี IPD — ทางเข้าอยู่กลางด้านหน้า
 const ZONES = {
-  O: { key: "O", title: "การเงิน OPD", color: TEAL, room: [-28, -18, -2, -9], wait: [-27, -5, -3, 11], counters: 3 },
-  I: { key: "I", title: "ปิดบัญชี IPD", color: "#3d6fb6", room: [2, -18, 28, -9], wait: [3, -5, 27, 11], counters: 2 },
+  O: { key: "O", title: "การเงิน OPD", color: TEAL, room: [-29, -18, -11, -9], wait: [-28.5, -5, -11.5, 11], counters: 3 },
+  P: { key: "P", title: "การเงิน Premium Clinic", color: "#b8862b", room: [-8, -18, 8, -9], wait: [-7.5, -5, 7.5, 11], counters: 2 },
+  I: { key: "I", title: "ปิดบัญชี IPD", color: "#3d6fb6", room: [11, -18, 29, -9], wait: [11.5, -5, 28.5, 11], counters: 2 },
 };
+// Premium Clinic: server ส่ง CounterZone = "P" มาให้ — สำรองด้วยชื่อคลินิก (กรณี server เก่า/รหัสไม่ตรง)
+const zoneOf = item => item.Type === "O" && /premium/i.test(item.Location ?? "") ? "P" : (item.CounterZone ?? item.Zone ?? item.Type);
 for (const z of Object.values(ZONES)) {
   z.center = [(z.wait[0] + z.wait[2]) / 2, (z.wait[1] + z.wait[3]) / 2];
   z.roomCenter = [(z.room[0] + z.room[2]) / 2, (z.room[1] + z.room[3]) / 2];
@@ -287,7 +291,7 @@ function init() {
   // เจ้าหน้าที่การเงิน (นั่งหลังเคาน์เตอร์)
   for (const zone of Object.values(ZONES)) {
     zone.counterSlots.forEach((s, i) => {
-      const p = makePerson("#02a49f", i + (zone.key === "I" ? 5 : 0));
+      const p = makePerson("#02a49f", i + ({ O: 0, P: 3, I: 5 })[zone.key]);
       p.root.position.set(s.x, 0, s.staffZ);
       p.body.position.y = -0.32;
       p.parts.legL.rotation.x = p.parts.legR.rotation.x = -1.35;
@@ -332,14 +336,14 @@ function init() {
     const pending = data.PendingPayments ?? [];
     const firstBuild = figures.size === 0; // เปิดหน้าครั้งแรก: ทุกคนอยู่ที่ของตัวเองแล้ว (ไม่ต้องเดินเข้าพร้อมกันทั้งหมด)
     const seen = new Set();
-    const byZone = { O: [], I: [] };
+    const byZone = Object.fromEntries(Object.keys(ZONES).map(k => [k, []]));
 
     // key ไม่ซ้ำภายในรอบเดียวกัน (รหัสอ้างอิง 4 หลักอาจชนกันได้)
     for (const item of pending) {
       let key = `${item.Type}${item.Reference}`;
       for (let n = 2; seen.has(key); n++) key = `${item.Type}${item.Reference}#${n}`;
       seen.add(key);
-      byZone[item.Type]?.push({ key, item });
+      (byZone[zoneOf(item)] ?? byZone[item.Type])?.push({ key, item });
     }
 
     for (const zone of Object.values(ZONES)) {
@@ -427,7 +431,7 @@ function init() {
       zo.status = status;
       zo.waitMat.color.set(st.soft); zo.waitMat.emissive.set(st.hex);
       zo.borderMat.color.set(st.hex);
-      const waitText = zone.key === "O" ? `${Math.round(avg)} นาที` : `${(avg / 60).toFixed(1)} ชม.`;
+      const waitText = zone.key !== "I" ? `${Math.round(avg)} นาที` : `${(avg / 60).toFixed(1)} ชม.`;
       cards[zone.key].innerHTML = `
         <span class="flex items-center gap-1.5 text-[11px] font-medium text-stone-700">
           <i class="size-2.5 rounded-[3px]" style="background:${zone.color}"></i>${zone.title}
@@ -459,7 +463,7 @@ function init() {
   function describe(item) {
     const { waitText, statusText } = window.app.pending;
     return `
-      <div class="mb-1 font-semibold text-stone-900">${item.Type === "O" ? "OPD" : "IPD"} · ${escapeHtml(item.Reference)}</div>
+      <div class="mb-1 font-semibold text-stone-900">${ZONES[zoneOf(item)]?.title ?? item.Type} · ${escapeHtml(item.Reference)}</div>
       <div class="grid grid-cols-[auto_1fr] gap-x-3 text-stone-600">
         ${item.PatientName || item.Hn ? `
         <span>ผู้ป่วย</span><b class="text-right text-stone-900">${escapeHtml(item.PatientName ?? "-")}</b>

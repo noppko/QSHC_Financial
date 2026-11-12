@@ -23,7 +23,7 @@ namespace Financial.Tests.TestSupport
             builder.UseSetting("Dashboard:Source", dashboardSource);
             builder.UseSetting("Security:LoginAttemptsPerMinute", "1000");
             builder.UseSetting("Database:AutoMigrate", "false");
-            builder.UseSetting("Reports:Nhso:AutoRefreshEnabled", "false");
+            builder.UseSetting("Reports:Fiscal:AutoRefreshEnabled", "false");
             builder.UseSetting("ConnectionStrings:DefaultConnection", UNREACHABLE_SQL);
             builder.UseSetting("ConnectionStrings:HealthObject", UNREACHABLE_SQL);
             builder.UseSetting("ConnectionStrings:InterfaceSystem", UNREACHABLE_SQL);

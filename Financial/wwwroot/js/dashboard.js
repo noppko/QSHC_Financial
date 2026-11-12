@@ -101,20 +101,24 @@
 
     function renderPendingTable(d) {
         for (const type of ["O", "I"]) {
-            const list = d.PendingPayments.filter(p => p.Type === type).sort((a, b) => b.Amount - a.Amount);
+            const list = d.PendingPayments.filter(p => p.Type === type).sort((a, b) => Number(b.InBilling) - Number(a.InBilling) || b.Amount - a.Amount); // รับเรื่องแล้วขึ้นบนสุด แล้วเรียงตามยอดเงิน
             setField(`Pending${type}Count3`, format.num(list.length));
             setField(`Pending${type}Amount2`, format.thb(list.reduce((s, p) => s + p.Amount, 0)));
-            const rows = list.map(p => `
-                <tr data-ref="${escapeHtml(p.Reference)}">
-                    <td class="tabular-nums">${escapeHtml(p.Reference)}</td>${showIdentity ? `
+            const rows = list.map(p => {
+                // ป้าย Premium ต่อท้ายชื่อผู้ป่วย (ผู้ใช้ที่ไม่เห็นชื่อ จะต่อท้ายรหัสอ้างอิงแทน)
+                const premiumBadge = (p.CounterZone === "P" || (p.Type === "O" && /premium/i.test(p.Location ?? ""))) ? ` <span class="badge bg-amber-50 text-amber-700">ห้อง Premium</span>` : "";
+                return `
+                <tr data-ref="${escapeHtml(p.Reference)}" class="${p.InBilling ? "bg-sky-50 hover:bg-sky-100/70" : ""}">
+                    <td class="tabular-nums">${escapeHtml(p.Reference)}${showIdentity ? "" : premiumBadge}</td>${showIdentity ? `
                     <td class="tabular-nums">${escapeHtml(p.Hn ?? "-")}</td>
-                    <td class="whitespace-nowrap">${escapeHtml(p.PatientName ?? "-")}</td>` : ""}
+                    <td class="whitespace-nowrap">${escapeHtml(p.PatientName ?? "-")}${premiumBadge}</td>` : ""}
                     <td class="num font-medium text-stone-900">${format.thb(p.Amount)}</td>
                     <td class="num ${waitClass(p)}">${waitText(p.WaitingMinutes)}</td>
                     <td>${escapeHtml(p.PayerName)}</td>
                     <td>${escapeHtml(p.Location)}</td>
-                    <td title="${escapeHtml(statusText(p))}">${statusShort(p)}</td>
-                </tr>`).join("");
+                    <td title="${escapeHtml(statusText(p))}"><span class="badge ${p.InBilling ? "bg-sky-100 text-sky-800" : "bg-sand-100 text-stone-600"}">${statusShort(p)}</span></td>
+                </tr>`;
+            }).join("");
             document.getElementById(`pendingBody${type}`).innerHTML = rows
                 || `<tr><td colspan="${showIdentity ? 8 : 6}" class="py-10 text-center text-stone-500">ไม่มีผู้ป่วย${type === "O" ? "นอกรอชำระ" : "ในรอปิดบัญชี"}</td></tr>`;
         }

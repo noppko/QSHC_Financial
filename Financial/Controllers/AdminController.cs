@@ -2,6 +2,7 @@ using Financial.Services;
 using Financial.Data;
 using Financial.Navigation;
 using Financial.Services.Authorization;
+using Financial.Services.Notifications;
 using Financial.Services.Reports;
 using Financial.Services.Settings;
 using Microsoft.AspNetCore.Authorization;
@@ -34,9 +35,14 @@ namespace Financial.Controllers
         private readonly IMemoryCache _cache;
         private readonly IAppSettingsStore _settingsStore;
         private readonly ApplicationDbContext _db;
-        private readonly NhsoFiscalRefreshQueue _refreshQueue;
+        /// <summary>ดึงข้อมูลจาก HIS ได้ไม่เกินครั้งละกี่ปี (1 ปี ≈ หลายนาที)</summary>
+        public const int MAX_REFRESH_YEARS = 10;
+
+        private readonly FiscalRefreshQueue _refreshQueue;
         private readonly TimeProvider _timeProvider;
         private readonly ILogger<AdminController> _logger;
+        private readonly ITelegramNotifier? _telegram;
+        private readonly IOptions<TelegramOptions>? _telegramOptions;
 
         public AdminController(
             IConfiguration configuration,
@@ -47,10 +53,14 @@ namespace Financial.Controllers
             IMemoryCache cache,
             IAppSettingsStore settingsStore,
             ApplicationDbContext db,
-            NhsoFiscalRefreshQueue refreshQueue,
+            FiscalRefreshQueue refreshQueue,
             TimeProvider timeProvider,
-            ILogger<AdminController> logger)
+            ILogger<AdminController> logger,
+            ITelegramNotifier? telegram = null,
+            IOptions<TelegramOptions>? telegramOptions = null)
         {
+            _telegram = telegram;
+            _telegramOptions = telegramOptions;
             _configuration = configuration;
             _authSettings = authSettings;
             _roleOptions = roleOptions;
@@ -74,13 +84,33 @@ namespace Financial.Controllers
                 _uploadOptions.Value,
                 _configuration["Dashboard:Source"] ?? "His",
                 Databases.Select(name => DescribeConnection(name, _configuration.GetConnectionString(name))).ToList(),
-                AppMenu.Groups.Select(g => new MenuGroupSetting(g.Key, g.Title, g.Items.Select(i => i.Name).ToList(), g.CanHide, !AppMenuFilter.IsHidden(g, setting))).ToList(),
+                AppMenu.Groups.Select(g => new MenuGroupSetting(g.Key, g.Title, g.Items.SelectMany(i => i.Pages()).Select(p => p.FullName).ToList(), g.CanHide, !AppMenuFilter.IsHidden(g, setting))).ToList(),
                 setting,
                 summaries,
                 summaryError,
                 _refreshQueue.Statuses,
                 Financial.Services.Dashboard.ThaiClock.Now(_timeProvider));
+            // สถานะ Telegram: แสดงเฉพาะว่าตั้งค่าแล้วหรือยัง + chat id แบบปิดบัง (ไม่แสดง token)
+            var telegram = _telegramOptions?.Value ?? new TelegramOptions();
+            ViewData["TelegramConfigured"] = telegram.IsConfigured;
+            ViewData["TelegramEnabled"] = telegram.Enabled;
+            ViewData["TelegramChat"] = telegram.IsConfigured ? telegram.MaskedChatId : null;
+            ViewData["TelegramProxy"] = !string.IsNullOrWhiteSpace(telegram.Proxy);
+            ViewData["TelegramOnSuccess"] = telegram.NotifyRefreshSuccess;
             return View(model);
+        }
+
+        /// <summary>ส่งข้อความทดสอบ Telegram (Admin เท่านั้น) — ข้อความไม่มีข้อมูลผู้ป่วย</summary>
+        [HttpPost]
+        public async Task<IActionResult> TestTelegram(CancellationToken cancellationToken)
+        {
+            var result = _telegram is null
+                ? new TelegramSendResult(false, "ยังไม่ได้ตั้งค่า Telegram")
+                : await _telegram.SendAsync($"🔔 ทดสอบการแจ้งเตือน (ส่งโดย {User.Identity?.Name})", cancellationToken: cancellationToken);
+            _logger.LogInformation("Telegram test by {User}: {Sent}", User.Identity?.Name, result.Sent);
+            if (result.Sent) TempData["Message"] = "ส่งข้อความทดสอบ Telegram แล้ว — ตรวจในแชทที่ตั้งไว้";
+            else TempData["Error"] = "ส่ง Telegram ไม่สำเร็จ: " + result.Reason;
+            return Redirect(Url.Action(nameof(Index)) + "#telegram");
         }
 
         /// <summary>
@@ -172,35 +202,62 @@ namespace Financial.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        /// <summary>
-        /// สั่งประมวลผลรายงาน สปสช. ของปีงบ (ทำงานเบื้องหลัง: ดึงจาก HIS → บันทึกลง QSHC_Financial)
-        /// </summary>
+        /// <summary>ดึงข้อมูลรายงานสิทธิ์จาก HIS หลายปีงบ (ทำงานเบื้องหลังทีละปี — ทุกสิทธิ์ในครั้งเดียว) · Admin เท่านั้น</summary>
         [HttpPost]
-        public IActionResult RefreshNhsoSummary(int fiscalYear)
+        public IActionResult RefreshFiscal(int from, int to)
         {
             var current = FiscalYear.Of(Financial.Services.Dashboard.ThaiClock.Now(_timeProvider)).BuddhistYear;
-            if (fiscalYear < 2550 || fiscalYear > current)
+            if (from > to) (from, to) = (to, from);
+            if (from < 2550 || to > current || to - from + 1 > MAX_REFRESH_YEARS)
             {
-                TempData["Error"] = "ปีงบประมาณไม่ถูกต้อง";
-            }
-            else if (_refreshQueue.Enqueue(fiscalYear))
-            {
-                _logger.LogInformation("NHSO summary FY {Year} queued by {User}", fiscalYear, User.Identity?.Name);
-                TempData["Message"] = $"เริ่มประมวลผลปีงบ {fiscalYear} แล้ว (ทำงานเบื้องหลัง อาจใช้เวลาหลายนาที) — รีเฟรชหน้านี้เพื่อดูสถานะ";
-            }
-            else
-            {
-                TempData["Message"] = $"ปีงบ {fiscalYear} อยู่ระหว่างประมวลผล";
+                return BadRequest(new { message = $"เลือกปีงบ 2550–{current} ได้ไม่เกิน {MAX_REFRESH_YEARS} ปีต่อครั้ง" });
             }
 
-            return Redirect(Url.Action(nameof(Index)) + "#nhso-summary");
+            var queued = new List<int>();
+            for (var y = from; y <= to; y++)
+            {
+                if (_refreshQueue.Enqueue(y)) queued.Add(y);
+            }
+            _logger.LogInformation("Fiscal summary FY {From}-{To} requested by {User} (queued {Queued})", from, to, User.Identity?.Name, string.Join(",", queued));
+            return Json(new { message = queued.Count == 0 ? "ปีที่เลือกอยู่ระหว่างประมวลผลแล้ว" : $"เริ่มดึงข้อมูล {queued.Count} ปีงบ", status = Status(from, to) });
+        }
+
+        /// <summary>สถานะการดึงข้อมูลของปีงบที่เลือก (หน้าเว็บเรียกซ้ำทุก 2 วินาทีเพื่อแสดง progress bar)</summary>
+        [HttpGet]
+        public IActionResult RefreshStatus(int from, int to)
+        {
+            if (from > to) (from, to) = (to, from);
+            if (to - from + 1 > MAX_REFRESH_YEARS) from = to - MAX_REFRESH_YEARS + 1;
+            return Json(Status(from, to));
+        }
+
+        private object Status(int from, int to)
+        {
+            var now = DateTime.Now;
+            var years = Enumerable.Range(from, to - from + 1).Select(y => _refreshQueue.Get(y)).ToList();
+            var tracked = years.Where(s => s is not null).Select(s => s!).ToList();
+            return new
+            {
+                total = tracked.Count,
+                done = tracked.Count(s => s.State == Financial.Services.Reports.RefreshStatus.DONE),
+                failed = tracked.Count(s => s.State == Financial.Services.Reports.RefreshStatus.FAILED),
+                active = tracked.Any(s => s.IsActive),
+                years = tracked.OrderBy(s => s.FiscalYear).Select(s => new
+                {
+                    year = s.FiscalYear,
+                    state = s.State,
+                    message = s.Message,
+                    rows = s.RowsRead,
+                    seconds = s.StartedAt is DateTime started ? (int)((s.IsActive ? now : s.UpdatedAt) - started).TotalSeconds : 0,
+                }),
+            };
         }
 
         private async Task<(IReadOnlyList<SummaryYearStatus> Rows, string? Error)> LoadSummaryStatusAsync(CancellationToken cancellationToken)
         {
             try
             {
-                var rows = await _db.NhsoFiscalSummaries.AsNoTracking()
+                var rows = await _db.FiscalSchemeTotals.AsNoTracking()
                     .GroupBy(s => s.FiscalYear)
                     .Select(g => new SummaryYearStatus(g.Key, g.Count(), g.Sum(x => x.NetAmount), g.Max(x => x.RefreshedAt)))
                     .ToListAsync(cancellationToken);
@@ -208,8 +265,8 @@ namespace Financial.Controllers
             }
             catch (Exception ex) when (ex is SqlException or InvalidOperationException)
             {
-                _logger.LogWarning(ex, "Cannot read NhsoFiscalSummaries");
-                return ([], "อ่านตาราง NhsoFiscalSummaries ไม่ได้ — ตรวจการเชื่อมต่อฐาน QSHC_Financial");
+                _logger.LogWarning(ex, "Cannot read FiscalSchemeTotals");
+                return ([], "อ่านตาราง FiscalSchemeTotals ไม่ได้ — ตรวจการเชื่อมต่อฐาน QSHC_Financial");
             }
         }
 

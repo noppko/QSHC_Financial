@@ -1,0 +1,131 @@
+@using Financial.Controllers
+@model ReferenceValuesViewModel
+@{
+    ViewData["Title"] = "ค่าอ้างอิง (Reference Values)";
+}
+<div class="space-y-5">
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert-success" role="status">@message</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert-error" role="alert">@error</div>
+    }
+    @if (Model.Error is not null)
+    {
+        <div class="alert-error" role="alert">@Model.Error</div>
+    }
+
+    <div class="grid gap-5 lg:grid-cols-[260px_1fr]">
+        <!-- ================= หมวด ================= -->
+        <aside class="card card-body h-fit" aria-label="หมวดค่าอ้างอิง">
+            <h2 class="mb-3 font-semibold text-stone-900">หมวด</h2>
+            @if (Model.Categories.Count == 0)
+            {
+                <p class="text-sm text-stone-500">ยังไม่มีข้อมูล</p>
+            }
+            <nav class="flex flex-col gap-1">
+                @foreach (var c in Model.Categories)
+                {
+                    var active = c.Category == Model.Category;
+                    <a asp-action="Index" asp-route-category="@c.Category"
+                       class="flex items-center justify-between rounded-xl px-3 py-2 text-sm transition @(active ? "bg-brand-50 font-medium text-brand-700" : "text-stone-600 hover:bg-sand-50")"
+                       aria-current="@(active ? "page" : null)">
+                        <span class="font-mono text-xs">@c.Category</span>
+                        <span class="badge @(active ? "bg-white text-brand-700" : "bg-sand-100 text-stone-500")">@c.Count</span>
+                    </a>
+                }
+            </nav>
+            <form method="get" asp-action="Create" class="mt-4 border-t border-sand-200 pt-4">
+                <label class="label" for="newCategory">เพิ่มหมวดใหม่</label>
+                <div class="flex gap-2">
+                    <input id="newCategory" name="category" class="input font-mono uppercase" placeholder="เช่น PAYMENT_MODE" pattern="[A-Za-z][A-Za-z0-9_]*" maxlength="100" required />
+                    <button type="submit" class="btn-outline px-3" aria-label="เพิ่มหมวด">+</button>
+                </div>
+                <p class="mt-1 text-xs text-stone-500">ตั้งชื่อแบบ UPPER_SNAKE_CASE แล้วเพิ่มรายการแรก</p>
+            </form>
+        </aside>
+
+        <!-- ================= รายการในหมวด ================= -->
+        <section class="card card-body" aria-labelledby="valuesTitle">
+            @if (Model.Category is null)
+            {
+                <p class="text-sm text-stone-500">เลือกหมวดทางซ้าย หรือเพิ่มหมวดใหม่</p>
+            }
+            else
+            {
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div>
+                        <h2 id="valuesTitle" class="font-semibold text-stone-900">หมวด <span class="font-mono">@Model.Category</span></h2>
+                        <p class="text-xs text-stone-500">ลาก <span aria-hidden="true">⠿</span> เพื่อเรียงลำดับ (หรือใช้ปุ่ม ▲▼) แล้วกด "บันทึกลำดับ" · ค่าระดับระบบแก้ชื่อ/รายละเอียด/ลำดับได้ แต่เปลี่ยนรหัสหรือลบไม่ได้</p>
+                    </div>
+                    <div class="ml-auto flex flex-wrap gap-2">
+                        <button type="button" id="refReset" class="btn-ghost hidden">ยกเลิก</button>
+                        <button type="button" id="refSaveOrder" class="btn-primary" disabled>บันทึกลำดับ</button>
+                        <a asp-action="Create" asp-route-category="@Model.Category" class="btn-dark">+ เพิ่มรายการ</a>
+                    </div>
+                </div>
+                <div id="refStatus" class="mb-3 hidden" role="status" aria-live="polite"></div>
+
+                <div class="table-wrap max-h-none">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th class="w-10"><span class="sr-only">ลาก</span></th><th class="num">ลำดับ</th><th>รหัส</th><th>ชื่อภาษาไทย</th><th>ชื่อภาษาอังกฤษ</th><th>รายละเอียด</th><th>ประเภท</th><th class="text-right">จัดการ</th></tr>
+                        </thead>
+                        <tbody id="refBody" data-category="@Model.Category">
+                            @foreach (var v in Model.Values)
+                            {
+                                <tr draggable="true" data-id="@v.Id" class="cursor-grab bg-white">
+                                    <td class="text-stone-400">
+                                        <span class="select-none text-lg leading-none" aria-hidden="true" title="ลากเพื่อเรียงลำดับ">⠿</span>
+                                        <span class="ml-1 inline-flex flex-col align-middle">
+                                            <button type="button" class="text-[10px] leading-none hover:text-brand-600" data-move="-1" aria-label="เลื่อน @v.Code ขึ้น">▲</button>
+                                            <button type="button" class="text-[10px] leading-none hover:text-brand-600" data-move="1" aria-label="เลื่อน @v.Code ลง">▼</button>
+                                        </span>
+                                    </td>
+                                    <td class="num" data-order>@v.DisplayOrder</td>
+                                    <td class="font-mono text-xs">@v.Code</td>
+                                    <td class="font-medium text-stone-900">@v.NameTH</td>
+                                    <td>@v.NameEN</td>
+                                    <td class="max-w-64 truncate text-stone-500" title="@v.Description">@v.Description</td>
+                                    <td>
+                                        @if (v.IsSystem)
+                                        {
+                                            <span class="badge bg-sand-100 text-stone-600" title="ค่าระดับระบบ: โค้ดอ้างอิงรหัสนี้ เปลี่ยนรหัส/ลบไม่ได้">ระบบ</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-brand-50 text-brand-700">ทั่วไป</span>
+                                        }
+                                    </td>
+                                    <td class="text-right">
+                                        <a asp-action="Edit" asp-route-id="@v.Id" class="btn-ghost px-2.5 py-1.5">แก้ไข</a>
+                                        @if (!v.IsSystem)
+                                        {
+                                            <form method="post" asp-action="Delete" asp-route-id="@v.Id" class="inline" data-confirm="ลบ @v.Code — @v.NameTH ?">
+                                                <button type="submit" class="btn-ghost px-2.5 py-1.5 text-red-600 hover:bg-red-50">ลบ</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn-ghost px-2.5 py-1.5" disabled title="ค่าระดับระบบลบไม่ได้">ลบ</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (Model.Values.Count == 0)
+                {
+                    <p class="mt-3 text-sm text-stone-500">หมวดนี้ยังไม่มีรายการ</p>
+                }
+            }
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/reference-values.js" asp-append-version="true"></script>
+}

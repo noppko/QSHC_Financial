@@ -73,14 +73,16 @@ namespace Financial.Services.Dashboard
             {
                 var payer = PickPayer(rng);
                 var wait = rng.Next(1, 95);
+                var premium = rng.NextDouble() < 0.2; // ราว 1 ใน 5 มาจาก Premium Clinic (ห้องการเงินแยก)
                 pending.Add(Identify(new PendingPayment("O", DashboardText.Reference(rng.Next(1_000_000, 9_999_999)), payer.Code, payer.Name,
-                    Clinics[rng.Next(Clinics.Length)], Money(rng, 300, payer.Code == "F" ? 25_000 : 8_000), wait, wait > 10), includePatientIdentity, pending.Count));
+                    premium ? "Premium Clinic" : Clinics[rng.Next(Clinics.Length)], Money(rng, 300, payer.Code == "F" ? 25_000 : 8_000), wait, wait > 10,
+                    Zone: premium ? PendingZones.PREMIUM : PendingZones.OPD), includePatientIdentity, pending.Count));
             }
             for (int i = 0, n = rng.Next(6, 16); i < n; i++)
             {
                 var payer = PickPayer(rng);
                 pending.Add(Identify(new PendingPayment("I", DashboardText.Reference(rng.Next(1_000_000, 9_999_999)), payer.Code, payer.Name,
-                    Wards[rng.Next(Wards.Length)], Money(rng, 15_000, 650_000), rng.Next(20, 60 * 30), rng.NextDouble() > 0.3), includePatientIdentity, pending.Count));
+                    Wards[rng.Next(Wards.Length)], Money(rng, 15_000, 650_000), rng.Next(20, 60 * 30), rng.NextDouble() > 0.3, Zone: PendingZones.IPD), includePatientIdentity, pending.Count));
             }
 
             var volume = new VolumeRow((int)(rng.Next(700, 1000) * dayProgress), rng.Next(80, 110), (int)(rng.Next(10, 25) * dayProgress));

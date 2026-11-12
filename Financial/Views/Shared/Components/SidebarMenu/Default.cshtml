@@ -2,6 +2,9 @@
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    bool IsActive(AppMenu.Item item)
+        => currentController.Equals(item.Controller, StringComparison.OrdinalIgnoreCase)
+           && currentAction.Equals(item.Action, StringComparison.OrdinalIgnoreCase);
 }
 <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="เมนูหลัก">
     @foreach (var group in Model)
@@ -11,15 +14,41 @@
             <ul class="space-y-1">
                 @foreach (var item in group.Items)
                 {
-                    var isActive = currentController.Equals(item.Controller, StringComparison.OrdinalIgnoreCase)
-                                   && currentAction.Equals(item.Action, StringComparison.OrdinalIgnoreCase);
-                    <li>
-                        <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link"
-                           aria-current="@(isActive ? "page" : null)" title="@item.Description">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
-                            <span>@item.Name</span>
-                        </a>
-                    </li>
+                    @if (item.HasChildren)
+                    {
+                        // ระดับ 1 (กางออกได้) → ระดับ 2 = รายการย่อย; กางเองเมื่ออยู่ในหน้าของรายการย่อย
+                        var childActive = item.Children!.Any(IsActive);
+                        <li>
+                            <details class="group/menu" open="@childActive">
+                                <summary class="nav-link cursor-pointer list-none [&::-webkit-details-marker]:hidden" title="@item.Description">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
+                                    <span class="flex-1">@item.Name</span>
+                                    <svg class="!size-4 transition-transform group-open/menu:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+                                </summary>
+                                <ul class="mt-1 ml-5 space-y-1 border-l border-sand-200 pl-3">
+                                    @foreach (var child in item.Children!)
+                                    {
+                                        <li>
+                                            <a asp-controller="@child.Controller" asp-action="@child.Action" class="nav-link !py-2"
+                                               aria-current="@(IsActive(child) ? "page" : null)" title="@child.Description">
+                                                <span>@child.Name</span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </details>
+                        </li>
+                    }
+                    else
+                    {
+                        <li>
+                            <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link"
+                               aria-current="@(IsActive(item) ? "page" : null)" title="@item.Description">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
+                                <span>@item.Name</span>
+                            </a>
+                        </li>
+                    }
                 }
             </ul>
         </div>

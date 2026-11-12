@@ -9,7 +9,7 @@
         <section>
             <h2 class="mb-3 text-sm font-semibold tracking-wide text-stone-500 uppercase">@group.Title</h2>
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                @foreach (var item in group.Items)
+                @foreach (var (fullName, item) in group.Items.SelectMany(i => i.Pages()))
                 {
                     <a asp-controller="@item.Controller" asp-action="@item.Action"
                        class="card card-body group flex items-start gap-4 transition hover:-translate-y-0.5 hover:shadow-md">
@@ -17,7 +17,7 @@
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
                         </span>
                         <span>
-                            <span class="block font-semibold text-stone-900 group-hover:text-brand-600">@item.Name</span>
+                            <span class="block font-semibold text-stone-900 group-hover:text-brand-600">@fullName</span>
                             <span class="mt-0.5 block text-sm text-stone-500">@item.Description</span>
                             <span class="mt-2 block font-mono text-xs text-stone-400">/@item.Controller/@item.Action</span>
                         </span>

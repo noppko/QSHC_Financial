@@ -7,6 +7,8 @@ namespace Financial.Models
     {
         public const string PATIENT_TYPE = "PATIENT_TYPE";
         public const string ACCESS_LEVEL = "ACCESS_LEVEL";
+        public const string PAYOR_SCHEME = "PAYOR_SCHEME";
+        public const string FISCAL_ZONE = "FISCAL_ZONE";
     }
 
     /// <summary>
@@ -37,5 +39,25 @@ namespace Financial.Models
         public const string ADMIN = "ADMIN";
         public const string FINANCE = "FINANCE";
         public const string GENERAL = "GENERAL";
+    }
+
+    /// <summary>
+    /// รหัสใน ReferenceValues category PAYOR_SCHEME — สิทธิ์ที่มีรายงานตามปีงบประมาณ
+    /// กลุ่มผู้จ่าย (PYRACAT ใน HIS) ของแต่ละสิทธิ์ตั้งค่าได้ที่ Reports:Fiscal:Schemes
+    /// </summary>
+    public static class PayorSchemeCodes
+    {
+        public const string NHSO = "NHSO";   // สปสช.
+        public const string CSMBS = "CSMBS"; // กรมบัญชีกลาง (สวัสดิการรักษาพยาบาลข้าราชการ)
+        public const string SSO = "SSO";     // ประกันสังคม
+        public const string LGO = "LGO";     // อปท. (องค์กรปกครองส่วนท้องถิ่น)
+    }
+
+    /// <summary>รหัสใน ReferenceValues category FISCAL_ZONE: ในเขต / นอกเขต / รวม</summary>
+    public static class FiscalZoneCodes
+    {
+        public const string IN = "IN";
+        public const string OUT = "OUT";
+        public const string ALL = "ALL";
     }
 }

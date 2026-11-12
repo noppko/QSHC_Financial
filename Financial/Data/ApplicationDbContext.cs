@@ -1,14 +1,13 @@
 ﻿using Financial.Models;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
 namespace Financial.Data
 {
     /// <summary>
-    /// DbContext หลักของระบบ รองรับ Identity และ Audit Fields
+    /// DbContext หลักของระบบ (QSHC_Financial) พร้อม Audit Fields — ไม่ใช้ ASP.NET Identity (ยืนยันตัวตนผ่าน External Auth API)
     /// </summary>
-    public class ApplicationDbContext : IdentityDbContext
+    public class ApplicationDbContext : DbContext
     {
         private readonly IHttpContextAccessor? _httpContextAccessor;
 
@@ -23,23 +22,12 @@ namespace Financial.Data
         // DbSets (ฐาน QSHC_Financial — ข้อมูลของระบบ Financial แยกจาก HIS)
         public DbSet<ReferenceValue> ReferenceValues { get; set; } = null!;
         public DbSet<AppSetting> AppSettings { get; set; } = null!;
-        public DbSet<NhsoFiscalSummary> NhsoFiscalSummaries { get; set; } = null!;
+        public DbSet<FiscalPayorSummary> FiscalPayorSummaries { get; set; } = null!;
+        public DbSet<FiscalSchemeTotal> FiscalSchemeTotals { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            // ตาราง Identity เดิม (ไม่ได้ใช้งาน) สร้างไว้ด้วย key ยาว 128 — คงไว้ตามเดิม ไม่ให้ migration ไปแก้ primary key
-            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>(b =>
-            {
-                b.Property(l => l.LoginProvider).HasMaxLength(128);
-                b.Property(l => l.ProviderKey).HasMaxLength(128);
-            });
-            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>(b =>
-            {
-                b.Property(t => t.LoginProvider).HasMaxLength(128);
-                b.Property(t => t.Name).HasMaxLength(128);
-            });
 
             // Global Query Filter สำหรับ Soft Delete ของทุก Entity ที่ inherit BaseEntity - กรองเฉพาะ IsActive = true
             foreach (var entityType in modelBuilder.Model.GetEntityTypes().Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)))
@@ -61,8 +49,11 @@ namespace Financial.Data
                 .IsUnique()
                 .HasFilter("[IsActive] = 1");
 
-            modelBuilder.Entity<NhsoFiscalSummary>()
-                .HasIndex(s => new { s.FiscalYear, s.PatientTypeCode });
+            modelBuilder.Entity<FiscalPayorSummary>()
+                .HasIndex(s => new { s.FiscalYear, s.SchemeCode, s.PatientTypeCode });
+
+            modelBuilder.Entity<FiscalSchemeTotal>()
+                .HasIndex(s => new { s.FiscalYear, s.SchemeCode, s.PatientTypeCode, s.ZoneCode });
 
             // Self-referencing relationship สำหรับ ReferenceValue
             modelBuilder.Entity<ReferenceValue>()
@@ -265,6 +256,18 @@ namespace Financial.Data
                 new ReferenceValue { Id = 14, Category = ReferenceCategories.ACCESS_LEVEL, Code = AccessLevelCodes.ADMIN, NameTH = "ผู้ดูแลระบบ", NameEN = "Administrator", Description = "ตั้งค่าระบบได้ และดูได้ทุกหน้า", DisplayOrder = 1, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
                 new ReferenceValue { Id = 15, Category = ReferenceCategories.ACCESS_LEVEL, Code = AccessLevelCodes.FINANCE, NameTH = "เจ้าหน้าที่การเงิน", NameEN = "Finance", Description = "role ขึ้นต้นด้วย Cashier — เข้าเมนูการเงินได้", DisplayOrder = 2, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
                 new ReferenceValue { Id = 16, Category = ReferenceCategories.ACCESS_LEVEL, Code = AccessLevelCodes.GENERAL, NameTH = "ผู้ใช้งานทั่วไป (Dashboard)", NameEN = "General", Description = "ดูได้เฉพาะ Dashboard", DisplayOrder = 3, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+
+                // สิทธิ์ที่มีรายงานตามปีงบประมาณ (กลุ่มผู้จ่ายใน HIS ตั้งค่าที่ Reports:Fiscal:Schemes)
+                new ReferenceValue { Id = 17, Category = ReferenceCategories.PAYOR_SCHEME, Code = PayorSchemeCodes.NHSO, NameTH = "สปสช.", NameEN = "NHSO (UCS)", Description = "หลักประกันสุขภาพถ้วนหน้า", DisplayOrder = 10, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 18, Category = ReferenceCategories.PAYOR_SCHEME, Code = PayorSchemeCodes.CSMBS, NameTH = "กรมบัญชีกลาง", NameEN = "CSMBS", Description = "สวัสดิการรักษาพยาบาลข้าราชการ", DisplayOrder = 20, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 19, Category = ReferenceCategories.PAYOR_SCHEME, Code = PayorSchemeCodes.SSO, NameTH = "ประกันสังคม", NameEN = "SSO", Description = "สำนักงานประกันสังคม", DisplayOrder = 30, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+
+                // เขตของเงื่อนไขการเรียกเก็บ (นอกเขต = ชื่อเงื่อนไขมีคำว่า "นอก")
+                new ReferenceValue { Id = 23, Category = ReferenceCategories.PAYOR_SCHEME, Code = PayorSchemeCodes.LGO, NameTH = "อปท.", NameEN = "LGO", Description = "องค์กรปกครองส่วนท้องถิ่น", DisplayOrder = 40, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+
+                new ReferenceValue { Id = 20, Category = ReferenceCategories.FISCAL_ZONE, Code = FiscalZoneCodes.IN, NameTH = "ในเขต", NameEN = "In zone", DisplayOrder = 10, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 21, Category = ReferenceCategories.FISCAL_ZONE, Code = FiscalZoneCodes.OUT, NameTH = "นอกเขต", NameEN = "Out of zone", DisplayOrder = 20, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 22, Category = ReferenceCategories.FISCAL_ZONE, Code = FiscalZoneCodes.ALL, NameTH = "รวม", NameEN = "Total", DisplayOrder = 30, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
             };
 
             modelBuilder.Entity<ReferenceValue>().HasData(referenceValues);

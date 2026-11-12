@@ -1,0 +1,60 @@
+@using Financial.Services
+@model Financial.Models.ReferenceValue
+@{
+    var isNew = Model.Id == 0;
+    var locked = Model.IsSystem; // ค่าระดับระบบ: ล็อกหมวด/รหัส
+    ViewData["Title"] = isNew ? "เพิ่มค่าอ้างอิง" : "แก้ไขค่าอ้างอิง";
+    var categories = ViewData["Categories"] as List<ReferenceCategorySummary> ?? [];
+}
+<div class="mx-auto max-w-2xl space-y-5">
+    <a asp-action="Index" asp-route-category="@Model.Category" class="btn-ghost px-3 py-1.5">← กลับไปหมวด @(string.IsNullOrEmpty(Model.Category) ? "ทั้งหมด" : Model.Category)</a>
+
+    <form method="post" asp-action="Save" class="card card-body space-y-4">
+        <h2 class="font-semibold text-stone-900">@ViewData["Title"]</h2>
+        <div asp-validation-summary="All" class="alert-error empty:hidden [&_ul]:list-none [&_ul]:p-0"></div>
+        <input type="hidden" asp-for="Id" />
+        @if (locked)
+        {
+            <div class="alert-info">ค่าระดับระบบ — โค้ดของระบบอ้างอิงหมวด/รหัสนี้ จึงแก้ได้เฉพาะชื่อ รายละเอียด และลำดับ</div>
+        }
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="label" asp-for="Category">หมวด <span class="text-red-600">*</span></label>
+                <input class="input font-mono uppercase read-only:bg-sand-100" asp-for="Category" list="categoryList" maxlength="100" required placeholder="เช่น PAYMENT_MODE" readonly="@locked" />
+                <datalist id="categoryList">
+                    @foreach (var c in categories)
+                    {
+                        <option value="@c.Category"></option>
+                    }
+                </datalist>
+            </div>
+            <div>
+                <label class="label" asp-for="Code">รหัส <span class="text-red-600">*</span></label>
+                <input class="input font-mono read-only:bg-sand-100" asp-for="Code" maxlength="50" required placeholder="เช่น CASH" readonly="@locked" />
+            </div>
+            <div>
+                <label class="label" asp-for="NameTH">ชื่อภาษาไทย <span class="text-red-600">*</span></label>
+                <input class="input" asp-for="NameTH" maxlength="200" required />
+            </div>
+            <div>
+                <label class="label" asp-for="NameEN">ชื่อภาษาอังกฤษ</label>
+                <input class="input" asp-for="NameEN" maxlength="200" />
+            </div>
+            <div class="sm:col-span-2">
+                <label class="label" asp-for="Description">รายละเอียด</label>
+                <textarea class="input" asp-for="Description" rows="3" maxlength="500"></textarea>
+            </div>
+            <div>
+                <label class="label" asp-for="DisplayOrder">ลำดับการแสดง</label>
+                <input class="input" asp-for="DisplayOrder" type="number" min="0" step="1" />
+                <p class="mt-1 text-xs text-stone-500">@(isNew ? "เว้น 0 = ต่อท้ายหมวด · " : "")เรียงด้วยการลากในหน้ารายการได้</p>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 border-t border-sand-200 pt-4">
+            <a asp-action="Index" asp-route-category="@Model.Category" class="btn-outline">ยกเลิก</a>
+            <button type="submit" class="btn-primary">บันทึก</button>
+        </div>
+    </form>
+</div>

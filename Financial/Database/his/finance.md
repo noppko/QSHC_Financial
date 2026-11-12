@@ -173,6 +173,8 @@ erDiagram
 | `pRepQSHCPayment` | นับ visit ผู้ป่วยในตาม tariff ของสิทธิหลัก | `@P_FromDttm`, `@P_ToDttm` | ⚠️ **บั๊ก: hard-code ช่วงวันที่ ก.ย. 2022** ไม่ใช้พารามิเตอร์ |
 | `pRepQSHCPatientPaymentByCathlab` (+`…N`, `…ByEcho`, `…ByPacemaker`, `…ByOPD`) | รายการ order ตาม Service (Cath 185/165) พร้อมสิทธิ | `@P_FromDttm`, `@P_ToDttm` | กรอง `PO.OrderLocationUID='45'`, ตัด `ORDSTUID` 22846/22820/44998; คืน PHI |
 | `pRepQSHCInpatientCashier` | ผู้ป่วยในที่ยังไม่ D/C + ยอดค่าใช้จ่ายสะสม | ช่วงวัน, org, location | ใช้ `fCalculateBillableItemAmount` |
+| `pGetQSHCPatientDischargeOPD` | ทะเบียนจำหน่าย OPD (visit ที่ปิดแล้ว) + ยอดเงินตามบิล | `@DATE_FROM`, `@DATE_TO` (วันเริ่ม visit) | **เฉพาะบางสิทธิ์** (ตรวจ 2026-11-05): ส่วน 1 = PayorAgreement `C080` Refer OPD, `C450`, `C572`, `C020`, `C445`, `C618`; ส่วน 2 = self-pay `C001`/`C002` ที่ไม่มีบิลสิทธิ์อื่น. ⚠️ ส่วน 2 เทียบ `PB2.PayorUID` (PayorDetail, self-pay = UID 1) กับ UID ของ PayorAgreement (94/95) → **ไม่คืนแถวเลย** (ก.ย. 69: 0 แทน 1,043 visit); ⚠️ `C572` ตอนนี้ = UID 1068 "Self Pay (บุคลากร)" ไม่ใช่ "กองทุนศูนย์หัวใจฯ" ตามคอมเมนต์; ส่วน 1 GROUP BY `BillGeneratedDttm` → 1 แถว/บิล; ครอบคลุม visit OPD ก.ย. 69 เพียง 125 จาก ~13,700. **ตัวใหม่ทุกสิทธิ์: `his/pGetQSHCPatientDischargeOPDAllPayor.sql`** (ทดสอบ ก.ย. 69: 13,750 แถว/9,708 visit, < 2 วินาที) |
+| `pGetQSHCPatientDischarge` (IPD) | ทะเบียนจำหน่าย IPD ตาม `DischargeEvent.MedicalDischargeDttm`, แสดงสิทธิ์หลัก (PAYRTP PRIMARY) + ยอดรวม 1 แถว/admission | `@DATE_FROM`, `@DATE_TO` | **ไม่ครบทุกสิทธิ์**: ตัดบิล `PAQSHC001` (UID 1060 ส่วนเกินค่ารักษา) เสมอ, ตัดบิล self-pay `C001/C002` + `C507` (UID 621 OFC ไม่จ่ายตรง) ถ้า visit มีสิทธิ์อื่น (ก.ย. 69 ~2.16 ล้านบาท), hard-code ตัด visit 377884, 641951. ส่วน self-pay ของ IPD เทียบ `PayorAgreementUID` ถูกต้อง (ต่างจาก OPD). **ตัวใหม่ทุกสิทธิ์: `his/pGetQSHCPatientDischargeIPDAllPayor.sql`** (ก.ย. 69: 509 admission → 878 แถว, ~1.5 วินาที) |
 | `pRepQSHCPatientVisitPayor` | สิทธิทั้งหมดของ visit | `@PatientVisitUID`, `@PatientUID` | แก้ล่าสุด 2025-11 |
 | `pRepQSHCPremiumByPayment`, `…PremiumByEcho`, `pRepQSHCMedicaltreatmentfeeByPremium*`, `pRepQSHCTimelengthByPremium*` | รายงานคลินิกพิเศษนอกเวลา (premium) | | ยังไม่อ่านละเอียด |
 
@@ -206,6 +208,13 @@ erDiagram
 
 ---
 
+### บทเรียนจาก SP ทะเบียนจำหน่าย (2026-11-05) — เทียบเต็มใน `his/discharge-compare.md`
+
+- `Patient.PASID` ยาว 4–9 ตัว: 8 หลัก 241K, **9 หลัก 159K (40%, ยังไม่พบมา visit ก.ย. 69)** — อย่าเก็บ HN ใน `VARCHAR(8)`; `PatientVisitID.Identifier` ยาวสูงสุด 10
+- DB collation `Thai_CI_AS`
+- พารามิเตอร์วันที่แบบ `DATETIME` + `'23:59:59.999'` ถูกปัดเป็น 00:00 วันถัดไป → ใช้ `DATETIME2(3)` หรือ `< วันถัดไป`
+- อย่าหา UID ด้วย scalar subquery `Code=… AND ActiveTo IS NULL` — code ซ้ำได้ (เช่น `C572` มี 3 แถว, `C020` 2 แถว) และความหมายเปลี่ยนได้
+
 ## 7. SQL ที่ทดสอบแล้ว (ตัวเลขรวม ไม่มี PHI)
 
 | ไฟล์ | ผลลัพธ์ |
@@ -221,3 +230,11 @@ erDiagram
 ## 8. คำถามค้าง
 
 ดู [open-questions.md](open-questions.md) #25–27: ความหมายของ `PatientBill.TotalAmount`, นิยามรายได้ที่ฝ่ายการเงินใช้, ตารางรับชำระจากผู้จ่ายสิทธิ (ไม่พบใน HO — น่าจะอยู่ในระบบบัญชีภายนอก)
+
+### รายงานสิทธิ์ตามปีงบประมาณในแอป Financial (2026-11-11)
+
+- ไฟล์ `Database/his/queries/report-fiscal-payor.sql` — 1 แถว = ประเภทบิล × ประเภท visit × PYRACAT × PayorAgreement.Name × PatientUID
+- สิทธิ์ (config `Reports:Fiscal:Schemes`): สปสช. = `A` · กรมบัญชีกลาง = `B`, `V` · ประกันสังคม = `C`, `N`, `O`
+- "จำนวน (ราย)" = `PatientVisit.PatientUID` ไม่ซ้ำ (นับในหน่วยความจำของแอป ไม่บันทึก UID) · OPD/IPD = `PatientVisit.ENTYPUID` (1705 OUPAT, 1706 AEPAT → O; 1379 INPAT → I) ไม่มีประเภท visit จึงใช้ BLCAT
+- ผลสรุปเก็บที่ QSHC_Financial: `FiscalSchemeTotals` (ปี × สิทธิ์ × O/I × IN/OUT/ALL), `FiscalPayorSummaries` (ราย PayorAgreement)
+- คำถามค้าง: ฝ่ายการเงินยืนยันกลุ่ม PYRACAT ของแต่ละสิทธิ์ (เช่น ประกันสังคมรวม N/O หรือไม่, กรมบัญชีกลางรวม V หรือไม่)

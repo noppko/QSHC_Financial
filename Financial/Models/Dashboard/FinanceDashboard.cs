@@ -88,5 +88,27 @@ namespace Financial.Models.Dashboard
         bool InBilling,       // OPD: การเงินรับเรื่องแล้ว (BLINP), IPD: แพทย์ Medical Discharge แล้ว
         [property: System.Text.Json.Serialization.JsonIgnore] long VisitUid = 0,
         string? Hn = null,
-        string? PatientName = null);
+        string? PatientName = null,
+        string? Zone = null)  // ห้องการเงินใน 3D: PendingZones.OPD / PREMIUM / IPD (null = ตาม Type)
+    {
+        /// <summary>ห้องการเงินที่ผู้ป่วยไปรอ — Premium Clinic แยกห้องจากคลินิก OPD อื่น</summary>
+        public string CounterZone => Zone ?? Type;
+    }
+
+    /// <summary>รหัสห้องการเงินใน 3D Digital Twin</summary>
+    public static class PendingZones
+    {
+        public const string OPD = "O";
+        public const string PREMIUM = "P";
+        public const string IPD = "I";
+        /// <summary>รหัสคลินิก (Location.Code) ของ Premium Clinic — ปรับได้ที่ Dashboard:PremiumClinicCodes</summary>
+        public static readonly string[] DEFAULT_PREMIUM_CLINIC_CODES = ["D2305"];
+        /// <summary>คำในชื่อคลินิก (Location.Name) ที่ถือเป็น Premium Clinic — กันกรณีรหัสใน HIS ไม่ตรงกับที่ตั้งไว้</summary>
+        public const string PREMIUM_NAME_KEYWORD = "Premium";
+
+        /// <summary>คลินิกนี้ใช้ห้องการเงิน Premium หรือไม่ (ตรงรหัส หรือชื่อมีคำว่า Premium)</summary>
+        public static bool IsPremium(string? locationCode, string? locationName, IReadOnlySet<string>? premiumCodes)
+            => (locationCode is not null && premiumCodes is not null && premiumCodes.Contains(locationCode.Trim()))
+               || (locationName?.Contains(PREMIUM_NAME_KEYWORD, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
 }

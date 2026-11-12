@@ -1,4 +1,5 @@
 using Financial.Models.Dashboard;
+using Financial.Services.Notifications;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Memory;
 using System.Data;
@@ -19,17 +20,22 @@ namespace Financial.Services.Dashboard
 
         private readonly string? _connectionString;
         private readonly int _commandTimeoutSeconds;
+        private readonly HashSet<string> _premiumClinicCodes;
         private readonly IMemoryCache _cache;
         private readonly TimeProvider _timeProvider;
         private readonly ILogger<HisFinanceDashboardService> _logger;
+        private readonly ITelegramNotifier? _alerts;
 
-        public HisFinanceDashboardService(IConfiguration configuration, IMemoryCache cache, TimeProvider timeProvider, ILogger<HisFinanceDashboardService> logger)
+        public HisFinanceDashboardService(IConfiguration configuration, IMemoryCache cache, TimeProvider timeProvider, ILogger<HisFinanceDashboardService> logger, ITelegramNotifier? alerts = null)
         {
             _connectionString = configuration.GetConnectionString("HealthObject");
             _commandTimeoutSeconds = configuration.GetValue("Dashboard:CommandTimeoutSeconds", 60);
+            var premium = configuration.GetSection("Dashboard:PremiumClinicCodes").Get<string[]>();
+            _premiumClinicCodes = new HashSet<string>(premium is { Length: > 0 } ? premium : PendingZones.DEFAULT_PREMIUM_CLINIC_CODES, StringComparer.OrdinalIgnoreCase);
             _cache = cache;
             _timeProvider = timeProvider;
             _logger = logger;
+            _alerts = alerts;
         }
 
         public async Task<FinanceDashboard> GetAsync(bool includePatientIdentity = false, CancellationToken cancellationToken = default)
@@ -58,7 +64,7 @@ namespace Financial.Services.Dashboard
             var volumeTask = Section("ปริมาณผู้ป่วย", warnings, () => Cached($"his:volume:{today:yyyyMMdd}", LiveCache,
                 ct => QueryAsync(HisQueries.Volume, ReadVolume, ct, ("@today", today), ("@tomorrow", tomorrow)), cancellationToken));
             var pendingOpdTask = Section("ผู้ป่วยนอกรอชำระ", warnings, () => Cached("his:pending:O", LiveCache,
-                ct => QueryAsync(HisQueries.PendingOpd, r => ReadPending(r, "O", now), ct, ("@today", today), ("@tomorrow", tomorrow), ("@since", now.AddHours(-8))), cancellationToken));
+                ct => QueryAsync(HisQueries.PendingOpd, r => ReadPending(r, "O", now, _premiumClinicCodes), ct, ("@today", today), ("@tomorrow", tomorrow), ("@since", now.AddHours(-8))), cancellationToken));
             var pendingIpdTask = Section("ผู้ป่วยในรอชำระ", warnings, () => Cached("his:pending:I", LiveCache,
                 ct => QueryAsync(HisQueries.PendingIpd, r => ReadPending(r, "I", now), ct), cancellationToken));
 
@@ -158,6 +164,8 @@ namespace Financial.Services.Dashboard
             {
                 _logger.LogError(ex, "Dashboard section '{Section}' failed", name);
                 lock (warnings) warnings.Add($"ดึงข้อมูล \"{name}\" ไม่สำเร็จ");
+                // แจ้ง Telegram (เรื่องเดียวกันไม่ถี่กว่า Telegram:CooldownMinutes) — ไม่รอผล ไม่ให้หน้า Dashboard ช้า
+                if (_alerts is not null) _ = _alerts.SendAsync($"⚠️ Dashboard ดึงข้อมูล \"{name}\" จาก HIS ไม่สำเร็จ ({ex.GetType().Name}) — ตรวจการเชื่อมต่อ HIS", dedupeKey: "dashboard:" + name);
                 return null;
             }
         }
@@ -233,10 +241,12 @@ namespace Financial.Services.Dashboard
                 Convert.ToInt32(r.GetValue(r.GetOrdinal("IpdDischargesToday"))));
         }
 
-        internal static List<PendingPayment> ReadPending(IDataReader r, string type, DateTime now)
+        /// <param name="premiumClinicCodes">รหัสคลินิกที่มีห้องการเงินแยก (Premium Clinic) — ใช้กับ OPD ที่ query คืน LocationCode</param>
+        internal static List<PendingPayment> ReadPending(IDataReader r, string type, DateTime now, IReadOnlySet<string>? premiumClinicCodes = null)
         {
             int uid = r.GetOrdinal("VisitUid"), since = r.GetOrdinal("WaitingSince"), inBilling = r.GetOrdinal("InBilling"),
                 loc = r.GetOrdinal("LocationName"), code = r.GetOrdinal("PayorCategoryCode"), name = r.GetOrdinal("PayorCategory"), amount = r.GetOrdinal("Amount");
+            var locCode = Enumerable.Range(0, r.FieldCount).FirstOrDefault(i => r.GetName(i) == "LocationCode", -1);
             var rows = new List<PendingPayment>();
             while (r.Read())
             {
@@ -251,7 +261,11 @@ namespace Financial.Services.Dashboard
                     Dec(r, amount),
                     Math.Max(0, (int)(now - waitingSince).TotalMinutes),
                     Convert.ToInt32(r.GetValue(inBilling)) == 1,
-                    visitUid));
+                    visitUid,
+                    Zone: type == PendingZones.OPD && PendingZones.IsPremium(
+                            locCode >= 0 && !r.IsDBNull(locCode) ? Convert.ToString(r.GetValue(locCode)) : null,
+                            r.IsDBNull(loc) ? null : r.GetString(loc), premiumClinicCodes)
+                        ? PendingZones.PREMIUM : type));
             }
             return rows;
         }
@@ -358,7 +372,7 @@ namespace Financial.Services.Dashboard
         public static readonly string Volume = Load("dashboard-volume.sql");
         public static readonly string PendingOpd = Load("dashboard-pending-opd.sql");
         public static readonly string PendingIpd = Load("dashboard-pending-ipd.sql");
-        public static readonly string NhsoFiscal = Load("report-nhso-fiscal.sql");
+        public static readonly string FiscalPayor = Load("report-fiscal-payor.sql");
         public static readonly string PendingIdentity = Load("dashboard-pending-identity.sql");
 
         private static string Load(string fileName)

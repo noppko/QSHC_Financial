@@ -4,7 +4,10 @@
     var isIpd = Model.Type == PatientTypeCodes.IPD;
     ViewData["Title"] = isIpd ? "Discharge IPD — ผู้ป่วยใน" : "Discharge OPD — ผู้ป่วยนอก";
     var th = System.Globalization.CultureInfo.GetCultureInfo("th-TH");
-    var columnCount = isIpd ? 8 : 9;
+    // IPD จาก SP ทุกสิทธิ์ (…IPDAllPayor) มีเงื่อนไขการเรียกเก็บ/หอผู้ป่วย — SP เดิมไม่มี
+    var showBillCon = !isIpd || Model.Items.Any(i => i.BillCon.Length > 0);
+    var showPlace = !isIpd || Model.Items.Any(i => i.Clinic.Length > 0);
+    var columnCount = (isIpd ? 7 : 7) + (showBillCon ? 1 : 0) + (showPlace ? 1 : 0);
 }
 
 <div class="space-y-5">
@@ -124,13 +127,13 @@
                         <th>ลำดับ</th>
                         <th>ชื่อ-สกุล</th>
                         <th>สิทธิ์</th>
-                        @if (!isIpd) { <th>เงื่อนไขการเรียกเก็บ</th> }
+                        @if (showBillCon) { <th>เงื่อนไขการเรียกเก็บ</th> }
                         <th>HN</th>
                         <th>@(isIpd ? "AN" : "VN")</th>
                         @if (isIpd) { <th>วันรับ</th> }
                         <th>@(isIpd ? "วันจำหน่าย" : "วันที่")</th>
                         <th class="text-right">จำนวนเงิน</th>
-                        @if (!isIpd) { <th>คลินิก</th> }
+                        @if (showPlace) { <th>@(isIpd ? "หอผู้ป่วย" : "คลินิก")</th> }
                     </tr>
                 </thead>
                 <tbody>
@@ -148,13 +151,13 @@
                             <td class="text-stone-500 tabular-nums">@item.Id</td>
                             <td class="font-medium text-stone-900">@item.FullName</td>
                             <td>@item.TreatmentRight</td>
-                            @if (!isIpd) { <td>@item.BillCon</td> }
+                            @if (showBillCon) { <td>@item.BillCon</td> }
                             <td class="tabular-nums">@item.HN</td>
                             <td class="tabular-nums">@item.AN</td>
                             @if (isIpd) { <td>@item.Admit</td> }
                             <td>@item.DCDate</td>
                             <td class="num">@DischargeQueryResult.ParseAmount(item.Amount).ToString("N2")</td>
-                            @if (!isIpd) { <td>@item.Clinic</td> }
+                            @if (showPlace) { <td>@item.Clinic</td> }
                         </tr>
                     }
                 </tbody>

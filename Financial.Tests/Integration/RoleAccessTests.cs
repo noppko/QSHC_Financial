@@ -73,11 +73,24 @@ namespace Financial.Tests.Integration
             { "cash1", "/Admin",                     false },
             { "cash1", "/Reports/NhsoFiscal",        true },
             { "user1", "/Reports/NhsoFiscal",        false },
+            { "cash1", "/Reports/CsmbsFiscal",       true },
+            { "cash1", "/Reports/SsoFiscal?side=O",  true },
+            { "admin1", "/Admin/RefreshStatus?from=2567&to=2569", true },
+            { "cash1", "/Admin/RefreshStatus?from=2567&to=2569", false },
+            { "user1", "/Admin/RefreshStatus?from=2567&to=2569", false },
+            { "user1", "/Reports/CsmbsFiscal",       false },
+            { "user1", "/Reports/SsoFiscal",         false },
+            { "cash1", "/Reports/LgoFiscal",         true },
+            { "user1", "/Reports/LgoFiscal",         false },
             { "admin1", "/Reports/NhsoFiscal?side=O&from=2566&to=2568", true },
             { "admin1", "/",                         true },
             { "admin1", "/Discharges/OPD",           true },
             { "admin1", "/InterfaceSystem",          true },
             { "admin1", "/Admin",                    true },
+            { "admin1", "/ReferenceValues",          true },
+            { "admin1", "/ReferenceValues/Create?category=PAY_MODE", true },
+            { "cash1", "/ReferenceValues",           false },
+            { "user1", "/ReferenceValues",           false },
         };
 
         [Theory]
@@ -134,6 +147,43 @@ namespace Financial.Tests.Integration
             html.Should().MatchRegex("data-role[^>]*>CashierOPD<");
             // claim จาก API แสดงใน dropdown
             html.Should().Contain("cash1@qshc.local").And.Contain("หน่วยงาน").And.Contain("หญิง");
+        }
+
+        [Fact]
+        public async Task Sidebar_ReportsAreTwoLevels_FiscalYearThenScheme()
+        {
+            var html = await (await LoginAs("cash1")).GetStringAsync("/Reports/CsmbsFiscal");
+
+            // ระดับ 1 "ตามปีงบประมาณ" เป็นหัวข้อที่กางออกได้ ระดับ 2 = ชื่อสิทธิ์ (หน้าปัจจุบันกางอยู่แล้ว)
+            var group = Regex.Match(html, "<details[^>]*>(?s:.*?)</details>").Value;
+            group.Should().Contain("ตามปีงบประมาณ").And.Contain("open");
+            group.Should().Contain("/Reports/NhsoFiscal").And.Contain("/Reports/CsmbsFiscal").And.Contain("/Reports/SsoFiscal").And.Contain("/Reports/LgoFiscal");
+            Regex.Matches(group, "aria-current=\"page\"").Count.Should().Be(1, "ไฮไลต์เฉพาะสิทธิ์ที่เปิดอยู่");
+            html.Should().NotContain("สปสช. ตามปีงบประมาณ", "ชื่อเดิมแบบแบนถูกแทนที่ด้วยเมนู 2 ระดับ");
+
+            var general = await (await LoginAs("user1")).GetStringAsync("/");
+            general.Should().NotContain("ตามปีงบประมาณ", "ผู้ใช้ทั่วไปไม่มีสิทธิ์เข้ารายงาน จึงไม่เห็นหัวข้อ");
+        }
+
+        [Fact]
+        public async Task FiscalReport_VisitColumn_IsOptional()
+        {
+            var client = await LoginAs("cash1");
+
+            var off = await client.GetStringAsync("/Reports/NhsoFiscal");
+            off.Should().NotContain("จำนวน (visit)</th>").And.Contain("แสดงจำนวน (visit)");
+
+            var on = await client.GetStringAsync("/Reports/NhsoFiscal?showVisits=true");
+            Regex.Matches(on, Regex.Escape("จำนวน (visit)</th>")).Count.Should().Be(3, "ในเขต / นอกเขต / รวม");
+            on.Should().Contain("colspan=\"4\"");
+        }
+
+        [Fact]
+        public async Task SiteMap_ListsEachSchemeWithParentName()
+        {
+            var html = await (await LoginAs("cash1")).GetStringAsync("/Home/SiteMap");
+
+            html.Should().Contain("ตามปีงบประมาณ — สปสช.").And.Contain("ตามปีงบประมาณ — กรมบัญชีกลาง").And.Contain("ตามปีงบประมาณ — ประกันสังคม").And.Contain("ตามปีงบประมาณ — อปท.");
         }
 
         [Fact]

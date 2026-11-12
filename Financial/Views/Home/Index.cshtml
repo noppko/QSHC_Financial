@@ -83,12 +83,13 @@
     <section class="card overflow-hidden" aria-labelledby="twinTitle">
         <div class="flex flex-wrap items-center gap-3 border-b border-sand-200 px-5 py-3">
             <div>
-                <h2 id="twinTitle" class="font-semibold text-stone-900">3D Digital Twin — เงินที่รอชำระ แยก OPD / IPD</h2>
-                <p class="text-xs text-stone-500">แต่ละคนคือผู้ป่วย 1 ราย · สีเสื้อ = ระยะเวลารอ · เหรียญเหนือศีรษะ = ค่าใช้จ่ายรวม (ยิ่งสูงยิ่งมาก) · ยืนที่เคาน์เตอร์ = การเงินรับเรื่องแล้ว · OPD นับจากออกจากห้องตรวจ (CHKOUT) ถึงปิดบัญชี (FINDIS) · IPD นับจาก Medical Discharge</p>
+                <h2 id="twinTitle" class="font-semibold text-stone-900">3D Digital Twin — เงินที่รอชำระ แยก OPD / Premium Clinic / IPD</h2>
+                <p class="text-xs text-stone-500">แต่ละคนคือผู้ป่วย 1 ราย · สีเสื้อ = ระยะเวลารอ · เหรียญเหนือศีรษะ = ค่าใช้จ่ายรวม (ยิ่งสูงยิ่งมาก) · ยืนที่เคาน์เตอร์ = การเงินรับเรื่องแล้ว · OPD นับจากตรวจเสร็จ (Examination Completed) หรือออกจากห้องตรวจ (CHKOUT) ถึงปิดบัญชี (FINDIS) · Premium Clinic แยกห้องการเงิน · IPD นับจาก Medical Discharge</p>
             </div>
             <div class="ml-auto flex flex-wrap items-center gap-2" role="group" aria-label="ตัวกรอง 3D">
                 <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="all" aria-pressed="true">ทั้งหมด</button>
                 <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="O" aria-pressed="false">OPD</button>
+                <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="P" aria-pressed="false">Premium</button>
                 <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="I" aria-pressed="false">IPD</button>
                 <button type="button" class="btn-ghost px-3 py-1.5" id="twinRotate" aria-pressed="false">หมุนอัตโนมัติ</button>
             </div>
@@ -146,21 +147,10 @@
                 </div>
             </div>
         }
-        <p class="text-xs text-stone-500 xl:col-span-2">เรียงตามยอดเงินจากมากไปน้อย · @(showIdentity ? "แสดง HN/ชื่อ-สกุลเฉพาะผู้ดูแลระบบ (บันทึกการเข้าถึงทุกครั้ง)" : "ไม่แสดง HN/ชื่อผู้ป่วย") · ยอดเงิน = ค่าใช้จ่ายรวมของ visit · คลิกตัวคนใน 3D เพื่อไฮไลต์แถว</p>
+        <p class="text-xs text-stone-500 xl:col-span-2">แถวสีฟ้า = การเงินรับเรื่องแล้ว (อยู่บนสุด) · เรียงตามยอดเงินจากมากไปน้อย · @(showIdentity ? "แสดง HN/ชื่อ-สกุลเฉพาะผู้ดูแลระบบ (บันทึกการเข้าถึงทุกครั้ง)" : "ไม่แสดง HN/ชื่อผู้ป่วย") · ยอดเงิน = ค่าใช้จ่ายรวมของ visit · คลิกตัวคนใน 3D เพื่อไฮไลต์แถว</p>
     </section>
 
-    <!-- ================= Charts ================= -->
-    <section class="grid gap-5 xl:grid-cols-3">
-        <div class="card card-body xl:col-span-2">
-            <h2 class="mb-3 font-semibold text-stone-900">รายได้รายวัน 30 วันล่าสุด (OPD / IPD)</h2>
-            <div class="h-72"><canvas id="dailyChart" aria-label="กราฟรายได้รายวัน"></canvas></div>
-        </div>
-        <div class="card card-body">
-            <h2 class="mb-3 font-semibold text-stone-900">รายได้เดือนนี้ตามสิทธิการรักษา</h2>
-            <div class="h-72"><canvas id="payerChart" aria-label="กราฟรายได้ตามสิทธิ"></canvas></div>
-        </div>
-    </section>
-
+    <!-- ================= รายเดือน (ใต้รายการรอชำระเงิน) ================= -->
     <section class="grid gap-5 xl:grid-cols-3">
         <div class="card card-body">
             <div class="mb-3 flex items-baseline justify-between gap-2">
@@ -187,6 +177,18 @@
                 <div><dt class="text-stone-500">จำหน่าย IPD วันนี้</dt><dd class="text-xl font-semibold tabular-nums" data-field="Volume.IpdDischargesToday">@Model.Volume.IpdDischargesToday.ToString("N0")</dd></div>
                 <div><dt class="text-stone-500">ยอดเฉลี่ยต่อบิลเดือนนี้ OPD / IPD</dt><dd class="font-semibold tabular-nums"><span data-field="Volume.AvgBillOpd">฿@Model.Volume.AvgBillOpd.ToString("N0")</span> / <span data-field="Volume.AvgBillIpd">฿@Model.Volume.AvgBillIpd.ToString("N0")</span></dd></div>
             </dl>
+        </div>
+    </section>
+
+    <!-- ================= Charts ================= -->
+    <section class="grid gap-5 xl:grid-cols-3">
+        <div class="card card-body xl:col-span-2">
+            <h2 class="mb-3 font-semibold text-stone-900">รายได้รายวัน 30 วันล่าสุด (OPD / IPD)</h2>
+            <div class="h-72"><canvas id="dailyChart" aria-label="กราฟรายได้รายวัน"></canvas></div>
+        </div>
+        <div class="card card-body">
+            <h2 class="mb-3 font-semibold text-stone-900">รายได้เดือนนี้ตามสิทธิการรักษา</h2>
+            <div class="h-72"><canvas id="payerChart" aria-label="กราฟรายได้ตามสิทธิ"></canvas></div>
         </div>
     </section>
 

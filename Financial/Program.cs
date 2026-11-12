@@ -5,6 +5,7 @@ using Financial.Services;
 using Financial.Services.Authorization;
 using Financial.Services.Dashboard;
 using Financial.Services.Discharges;
+using Financial.Services.Notifications;
 using Financial.Services.Reports;
 using Financial.Services.Settings;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -131,6 +132,18 @@ try
             options.CircuitBreaker.SamplingDuration = options.AttemptTimeout.Timeout * 2;
         });
 
+    // แจ้งเตือน Telegram (BotToken/ChatId ใส่ใน User Secrets หรือ env var ห้ามใส่ appsettings.json)
+    builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection(TelegramOptions.SECTION_NAME));
+    builder.Services.AddSingleton<AlertCooldown>();
+    {
+        var telegram = builder.Configuration.GetSection(TelegramOptions.SECTION_NAME).Get<TelegramOptions>() ?? new TelegramOptions();
+        builder.Services.AddHttpClient<ITelegramNotifier, TelegramNotifier>(client => client.Timeout = TimeSpan.FromSeconds(Math.Clamp(telegram.TimeoutSeconds, 3, 60)))
+            .RemoveAllLoggers() // URL ของ Telegram มี bot token — ห้ามให้ HttpClient log URL
+            .ConfigurePrimaryHttpMessageHandler(() => string.IsNullOrWhiteSpace(telegram.Proxy)
+                ? new HttpClientHandler()
+                : new HttpClientHandler { Proxy = new System.Net.WebProxy(telegram.Proxy), UseProxy = true });
+    }
+
     // ใช้ทดสอบการเชื่อมต่อในหน้าตั้งค่าระบบ (ไม่ retry, timeout สั้น)
     builder.Services.AddHttpClient(AdminController.HEALTH_CHECK_CLIENT, client => client.Timeout = TimeSpan.FromSeconds(5));
 
@@ -139,12 +152,12 @@ try
     builder.Services.AddSingleton<IAppSettingsStore, DbAppSettingsStore>();
     builder.Services.AddScoped<IReferenceValueService, ReferenceValueService>();
     builder.Services.AddScoped<IDischargeService, DischargeService>();
-    builder.Services.Configure<NhsoReportOptions>(builder.Configuration.GetSection(NhsoReportOptions.SECTION_NAME));
-    builder.Services.AddScoped<INhsoFiscalReportService, NhsoFiscalReportService>();
-    builder.Services.AddScoped<INhsoHisSource, NhsoHisSource>();
-    builder.Services.AddScoped<NhsoFiscalSummaryRefresher>();
-    builder.Services.AddSingleton<NhsoFiscalRefreshQueue>();
-    builder.Services.AddHostedService<NhsoFiscalRefreshWorker>();
+    builder.Services.Configure<FiscalReportOptions>(builder.Configuration.GetSection(FiscalReportOptions.SECTION_NAME));
+    builder.Services.AddScoped<IFiscalReportService, FiscalReportService>();
+    builder.Services.AddScoped<IFiscalHisSource, FiscalHisSource>();
+    builder.Services.AddScoped<FiscalSummaryRefresher>();
+    builder.Services.AddSingleton<FiscalRefreshQueue>();
+    builder.Services.AddHostedService<FiscalRefreshWorker>();
     // Dashboard:Source = "His" (HealthObject จริง, ค่าเริ่มต้น) หรือ "Sample" (ข้อมูลตัวอย่างสำหรับทดสอบหน้าจอ)
     if (string.Equals(builder.Configuration["Dashboard:Source"], "Sample", StringComparison.OrdinalIgnoreCase))
     {

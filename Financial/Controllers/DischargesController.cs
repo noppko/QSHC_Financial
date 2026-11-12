@@ -62,11 +62,13 @@ namespace Financial.Controllers
                     ["ลำดับที่"] = x => x.Id,
                     ["รายชื่อ"] = x => x.FullName,
                     ["สิทธิ์การรักษา"] = x => x.TreatmentRight,
+                    ["เงื่อนไขการเรียกเก็บ"] = x => x.BillCon,
                     ["HN"] = x => x.HN,
                     ["AN"] = x => x.AN,
                     ["Admit"] = x => x.Admit,
                     ["D/C"] = x => x.DCDate,
                     ["จำนวนเงิน"] = x => DischargeQueryResult.ParseAmount(x.Amount),
+                    ["หอผู้ป่วย"] = x => x.Clinic,
                 })
                 : ExcelHelper.CreateExcel(result.Items.ToList(), "OPD", new Dictionary<string, Func<VmDischargesPD, object>>
                 {

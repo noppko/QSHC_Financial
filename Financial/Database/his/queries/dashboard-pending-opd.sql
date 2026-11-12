@@ -1,13 +1,16 @@
 -- Dashboard: ผู้ป่วยนอกที่รอชำระเงินขณะนี้ (สำหรับ 3D Digital Twin)
--- จุดการเงิน (service-points.md): arrive = CHKOUT 28029, call = BLINP 44764, finish = FINDIS 44225 (PHADIS 44226 = จบแล้ว)
---   รอชำระ = visit OPD วันนี้ที่มี CHKOUT แล้ว แต่ยังไม่มี FINDIS/PHADIS และ CHKOUT ไม่เกิน 8 ชม. (wait-definitions.md)
+-- จุดการเงิน (service-points.md): arrive = CHKOUT 28029 หรือ SEEEN 1361 (Examination Completed), call = BLINP 44764,
+--   finish = FINDIS 44225 (PHADIS 44226 = จบแล้ว)
+--   รอชำระ = visit OPD วันนี้ที่ตรวจเสร็จ (SEEEN) หรือ CHKOUT แล้ว แต่ยังไม่มี FINDIS/PHADIS และเริ่มรอไม่เกิน 8 ชม. (wait-definitions.md)
+--   เวลาเริ่มรอ = เหตุการณ์ SEEEN/CHKOUT ที่เกิดก่อน
+--   LocationCode = รหัสคลินิก (Location.Code) ใช้แยกห้องการเงิน Premium Clinic (Dashboard:PremiumClinicCodes)
 --   ยอดเงิน = ค่าใช้จ่ายรวมของ visit SUM(PatientBillableItem.NetAmount)
 --   สิทธิ = PatientVisitPayor ลำดับแรก (PAYRTP 13838 PRIMARY) → กลุ่มผู้จ่าย PYRACAT
 -- ไม่คืน HN/ชื่อ — คืนเฉพาะ VisitUid ซึ่งแอปจะแสดงเป็นรหัสอ้างอิงแบบย่อ
 -- params: @today, @tomorrow, @since (datetime; @since = ขณะนี้ − 8 ชม.)
 WITH ev AS (
     SELECT e.PatientVisitUID AS pv,
-           MIN(CASE WHEN e.DepartmentUID = 28029 THEN e.CWhen END)            AS chkAt,
+           MIN(CASE WHEN e.DepartmentUID IN (28029, 1361) THEN e.CWhen END)   AS chkAt,
            MIN(CASE WHEN e.DepartmentUID = 44764 THEN e.CWhen END)            AS billingAt,
            MAX(CASE WHEN e.DepartmentUID IN (44225, 44226) THEN 1 ELSE 0 END) AS done
     FROM PatientServiceEvent e WITH (NOLOCK)
@@ -15,13 +18,14 @@ WITH ev AS (
       ON v.UID = e.PatientVisitUID AND v.ENTYPUID = 1705 AND v.StatusFlag = 'A'
     WHERE e.CWhen >= @today AND e.CWhen < @tomorrow
       AND e.StatusFlag = 'A'
-      AND e.DepartmentUID IN (28029, 44764, 44225, 44226)
+      AND e.DepartmentUID IN (28029, 1361, 44764, 44225, 44226)
     GROUP BY e.PatientVisitUID
 )
 SELECT ev.pv                                     AS VisitUid,
        ev.chkAt                                  AS WaitingSince,
        CASE WHEN ev.billingAt IS NULL THEN 0 ELSE 1 END AS InBilling,
        ISNULL(loc.Name, N'-')                    AS LocationName,
+       loc.Code                                  AS LocationCode,
        ISNULL(pay.PayorCategoryCode, '?')        AS PayorCategoryCode,
        ISNULL(pay.PayorCategory, N'(ไม่ระบุ)')   AS PayorCategory,
        ISNULL(amt.Amount, 0)                     AS Amount

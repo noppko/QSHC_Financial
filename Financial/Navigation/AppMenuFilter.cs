@@ -23,7 +23,19 @@ namespace Financial.Navigation
                 var items = new List<AppMenu.Item>();
                 foreach (var item in group.Items)
                 {
-                    if (item.Policy is null || (await authorization.AuthorizeAsync(user, item.Policy)).Succeeded)
+                    if (!await CanSeeAsync(authorization, user, item)) continue;
+
+                    if (item.HasChildren)
+                    {
+                        // หัวข้อระดับ 1 แสดงเฉพาะลูกที่มีสิทธิ์ — ไม่มีลูกที่เข้าได้เลยก็ซ่อนหัวข้อ
+                        var children = new List<AppMenu.Item>();
+                        foreach (var child in item.Children!)
+                        {
+                            if (await CanSeeAsync(authorization, user, child)) children.Add(child);
+                        }
+                        if (children.Count > 0) items.Add(item with { Children = children });
+                    }
+                    else
                     {
                         items.Add(item);
                     }
@@ -37,6 +49,9 @@ namespace Financial.Navigation
 
             return groups;
         }
+
+        private static async Task<bool> CanSeeAsync(IAuthorizationService authorization, ClaimsPrincipal user, AppMenu.Item item)
+            => item.Policy is null || (await authorization.AuthorizeAsync(user, item.Policy)).Succeeded;
 
         public static bool IsHidden(AppMenu.Group group, MenuVisibilitySettings setting)
             => group.CanHide && setting.HiddenMenuGroups.Contains(group.Key, StringComparer.OrdinalIgnoreCase);

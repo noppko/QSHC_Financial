@@ -118,11 +118,45 @@ namespace Financial.Tests.Services
             using var reader = table.CreateDataReader();
             var rows = HisFinanceDashboardService.ReadPending(reader, "O", Now);
 
-            rows[0].Should().Be(new PendingPayment("O", "#4321", "F", "เงินสด", "คลินิกหัวใจ", 2_450.50m, 25, true, VisitUid: 987654321L));
+            rows[0].Should().Be(new PendingPayment("O", "#4321", "F", "เงินสด", "คลินิกหัวใจ", 2_450.50m, 25, true, VisitUid: 987654321L, Zone: "O"));
             rows[0].Hn.Should().BeNull("ข้อมูลที่อ่านจาก query ปกติต้องไม่มี HN/ชื่อ");
             rows[0].PatientName.Should().BeNull();
             rows[0].Reference.Should().NotContain("987654321", "ห้ามแสดง VisitUid เต็ม");
             rows[1].WaitingMinutes.Should().Be(0);
+        }
+
+        [Fact]
+        public void ReadPending_PremiumClinicCode_GoesToSeparateCounterRoom()
+        {
+            var table = new DataTable();
+            foreach (var c in new[] { "VisitUid", "WaitingSince", "InBilling", "LocationName", "LocationCode", "PayorCategoryCode", "PayorCategory", "Amount" })
+                table.Columns.Add(c, c switch { "VisitUid" => typeof(long), "WaitingSince" => typeof(DateTime), "InBilling" => typeof(int), "Amount" => typeof(decimal), _ => typeof(string) });
+            table.Rows.Add(1L, Now.AddMinutes(-5), 0, "Premium Clinic", "d2305 ", "F", "เงินสด", 1_000m);
+            table.Rows.Add(2L, Now.AddMinutes(-5), 0, "คลินิกหัวใจ", "D1101", "F", "เงินสด", 500m);
+            table.Rows.Add(3L, Now.AddMinutes(-5), 0, "-", DBNull.Value, "F", "เงินสด", 500m);
+
+            using var reader = table.CreateDataReader();
+            var rows = HisFinanceDashboardService.ReadPending(reader, "O", Now, new HashSet<string>(["D2305"], StringComparer.OrdinalIgnoreCase));
+
+            rows.Select(r => r.CounterZone).Should().Equal(PendingZones.PREMIUM, PendingZones.OPD, PendingZones.OPD);
+            rows.Should().OnlyContain(r => r.Type == "O", "Premium ยังเป็นผู้ป่วยนอก แค่แยกห้องการเงิน");
+        }
+
+        [Theory]
+        [InlineData("D2305", "คลินิกใดก็ได้", true)]
+        [InlineData("X9999", "Premium Clinic", true)]
+        [InlineData(null, "premium clinic (นอกเวลา)", true)]
+        [InlineData("D1101", "คลินิกหัวใจ", false)]
+        [InlineData(null, null, false)]
+        public void IsPremium_MatchesCodeOrClinicName(string? code, string? name, bool expected)
+            => PendingZones.IsPremium(code, name, new HashSet<string>(["D2305"])).Should().Be(expected);
+
+        [Fact]
+        public void PendingOpdQuery_TreatsExaminationCompletedAsWaiting()
+        {
+            var sql = HisQueries.PendingOpd;
+            sql.Should().Contain("IN (28029, 1361)", "SEEEN 1361 = Examination Completed เริ่มรอชำระเงินด้วย");
+            sql.Should().Contain("AS LocationCode");
         }
 
         [Fact]
@@ -145,7 +179,7 @@ namespace Financial.Tests.Services
         [InlineData("dashboard-pending-opd.sql")]
         [InlineData("dashboard-pending-ipd.sql")]
         [InlineData("dashboard-pending-identity.sql")]
-        [InlineData("report-nhso-fiscal.sql")]
+        [InlineData("report-fiscal-payor.sql")]
         public void SqlFiles_AreEmbeddedAndReadOnly(string fileName)
         {
             var assembly = typeof(HisFinanceDashboardService).Assembly;
