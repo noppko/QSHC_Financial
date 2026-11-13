@@ -178,6 +178,40 @@ namespace Financial.Tests.Integration
             on.Should().Contain("colspan=\"4\"");
         }
 
+        [Theory]
+        [InlineData("/Reports/CsmbsFiscal")]
+        [InlineData("/Reports/SsoFiscal")]
+        [InlineData("/Reports/LgoFiscal")]
+        public async Task FiscalReport_OtherSchemes_HaveNoZoneColumns(string url)
+        {
+            var html = await (await LoginAs("cash1")).GetStringAsync(url + "?showVisits=true");
+
+            html.Should().NotContain(">ในเขต</th>").And.NotContain(">นอกเขต</th>").And.NotContain(">รวม</th>", "ไม่มีหัวกลุ่ม");
+            Regex.Matches(html, Regex.Escape("จำนวน (visit)</th>")).Count.Should().Be(1, "คอลัมน์เดียว");
+
+            (await (await LoginAs("cash1")).GetStringAsync("/Reports/NhsoFiscal")).Should().Contain(">นอกเขต</th>", "สปสช. ยังแยกในเขต/นอกเขต");
+        }
+
+        [Fact]
+        public async Task Sidebar_Edc_IsTwoLevels_ImportAndData_AndTemplateDownloads()
+        {
+            var cash = await LoginAs("cash1");
+            var html = await cash.GetStringAsync("/InterfaceSystem");
+
+            var group = Regex.Matches(html, "<details[^>]*>(?s:.*?)</details>").Select(m => m.Value).Single(d => d.Contains(">EDC<"));
+            group.Should().Contain("open", "อยู่ในหน้านำเข้าไฟล์ จึงกางเมนู EDC อยู่แล้ว").And.Contain(">นำเข้าไฟล์<").And.Contain(">ข้อมูล<");
+            group.Should().Contain("/InterfaceSystem\"").And.Contain("/InterfaceSystem/EDCIndex");
+            html.Should().Contain("/InterfaceSystem/DownloadTemplate", "ปุ่มดาวน์โหลด template");
+
+            var file = await cash.GetAsync("/InterfaceSystem/DownloadTemplate");
+            file.StatusCode.Should().Be(HttpStatusCode.OK);
+            file.Content.Headers.ContentDisposition!.FileName.Should().StartWith("HCG14584");
+
+            (await LoginAs("user1")).GetAsync("/InterfaceSystem/DownloadTemplate").Result.StatusCode.Should().NotBe(HttpStatusCode.OK, "ผู้ใช้ทั่วไปไม่มีสิทธิ์");
+
+            (await cash.GetStringAsync("/Home/SiteMap")).Should().Contain("EDC — นำเข้าไฟล์").And.Contain("EDC — ข้อมูล");
+        }
+
         [Fact]
         public async Task SiteMap_ListsEachSchemeWithParentName()
         {

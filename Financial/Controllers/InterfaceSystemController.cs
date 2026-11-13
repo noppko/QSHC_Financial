@@ -251,15 +251,61 @@ namespace Financial.Controllers
             return Json(result);
         }
 
-        // GET: /InterfaceSystem/EDCIndex
-        public async Task<IActionResult> EDCIndex(CancellationToken cancellationToken)
+        public const int EDC_LATEST_ROWS = 50;
+        public const int EDC_FILTER_MAX_ROWS = 500;
+
+        // GET: /InterfaceSystem/EDCIndex?postFrom=2026-11-01&postTo=2026-11-12&code=XXX
+        // ไม่ระบุตัวกรอง = 50 รายการล่าสุด · มีตัวกรอง = ไม่เกิน 500 รายการ เรียงวันที่ Post ล่าสุดก่อน
+        public async Task<IActionResult> EDCIndex(DateTime? postFrom, DateTime? postTo, string? code, CancellationToken cancellationToken)
         {
-            var records = await _db.PatientEdcregisters
-                .AsNoTracking()
-                .OrderByDescending(o => o.Uid)
-                .Take(50)
+            code = code?.Trim();
+            if (postFrom is not null && postTo is not null && postFrom > postTo) (postFrom, postTo) = (postTo, postFrom);
+
+            // Code ค้นแบบบางส่วน (LIKE) — พิมพ์ "4583" ก็เจอ FA0014583
+            var byCode = _db.PatientEdcregisters.AsNoTracking();
+            if (!string.IsNullOrEmpty(code)) byCode = byCode.Where(r => r.Code != null && r.Code.Contains(code));
+            var query = byCode;
+            if (postFrom is { } from) query = query.Where(r => r.PostDate >= from.Date);
+            if (postTo is { } to) query = query.Where(r => r.PostDate < to.Date.AddDays(1));
+
+            var filtered = postFrom is not null || postTo is not null || !string.IsNullOrEmpty(code);
+            var limit = filtered ? EDC_FILTER_MAX_ROWS : EDC_LATEST_ROWS;
+            var records = await query
+                .OrderByDescending(r => r.PostDate)
+                .ThenByDescending(r => r.Uid)
+                .Take(limit + 1)
                 .ToListAsync(cancellationToken);
-            return View(records);
+
+            ViewData["PostFrom"] = postFrom;
+            ViewData["PostTo"] = postTo;
+            ViewData["Code"] = code;
+            ViewData["Filtered"] = filtered;
+            ViewData["Limit"] = limit;
+            ViewData["HasMore"] = records.Count > limit;
+
+            // ค้นด้วย Code + วันที่แล้วไม่เจอ → บอกว่า Code นี้มีข้อมูลช่วง PostDate ไหน
+            if (records.Count == 0 && !string.IsNullOrEmpty(code) && (postFrom is not null || postTo is not null))
+            {
+                var dates = await byCode.Where(r => r.PostDate != null)
+                    .GroupBy(_ => 1)
+                    .Select(g => new { Count = g.Count(), First = g.Min(r => r.PostDate), Last = g.Max(r => r.PostDate) })
+                    .FirstOrDefaultAsync(cancellationToken);
+                ViewData["Hint"] = dates is null
+                    ? $"ไม่พบ Code “{code}” ในทุกช่วงวันที่"
+                    : $"Code “{code}” มี {dates.Count:N0} รายการ PostDate ระหว่าง {dates.First:d/M/yyyy} – {dates.Last:d/M/yyyy} — ลองเปลี่ยนช่วงวันที่";
+            }
+            return View(records.Take(limit).ToList());
+        }
+
+        /// <summary>
+        /// ไฟล์ตัวอย่าง (template) สำหรับนำเข้า EDC — ข้อความคั่นด้วย | ชื่อขึ้นต้น HCG14584 ข้อมูลสมมติ ไม่มีข้อมูลผู้ป่วยจริง
+        /// ไม่มีบรรทัดหัวตาราง เพราะระบบนำเข้าทุกบรรทัดเป็นข้อมูล
+        /// </summary>
+        [HttpGet]
+        public IActionResult DownloadTemplate()
+        {
+            var content = EdcTemplate.Build();
+            return File(new System.Text.UTF8Encoding(false).GetBytes(content), "text/plain; charset=utf-8", EdcTemplate.FILE_NAME);
         }
 
         /// <summary>

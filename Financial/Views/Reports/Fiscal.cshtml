@@ -5,7 +5,9 @@
     ViewData["Title"] = $"รายงานสิทธิ {Model.SchemeName} ตามปีงบประมาณ";
     var currentFy = (int)ViewData["CurrentFiscalYear"]!;
     var schemeAction = (string)ViewData["SchemeAction"]!;
-    var yearOptions = Enumerable.Range(currentFy - 9, 10).Reverse().ToList();
+    // ตัวเลือกปี = เฉพาะปีที่มีข้อมูล (ไม่จำกัดจำนวนปี)
+    var yearOptions = (Model.AvailableYears.Count > 0 ? Model.AvailableYears : Model.Years.Select(y => y.BuddhistYear).ToList()).OrderDescending().ToList();
+    var groups = Model.GroupNames;   // สปสช. = ในเขต/นอกเขต/รวม · สิทธิ์อื่น = รวม
     var from = Model.Years[0].BuddhistYear;
     var to = Model.Years[^1].BuddhistYear;
     var th = System.Globalization.CultureInfo.GetCultureInfo("th-TH");
@@ -57,7 +59,7 @@
                 แสดงจำนวน (visit)
             </label>
             <button type="submit" class="btn-primary">แสดงรายงาน</button>
-            <span class="text-xs text-stone-500">แสดงได้ไม่เกิน @ReportsController.MAX_YEARS ปี · ข้อมูลดึงจาก HIS โดยผู้ดูแลระบบ (หน้า ตั้งค่าระบบ)</span>
+            <span class="text-xs text-stone-500">แสดงเฉพาะปีงบที่มีข้อมูล (@yearOptions.Count ปี) · ข้อมูลดึงจาก HIS โดยผู้ดูแลระบบ (หน้า ตั้งค่าระบบ)</span>
         </form>
     </section>
 
@@ -98,14 +100,19 @@
         <div class="overflow-x-auto rounded-xl border border-sand-200">
             <table class="w-full border-collapse text-sm tabular-nums">
                 <thead class="bg-sky-50 text-stone-700">
-                    <tr>
-                        <th rowspan="2" class="border border-sand-200 px-3 py-2">ปีงบประมาณ</th>
-                        <th colspan="@perGroup" class="border border-sand-200 px-3 py-2">ในเขต</th>
-                        <th colspan="@perGroup" class="border border-sand-200 px-3 py-2">นอกเขต</th>
-                        <th colspan="@perGroup" class="border border-sand-200 px-3 py-2">รวม</th>
-                    </tr>
-                    <tr class="text-xs">
-                        @for (var i = 0; i < 3; i++)
+                    @if (Model.HasZones)
+                    {
+                        <tr>
+                            <th rowspan="2" class="border border-sand-200 px-3 py-2">ปีงบประมาณ</th>
+                            @foreach (var g in groups)
+                            {
+                                <th colspan="@perGroup" class="border border-sand-200 px-3 py-2">@g</th>
+                            }
+                        </tr>
+                    }
+                    <tr class="@(Model.HasZones ? "text-xs" : "")">
+                        @if (!Model.HasZones) { <th class="border border-sand-200 px-3 py-2">ปีงบประมาณ</th> }
+                        @for (var i = 0; i < groups.Count; i++)
                         {
                             <th class="border border-sand-200 px-3 py-2 font-medium">จำนวน (ราย)</th>
                             @if (showVisits) { <th class="border border-sand-200 px-3 py-2 font-medium">จำนวน (visit)</th> }
@@ -120,7 +127,7 @@
                         var isSum = ReferenceEquals(row, Model.Sum);
                         <tr class="@(isSum ? "bg-sand-50 font-semibold" : "hover:bg-brand-50/40")">
                             <td class="border border-sand-200 px-3 py-2 text-center">@row.Label</td>
-                            @foreach (var z in new[] { row.InZone, row.OutZone, row.Total })
+                            @foreach (var z in Model.Figures(row))
                             {
                                 <td class="border border-sand-200 px-3 py-2 text-right">@z.Patients.ToString("N0")</td>
                                 @if (showVisits) { <td class="border border-sand-200 px-3 py-2 text-right text-stone-600">@z.Visits.ToString("N0")</td> }
@@ -133,25 +140,32 @@
             </table>
         </div>
         <ul class="mt-3 list-disc space-y-0.5 pl-5 text-xs text-stone-500">
-            <li>จำนวน (ราย) = ผู้ป่วยไม่ซ้ำ (คน) ในปีงบนั้น — ติ๊ก "แสดงจำนวน (visit)" เพื่อเพิ่มคอลัมน์จำนวน visit (ครั้งที่มารับบริการ ผู้ป่วยคนเดียวมีได้หลาย visit) · ผู้ป่วยที่มีทั้งในเขตและนอกเขตนับในทั้งสองช่อง แต่นับครั้งเดียวในช่องรวม · แถวรวมหลายปี = ผลรวมรายปี</li>
+            <li>จำนวน (ราย) = ผู้ป่วยไม่ซ้ำ (คน) ในปีงบนั้น — ติ๊ก "แสดงจำนวน (visit)" เพื่อเพิ่มคอลัมน์จำนวน visit (ครั้งที่มารับบริการ ผู้ป่วยคนเดียวมีได้หลาย visit)@(Model.HasZones ? " · ผู้ป่วยที่มีทั้งในเขตและนอกเขตนับในทั้งสองช่อง แต่นับครั้งเดียวในช่องรวม" : "") · แถวรวมหลายปี = ผลรวมรายปี</li>
             <li>OPD/IPD ตามประเภท visit ใน HIS (VN = ผู้ป่วยนอก, AN = ผู้ป่วยใน) — visit ที่ไม่มีประเภท ใช้ประเภทบิล</li>
             <li>นับตามวันออกบิลในปีงบประมาณ (1 ต.ค. – 30 ก.ย.) · จำนวนเงิน = ยอดบิลที่เรียกเก็บกับสิทธิ์หลัก @Model.SchemeName (กลุ่มผู้จ่าย @string.Join(", ", Model.PayorCategoryCodes)@(Model.PayorNameKeywords.Count > 0 ? $" หรือชื่อผู้จ่าย/เงื่อนไขมีคำว่า {string.Join(", ", Model.PayorNameKeywords.Select(k => $"“{k}”"))} เช่น สปสช(อปท)" : "")) ไม่รวมบิลคืนเงิน/Free bill@(Model.ExcludedPayorNameKeywords.Count > 0 ? $" · ผู้จ่ายที่ชื่อมีคำว่า {string.Join(", ", Model.ExcludedPayorNameKeywords.Select(k => $"“{k}”"))} นับในรายงานของสิทธิ์นั้นแทน (ไม่นับซ้ำ)" : "")</li>
-            <li>นอกเขต = เงื่อนไขการเรียกเก็บมีคำว่า “นอก” (ไม่นับ “ผู้ป่วยนอก”, “นอกเวลา”) · มีคำว่า “ใน” หรือไม่มีทั้งสองคำ = ในเขต</li>
-            <li>ร้อยละในเขต/นอกเขต = สัดส่วนจำนวนเงินของปีนั้น · ร้อยละรวม = สัดส่วนจำนวนเงินของปีนั้นต่อทุกปีที่เลือก</li>
+            @if (Model.HasZones)
+            {
+                <li>นอกเขต = เงื่อนไขการเรียกเก็บมีคำว่า “นอก” (ไม่นับ “ผู้ป่วยนอก”, “นอกเวลา”) · มีคำว่า “ใน” หรือไม่มีทั้งสองคำ = ในเขต</li>
+                <li>ร้อยละในเขต/นอกเขต = สัดส่วนจำนวนเงินของปีนั้น · ร้อยละรวม = สัดส่วนจำนวนเงินของปีนั้นต่อทุกปีที่เลือก</li>
+            }
+            else
+            {
+                <li>ร้อยละ = สัดส่วนจำนวนเงินของปีนั้นต่อทุกปีที่เลือก</li>
+            }
         </ul>
     </section>
 
     <!-- ตรวจการจัดกลุ่ม -->
     <section class="card card-body">
         <details>
-            <summary class="cursor-pointer font-semibold text-stone-900">เงื่อนไขการเรียกเก็บที่พบ (@Model.Agreements.Count รายการ) — ใช้ตรวจการจัดในเขต/นอกเขต</summary>
+            <summary class="cursor-pointer font-semibold text-stone-900">เงื่อนไขการเรียกเก็บที่พบ (@Model.Agreements.Count รายการ)@(Model.HasZones ? " — ใช้ตรวจการจัดในเขต/นอกเขต" : "")</summary>
             <div class="table-wrap mt-3 max-h-96">
                 <table class="data-table">
-                    <thead><tr><th>กลุ่มผู้จ่าย</th><th>เงื่อนไขการเรียกเก็บ</th><th>จัดเป็น</th><th class="text-right">จำนวน (ราย)</th><th class="text-right">visit</th><th class="text-right">จำนวนเงิน</th></tr></thead>
+                    <thead><tr><th>กลุ่มผู้จ่าย</th><th>เงื่อนไขการเรียกเก็บ</th>@if (Model.HasZones) { <th>จัดเป็น</th> }<th class="text-right">จำนวน (ราย)</th><th class="text-right">visit</th><th class="text-right">จำนวนเงิน</th></tr></thead>
                     <tbody>
                         @if (Model.Agreements.Count == 0)
                         {
-                            <tr><td colspan="6" class="py-8 text-center text-stone-500">ไม่มีข้อมูล</td></tr>
+                            <tr><td colspan="@(Model.HasZones ? 6 : 5)" class="py-8 text-center text-stone-500">ไม่มีข้อมูล</td></tr>
                         }
                         @foreach (var a in Model.Agreements)
                         {
@@ -169,16 +183,19 @@
                                         <span class="badge ml-1 bg-sky-50 text-sky-700" title="เรียกเก็บผ่านบิล @otherSide ใน HIS แต่ประเภท visit เป็น @(Financial.Models.PatientTypeCodes.Abbreviation(Model.Side))">บิล @otherSide · นับตาม visit</span>
                                     }
                                 </td>
-                                <td>
-                                    @if (a.OutOfZone)
-                                    {
-                                        <span class="badge bg-amber-50 text-amber-700">นอกเขต</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-emerald-50 text-emerald-700">ในเขต</span>
-                                    }
-                                </td>
+                                @if (Model.HasZones)
+                                {
+                                    <td>
+                                        @if (a.OutOfZone)
+                                        {
+                                            <span class="badge bg-amber-50 text-amber-700">นอกเขต</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-emerald-50 text-emerald-700">ในเขต</span>
+                                        }
+                                    </td>
+                                }
                                 <td class="num">@a.Patients.ToString("N0")</td>
                                 <td class="num">@a.Visits.ToString("N0")</td>
                                 <td class="num">@a.Amount.ToString("N2")</td>
@@ -187,7 +204,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="mt-2 text-xs text-stone-500">จำนวน (ราย) ในตารางนี้นับไม่ซ้ำภายในแต่ละเงื่อนไข · ตั้งค่ากลุ่มผู้จ่ายของสิทธิ์และคำที่ใช้จัดนอกเขตได้ที่ appsettings.json → Reports:Fiscal (แก้แล้วต้องดึงข้อมูลจาก HIS ใหม่)</p>
+            <p class="mt-2 text-xs text-stone-500">จำนวน (ราย) ในตารางนี้นับไม่ซ้ำภายในแต่ละเงื่อนไข · ตั้งค่ากลุ่มผู้จ่ายของสิทธิ์@(Model.HasZones ? "และคำที่ใช้จัดนอกเขต" : "")ได้ที่ appsettings.json → Reports:Fiscal (แก้แล้วต้องดึงข้อมูลจาก HIS ใหม่)</p>
         </details>
     </section>
 </div>

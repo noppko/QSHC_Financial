@@ -58,8 +58,12 @@ namespace Financial.Navigation
             ]),
             new("interface", "Interface",
             [
-                new("นำเข้าไฟล์ EDC", "อัปโหลดไฟล์ EDC (.txt) เข้าสู่ระบบ Interface", "InterfaceSystem", "Index", ICON_UPLOAD, AppPolicies.FINANCE),
-                new("ข้อมูล EDC", "รายการลงทะเบียน EDC ล่าสุด และตรวจไฟล์ก่อนนำเข้า", "InterfaceSystem", "EDCIndex", ICON_CARD, AppPolicies.FINANCE),
+                // ระดับ 1 = EDC · ระดับ 2 = นำเข้าไฟล์ / ข้อมูล
+                new("EDC", "นำเข้าไฟล์ EDC และดูข้อมูลลงทะเบียน EDC", "", "", ICON_CARD, AppPolicies.FINANCE,
+                [
+                    new("นำเข้าไฟล์", "อัปโหลดไฟล์ EDC (.txt) เข้าสู่ระบบ Interface พร้อมดาวน์โหลดไฟล์ตัวอย่าง (template)", "InterfaceSystem", "Index", ICON_UPLOAD, AppPolicies.FINANCE),
+                    new("ข้อมูล", "รายการลงทะเบียน EDC ค้นหาตามวันที่ Post (PostDate) และรหัส (Code) และตรวจไฟล์ก่อนนำเข้า", "InterfaceSystem", "EDCIndex", ICON_LIST, AppPolicies.FINANCE),
+                ]),
             ]),
             new("admin", "ผู้ดูแลระบบ",
             [

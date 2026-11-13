@@ -48,6 +48,11 @@ namespace Financial.Services.Reports
         /// มาก่อนกลุ่มผู้จ่าย — เช่น อปท. = ผู้จ่าย "สปสช(อปท)" ซึ่งอยู่กลุ่ม สปสช. ใน HIS (นับใน อปท. ไม่นับซ้ำใน สปสช.)
         /// </summary>
         public string[] PayorNameKeywords { get; set; } = [];
+
+        /// <summary>แยกในเขต/นอกเขต — ไม่ระบุ = เฉพาะ สปสช. (สิทธิ์อื่นแสดงเฉพาะยอดรวม)</summary>
+        public bool? SplitZones { get; set; }
+
+        public bool HasZones => SplitZones ?? string.Equals(Code, PayorSchemeCodes.NHSO, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -296,6 +301,17 @@ namespace Financial.Services.Reports
         public DateTime? RefreshedAt { get; init; }
 
         public string SideName => Side == PatientTypeCodes.IPD ? "ผู้ป่วยใน (IPD)" : "ผู้ป่วยนอก (OPD)";
+
+        /// <summary>แยกในเขต/นอกเขต (เฉพาะ สปสช.) — false = แสดงเฉพาะกลุ่ม "รวม"</summary>
+        public bool HasZones { get; init; } = true;
+
+        /// <summary>ปีงบที่มีข้อมูลใน QSHC_Financial (ตัวเลือกปีในหน้ารายงาน)</summary>
+        public IReadOnlyList<int> AvailableYears { get; init; } = [];
+
+        /// <summary>หัวกลุ่ม — สปสช. = ในเขต/นอกเขต/รวม · สิทธิ์อื่นไม่มีหัวกลุ่ม (คอลัมน์เดียว)</summary>
+        public IReadOnlyList<string> GroupNames => HasZones ? ["ในเขต", "นอกเขต", "รวม"] : [""];
+
+        public IReadOnlyList<ZoneFigure> Figures(FiscalYearRow row) => HasZones ? [row.InZone, row.OutZone, row.Total] : [row.Total];
     }
 
     /// <summary>
@@ -307,7 +323,7 @@ namespace Financial.Services.Reports
     {
         public static FiscalReport Build(FiscalSchemeOptions scheme, string schemeName, string side, IReadOnlyList<FiscalYear> years,
             IReadOnlyList<FiscalSchemeTotal> totals, IReadOnlyList<FiscalPayorSummary> agreements, FiscalReportOptions options,
-            DateTime generatedAt, IReadOnlyList<string>? warnings = null, DateTime? refreshedAt = null)
+            DateTime generatedAt, IReadOnlyList<string>? warnings = null, DateTime? refreshedAt = null, IReadOnlyList<int>? availableYears = null)
         {
             var mine = totals.Where(t => t.SchemeCode == scheme.Code && t.PatientTypeCode == side).ToList();
             var grandAmount = mine.Where(t => t.ZoneCode == FiscalZoneCodes.ALL).Sum(t => t.NetAmount);
@@ -354,6 +370,8 @@ namespace Financial.Services.Reports
                 Warnings = warnings ?? [],
                 GeneratedAt = generatedAt,
                 RefreshedAt = refreshedAt,
+                HasZones = scheme.HasZones,
+                AvailableYears = availableYears ?? [],
             };
         }
 

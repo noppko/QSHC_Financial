@@ -301,22 +301,69 @@ namespace Financial.Tests.Services
         }
 
         [Fact]
-        public void Controller_Normalize_DefaultsToLastThreeClosedYears_AndLimitsRange()
+        public void Controller_Normalize_UsesOnlyYearsWithData_WithoutLimit()
         {
             var time = new FixedLocalTimeProvider(new DateTime(2026, 10, 22, 10, 0, 0)); // ปีงบปัจจุบัน 2570
             var controller = new ReportsController(Mock.Of<IFiscalReportService>(),
                 Microsoft.Extensions.Options.Options.Create(new FiscalReportOptions()), time, NullLogger<ReportsController>.Instance);
+            int[] available = [2569, 2560, 2561, 2562, 2563, 2564, 2565, 2566, 2568, 2570]; // ไม่มี 2567
 
-            var (side, years, error) = controller.Normalize(null, null, null);
+            var (side, years, error) = controller.Normalize(null, null, null, available);
             side.Should().Be("I");
-            years.Select(y => y.BuddhistYear).Should().Equal(2567, 2568, 2569);
-            error.Should().BeNull();
+            years.Select(y => y.BuddhistYear).Should().Equal(2560, 2561, 2562, 2563, 2564, 2565, 2566, 2568, 2569, 2570);
+            error.Should().BeNull("ค่าเริ่มต้น = ทุกปีที่มีข้อมูล ไม่จำกัดจำนวนปี");
 
-            var (side2, years2, error2) = controller.Normalize("o", 2550, 2570);
+            var (side2, years2, _) = controller.Normalize("o", 2570, 2565, available);
             side2.Should().Be("O");
-            years2.Should().HaveCount(ReportsController.MAX_YEARS);
-            years2[^1].BuddhistYear.Should().Be(2570);
-            error2.Should().NotBeNull();
+            years2.Select(y => y.BuddhistYear).Should().Equal([2565, 2566, 2568, 2569, 2570], "ข้ามปีที่ไม่มีข้อมูล และสลับช่วงที่กลับด้าน");
+
+            var (_, years3, error3) = controller.Normalize(null, 2550, 2555, available);
+            years3.Should().HaveCount(available.Length);
+            error3.Should().Contain("ไม่มีข้อมูล");
+
+            var (_, empty, _) = controller.Normalize(null, null, null, []);
+            empty.Select(y => y.BuddhistYear).Should().Equal([2569], "ยังไม่มีข้อมูลเลย = ปีงบที่ปิดล่าสุด");
+        }
+
+        [Fact]
+        public void OnlyNhso_SplitsZones_OtherSchemesShowTotalOnly()
+        {
+            var totals = Aggregate(2568, Row(1, payor: "B", agreement: OUT_OF_PROVINCE, amount: 500m), Row(2, payor: "A", amount: 100m)).Totals;
+            var csmbsScheme = Options.Scheme(PayorSchemeCodes.CSMBS)!;
+
+            Nhso.HasZones.Should().BeTrue();
+            csmbsScheme.HasZones.Should().BeFalse();
+            new FiscalSchemeOptions { Code = "SSO", SplitZones = true }.HasZones.Should().BeTrue("ตั้งค่าเปิดได้");
+
+            var report = FiscalReportBuilder.Build(csmbsScheme, "กรมบัญชีกลาง", "I", [new FiscalYear(2568)], totals, [], Options, DateTime.Now);
+            report.GroupNames.Should().Equal("");
+            report.Figures(report.Rows[0]).Should().ContainSingle().Which.Amount.Should().Be(500m);
+
+            using var package = new ExcelPackage(new MemoryStream(FiscalExcel.Create(report)));
+            var ws = package.Workbook.Worksheets[0];
+            // หัวชั้นเดียว: แถว 2 = หัวคอลัมน์, แถว 3 = ปี, แถว 4 = รวมทุกปี
+            ws.Cells["A2"].Text.Should().Be("ปีงบประมาณ");
+            ws.Cells["B2"].Text.Should().Be("จำนวน (ราย)");
+            ws.Cells["C2"].Text.Should().Be("จำนวนเงิน (บาท)");
+            ws.Cells["A3"].Text.Should().Be("2568");
+            ws.Cells["B3"].GetValue<int>().Should().Be(1);
+            ws.Cells["C3"].GetValue<decimal>().Should().Be(500m);
+            ws.Cells["A4"].Text.Should().Be("รวม");
+        }
+
+        [Fact]
+        public async Task ReportService_AvailableYears_ForScheme_ElseAnyProcessedYear()
+        {
+            using var db = TestHost.CreateInMemoryDb();
+            db.FiscalSchemeTotals.AddRange(Aggregate(2568, Row(1, amount: 1m)).Totals);
+            db.FiscalSchemeTotals.AddRange(Aggregate(2566, Row(1, amount: 1m), Row(2, payor: "B", amount: 1m)).Totals);
+            await db.SaveChangesAsync();
+            var service = new FiscalReportService(db, Microsoft.Extensions.Options.Options.Create(new FiscalReportOptions()), Mock.Of<IReferenceValueService>(),
+                new FixedLocalTimeProvider(new DateTime(2026, 10, 22, 10, 0, 0)), NullLogger<FiscalReportService>.Instance);
+
+            (await service.GetAvailableYearsAsync(PayorSchemeCodes.NHSO)).Should().Equal(2566, 2568);
+            (await service.GetAvailableYearsAsync(PayorSchemeCodes.CSMBS)).Should().Equal(2566);
+            (await service.GetAvailableYearsAsync(PayorSchemeCodes.LGO)).Should().Equal([2566, 2568], "สิทธิ์ที่ยังไม่มีข้อมูล ใช้ปีที่ประมวลผลแล้ว");
         }
 
         [Fact]

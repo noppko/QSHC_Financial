@@ -13,7 +13,8 @@ public partial class PatientEdcregister
     [Column("UID")]
     public int Uid { get; set; }
 
-    [StringLength(5)]
+    // ข้อมูลจริงยาวกว่า 5 ตัว เช่น FA0014584 (โมเดล scaffold เดิมระบุ 5)
+    [StringLength(20)]
     public string? Code { get; set; }
 
     [StringLength(8)]

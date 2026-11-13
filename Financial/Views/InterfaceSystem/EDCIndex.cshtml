@@ -14,7 +14,39 @@
     </section>
 
     <section class="card card-body">
-        <h2 class="mb-4 font-semibold text-stone-900">รายการลงทะเบียน EDC ล่าสุด (50 รายการ)</h2>
+        <form method="get" asp-action="EDCIndex" class="mb-4 flex flex-wrap items-end gap-4" data-loading="กำลังค้นหา...">
+            <div>
+                <label for="postFrom" class="label">PostDate ตั้งแต่</label>
+                <input type="date" id="postFrom" name="postFrom" class="input w-44" value="@(((DateTime?)ViewData["PostFrom"])?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div>
+                <label for="postTo" class="label">ถึง</label>
+                <input type="date" id="postTo" name="postTo" class="input w-44" value="@(((DateTime?)ViewData["PostTo"])?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div>
+                <label for="code" class="label">Code</label>
+                <input type="text" id="code" name="code" maxlength="20" class="input w-40" placeholder="เช่น FA0014584" value="@ViewData["Code"]" autocomplete="off" />
+            </div>
+            <button type="submit" class="btn-primary">ค้นหา</button>
+            @if (ViewData["Filtered"] is true)
+            {
+                <a asp-action="EDCIndex" class="btn-ghost">ล้างตัวกรอง</a>
+            }
+        </form>
+        @if (ViewData["Hint"] is string hint)
+        {
+            <div class="alert-info mb-4" role="status">@hint</div>
+        }
+        <h2 class="mb-4 font-semibold text-stone-900">
+            @if (ViewData["Filtered"] is true)
+            {
+                <text>ผลการค้นหา (@Model.Count().ToString("N0") รายการ@(ViewData["HasMore"] is true ? $" — แสดงสูงสุด {ViewData["Limit"]} รายการ กรุณาจำกัดช่วงวันที่" : ""))</text>
+            }
+            else
+            {
+                <text>รายการลงทะเบียน EDC ล่าสุด (@ViewData["Limit"] รายการ)</text>
+            }
+        </h2>
         <div class="table-wrap">
             <table class="data-table">
                 <thead>

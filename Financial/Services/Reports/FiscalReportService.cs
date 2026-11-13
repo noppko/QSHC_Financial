@@ -103,6 +103,9 @@ namespace Financial.Services.Reports
     public interface IFiscalReportService
     {
         Task<FiscalReport> GetAsync(string schemeCode, string side, IReadOnlyList<FiscalYear> years, CancellationToken cancellationToken = default);
+
+        /// <summary>ปีงบ (พ.ศ.) ที่มีข้อมูลของสิทธิ์นี้ — ไม่มีเลยใช้ปีที่ประมวลผลแล้วของทุกสิทธิ์ · เรียงจากน้อยไปมาก</summary>
+        Task<IReadOnlyList<int>> GetAvailableYearsAsync(string schemeCode, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -155,13 +158,35 @@ namespace Financial.Services.Reports
                 }
 
                 DateTime? refreshedAt = totals.Count == 0 ? null : totals.Min(t => t.RefreshedAt);
-                return FiscalReportBuilder.Build(scheme, schemeName, side, years, totals, agreements, _options, now, warnings, refreshedAt);
+                var available = await GetAvailableYearsAsync(scheme.Code, cancellationToken);
+                return FiscalReportBuilder.Build(scheme, schemeName, side, years, totals, agreements, _options, now, warnings, refreshedAt, available);
             }
             catch (Exception ex) when (ex is SqlException or InvalidOperationException or DbUpdateException)
             {
                 _logger.LogError(ex, "Cannot read fiscal summaries from QSHC_Financial");
                 warnings.Add("อ่านผลสรุปจากฐาน QSHC_Financial ไม่สำเร็จ — ตรวจการเชื่อมต่อ DefaultConnection และ migration");
                 return FiscalReportBuilder.Build(scheme, schemeName, side, years, [], [], _options, now, warnings);
+            }
+        }
+
+        public async Task<IReadOnlyList<int>> GetAvailableYearsAsync(string schemeCode, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var mine = await _db.FiscalSchemeTotals.AsNoTracking()
+                    .Where(t => t.SchemeCode == schemeCode)
+                    .Select(t => t.FiscalYear).Distinct().ToListAsync(cancellationToken);
+                if (mine.Count == 0)
+                {
+                    mine = await _db.FiscalSchemeTotals.AsNoTracking()
+                        .Select(t => t.FiscalYear).Distinct().ToListAsync(cancellationToken);
+                }
+                return mine.Order().ToList();
+            }
+            catch (Exception ex) when (ex is SqlException or InvalidOperationException or DbUpdateException)
+            {
+                _logger.LogError(ex, "Cannot read fiscal years from QSHC_Financial");
+                return [];
             }
         }
     }
