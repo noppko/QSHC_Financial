@@ -11,7 +11,7 @@
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 @foreach (var (fullName, item) in group.Items.SelectMany(i => i.Pages()))
                 {
-                    <a asp-controller="@item.Controller" asp-action="@item.Action"
+                    <a asp-area="@item.AreaName" asp-controller="@item.Controller" asp-action="@item.Action"
                        class="card card-body group flex items-start gap-4 transition hover:-translate-y-0.5 hover:shadow-md">
                         <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
@@ -19,7 +19,7 @@
                         <span>
                             <span class="block font-semibold text-stone-900 group-hover:text-brand-600">@fullName</span>
                             <span class="mt-0.5 block text-sm text-stone-500">@item.Description</span>
-                            <span class="mt-2 block font-mono text-xs text-stone-400">/@item.Controller/@item.Action</span>
+                            <span class="mt-2 block font-mono text-xs text-stone-400">@item.Path</span>
                         </span>
                     </a>
                 }

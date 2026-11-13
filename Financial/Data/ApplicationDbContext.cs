@@ -24,6 +24,8 @@ namespace Financial.Data
         public DbSet<AppSetting> AppSettings { get; set; } = null!;
         public DbSet<FiscalPayorSummary> FiscalPayorSummaries { get; set; } = null!;
         public DbSet<FiscalSchemeTotal> FiscalSchemeTotals { get; set; } = null!;
+        public DbSet<Models.Receivables.ArReceivable> ArReceivables { get; set; } = null!;
+        public DbSet<Models.Receivables.ArStatusHistory> ArStatusHistories { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -54,6 +56,19 @@ namespace Financial.Data
 
             modelBuilder.Entity<FiscalSchemeTotal>()
                 .HasIndex(s => new { s.FiscalYear, s.SchemeCode, s.PatientTypeCode, s.ZoneCode });
+
+            // ลูกหนี้สิทธิ: 1 บิล HIS = 1 แถว · index สำหรับภาพรวม/จับคู่ (VN/AN, HN + วันที่เปิด visit)
+            modelBuilder.Entity<Models.Receivables.ArReceivable>(e =>
+            {
+                e.HasIndex(r => r.HisBillUid).IsUnique().HasFilter("[IsActive] = 1");
+                e.HasIndex(r => new { r.SchemeCode, r.StatusCode, r.BillDate });
+                e.HasIndex(r => new { r.SchemeCode, r.VisitNumber });
+                e.HasIndex(r => new { r.SchemeCode, r.Hn, r.VisitStartDate });
+                e.HasIndex(r => r.BillDate);
+            });
+            modelBuilder.Entity<Models.Receivables.ArStatusHistory>()
+                .HasOne(h => h.Receivable).WithMany(r => r.StatusHistories)
+                .HasForeignKey(h => h.ReceivableId).OnDelete(DeleteBehavior.Restrict);
 
             // Self-referencing relationship สำหรับ ReferenceValue
             modelBuilder.Entity<ReferenceValue>()
@@ -268,6 +283,16 @@ namespace Financial.Data
                 new ReferenceValue { Id = 20, Category = ReferenceCategories.FISCAL_ZONE, Code = FiscalZoneCodes.IN, NameTH = "ในเขต", NameEN = "In zone", DisplayOrder = 10, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
                 new ReferenceValue { Id = 21, Category = ReferenceCategories.FISCAL_ZONE, Code = FiscalZoneCodes.OUT, NameTH = "นอกเขต", NameEN = "Out of zone", DisplayOrder = 20, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
                 new ReferenceValue { Id = 22, Category = ReferenceCategories.FISCAL_ZONE, Code = FiscalZoneCodes.ALL, NameTH = "รวม", NameEN = "Total", DisplayOrder = 30, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+
+                // AR_STATUS - สถานะลูกหนี้สิทธิ
+                new ReferenceValue { Id = 24, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.OPEN, NameTH = "ตั้งหนี้", NameEN = "Open", Description = "ดึงจาก HIS ยังไม่ได้ส่งเรียกเก็บ", DisplayOrder = 10, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 25, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.CLAIMED, NameTH = "ส่งเรียกเก็บแล้ว", NameEN = "Claimed", DisplayOrder = 20, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 26, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.PARTIAL, NameTH = "ได้รับบางส่วน", NameEN = "Partially paid", DisplayOrder = 30, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 27, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.PAID, NameTH = "ได้รับครบ", NameEN = "Paid", DisplayOrder = 40, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 28, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.DENIED, NameTH = "ถูกปฏิเสธ", NameEN = "Denied", DisplayOrder = 50, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 29, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.APPEAL, NameTH = "อุทธรณ์/ส่งใหม่", NameEN = "Appeal", DisplayOrder = 60, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 30, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.WRITE_OFF, NameTH = "ตัดหนี้", NameEN = "Write-off", DisplayOrder = 70, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
+                new ReferenceValue { Id = 31, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.CANCELLED, NameTH = "ยกเลิก", NameEN = "Cancelled", Description = "บิลถูกยกเลิก/คืนเงินใน HIS หลังตั้งหนี้", DisplayOrder = 80, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
             };
 
             modelBuilder.Entity<ReferenceValue>().HasData(referenceValues);

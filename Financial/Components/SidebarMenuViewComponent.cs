@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Financial.Components
 {
+    /// <summary>
+    /// Sidebar: งานหลัก = AppMenu · อยู่ใน Area ลูกหนี้สิทธิ = ReceivablesMenu + ลิงก์ "กลับระบบหลัก"
+    /// </summary>
     public class SidebarMenuViewComponent : ViewComponent
     {
         private readonly IAuthorizationService _authorization;
@@ -17,6 +20,11 @@ namespace Financial.Components
         }
 
         public async Task<IViewComponentResult> InvokeAsync()
-            => View(await AppMenuFilter.VisibleGroupsAsync(_authorization, HttpContext.User, _settingsStore, HttpContext.RequestAborted));
+        {
+            var inReceivables = ReceivablesMenu.IsArea(RouteData.Values["area"]?.ToString());
+            ViewData["InArea"] = inReceivables;
+            return View(await AppMenuFilter.VisibleGroupsAsync(_authorization, HttpContext.User, _settingsStore, HttpContext.RequestAborted,
+                inReceivables ? ReceivablesMenu.Groups : null));
+        }
     }
 }

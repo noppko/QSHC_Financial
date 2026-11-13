@@ -217,6 +217,185 @@ namespace Financial.Data.Migrations
                     b.ToTable("FiscalSchemeTotals");
                 });
 
+            modelBuilder.Entity("Financial.Models.Receivables.ArReceivable", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AgreementName")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<DateTime>("BillDate")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("BillNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("BilledAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("DeniedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("DischargeDate")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<long>("HisBillUid")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("HisVisitUid")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Hn")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsOutOfZone")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastSyncedAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<decimal>("OutstandingAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PatientTypeCode")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)");
+
+                    b.Property<string>("PayorCategoryCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("PayorCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PayorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SchemeCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("StatusCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VisitNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("VisitStartDate")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<decimal>("WriteOffAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BillDate");
+
+                    b.HasIndex("HisBillUid")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("SchemeCode", "VisitNumber");
+
+                    b.HasIndex("SchemeCode", "Hn", "VisitStartDate");
+
+                    b.HasIndex("SchemeCode", "StatusCode", "BillDate");
+
+                    b.ToTable("ArReceivables");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArStatusHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ReceivableId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivableId");
+
+                    b.ToTable("ArStatusHistories");
+                });
+
             modelBuilder.Entity("Financial.Models.ReferenceValue", b =>
                 {
                     b.Property<int>("Id")
@@ -601,7 +780,124 @@ namespace Financial.Data.Migrations
                             IsSystem = true,
                             NameEN = "Total",
                             NameTH = "รวม"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Category = "AR_STATUS",
+                            Code = "OPEN",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            Description = "ดึงจาก HIS ยังไม่ได้ส่งเรียกเก็บ",
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Open",
+                            NameTH = "ตั้งหนี้"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Category = "AR_STATUS",
+                            Code = "CLAIMED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 20,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Claimed",
+                            NameTH = "ส่งเรียกเก็บแล้ว"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Category = "AR_STATUS",
+                            Code = "PARTIAL",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 30,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Partially paid",
+                            NameTH = "ได้รับบางส่วน"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Category = "AR_STATUS",
+                            Code = "PAID",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 40,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Paid",
+                            NameTH = "ได้รับครบ"
+                        },
+                        new
+                        {
+                            Id = 28,
+                            Category = "AR_STATUS",
+                            Code = "DENIED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 50,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Denied",
+                            NameTH = "ถูกปฏิเสธ"
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Category = "AR_STATUS",
+                            Code = "APPEAL",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 60,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Appeal",
+                            NameTH = "อุทธรณ์/ส่งใหม่"
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Category = "AR_STATUS",
+                            Code = "WRITE_OFF",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 70,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Write-off",
+                            NameTH = "ตัดหนี้"
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Category = "AR_STATUS",
+                            Code = "CANCELLED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            Description = "บิลถูกยกเลิก/คืนเงินใน HIS หลังตั้งหนี้",
+                            DisplayOrder = 80,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Cancelled",
+                            NameTH = "ยกเลิก"
                         });
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArStatusHistory", b =>
+                {
+                    b.HasOne("Financial.Models.Receivables.ArReceivable", "Receivable")
+                        .WithMany("StatusHistories")
+                        .HasForeignKey("ReceivableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Receivable");
                 });
 
             modelBuilder.Entity("Financial.Models.ReferenceValue", b =>
@@ -612,6 +908,11 @@ namespace Financial.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArReceivable", b =>
+                {
+                    b.Navigation("StatusHistories");
                 });
 
             modelBuilder.Entity("Financial.Models.ReferenceValue", b =>

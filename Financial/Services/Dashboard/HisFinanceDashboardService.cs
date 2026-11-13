@@ -373,6 +373,7 @@ namespace Financial.Services.Dashboard
         public static readonly string PendingOpd = Load("dashboard-pending-opd.sql");
         public static readonly string PendingIpd = Load("dashboard-pending-ipd.sql");
         public static readonly string FiscalPayor = Load("report-fiscal-payor.sql");
+        public static readonly string ArCreditBills = Load("ar-credit-bills.sql");
         public static readonly string PendingIdentity = Load("dashboard-pending-identity.sql");
 
         private static string Load(string fileName)

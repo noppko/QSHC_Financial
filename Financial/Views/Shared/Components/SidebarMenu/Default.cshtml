@@ -1,12 +1,23 @@
 @model IReadOnlyList<AppMenu.Group>
 @{
+    var currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var inArea = ViewData["InArea"] is true;
     bool IsActive(AppMenu.Item item)
-        => currentController.Equals(item.Controller, StringComparison.OrdinalIgnoreCase)
+        => currentArea.Equals(item.AreaName, StringComparison.OrdinalIgnoreCase)
+           && currentController.Equals(item.Controller, StringComparison.OrdinalIgnoreCase)
            && currentAction.Equals(item.Action, StringComparison.OrdinalIgnoreCase);
 }
 <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="เมนูหลัก">
+    @if (inArea)
+    {
+        <!-- อยู่ในส่วนงานแยก (Area) — กลับระบบหลักได้เสมอ -->
+        <a asp-area="" asp-controller="Home" asp-action="Index" class="nav-link border border-sand-200 bg-sand-50" data-back-to-main>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@AppMenu.ICON_BACK" /></svg>
+            <span>กลับระบบหลัก</span>
+        </a>
+    }
     @foreach (var group in Model)
     {
         <div>
@@ -29,7 +40,7 @@
                                     @foreach (var child in item.Children!)
                                     {
                                         <li>
-                                            <a asp-controller="@child.Controller" asp-action="@child.Action" class="nav-link !py-2"
+                                            <a asp-area="@child.AreaName" asp-controller="@child.Controller" asp-action="@child.Action" class="nav-link !py-2"
                                                aria-current="@(IsActive(child) ? "page" : null)" title="@child.Description">
                                                 <span>@child.Name</span>
                                             </a>
@@ -42,7 +53,7 @@
                     else
                     {
                         <li>
-                            <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link"
+                            <a asp-area="@item.AreaName" asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link"
                                aria-current="@(IsActive(item) ? "page" : null)" title="@item.Description">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@item.IconPath" /></svg>
                                 <span>@item.Name</span>

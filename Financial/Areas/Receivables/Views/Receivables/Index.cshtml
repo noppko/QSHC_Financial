@@ -1,0 +1,157 @@
+@model ReceivableListResult
+@{
+    ViewData["Title"] = "รายการลูกหนี้สิทธิ";
+    var q = (ReceivableListQuery)ViewData["Query"]!;
+    var statusNames = (Dictionary<string, string>)ViewData["StatusNames"]!;
+    var hasZones = ViewData["HasZones"] is true;
+    var showIdentity = ViewData["ShowIdentity"] is true;
+    var totalPages = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
+    var colCount = 11 + (showIdentity ? 1 : 0) + (hasZones ? 1 : 0);
+    string Name(string code) => statusNames.GetValueOrDefault(code, code);
+    string? Date(DateTime? d) => d?.ToString("dd/MM/yyyy");
+    // คงค่าตัวกรองตอนเปลี่ยนหน้า/สิทธิ์
+    Dictionary<string, string?> Route(int page) => new()
+    {
+        ["scheme"] = q.SchemeCode, ["side"] = q.Side, ["status"] = q.Status, ["aging"] = q.Aging, ["payor"] = q.Payor,
+        ["billFrom"] = q.BillFrom?.ToString("yyyy-MM-dd"), ["billTo"] = q.BillTo?.ToString("yyyy-MM-dd"), ["search"] = q.Search, ["page"] = page.ToString(),
+    };
+}
+
+<div class="space-y-5">
+    <partial name="_SchemeTabs" model="@((q.SchemeCode, "Receivables", "Index"))" />
+
+    <section class="card card-body">
+        <form method="get" asp-action="Index" class="flex flex-wrap items-end gap-4" data-loading="กำลังค้นหา...">
+            <input type="hidden" name="scheme" value="@q.SchemeCode" />
+            <div>
+                <label for="side" class="label">ประเภทผู้ป่วย</label>
+                <select id="side" name="side" class="input w-36">
+                    <option value="">ทั้งหมด</option>
+                    <option value="O" selected="@(q.Side == "O")">OPD</option>
+                    <option value="I" selected="@(q.Side == "I")">IPD</option>
+                </select>
+            </div>
+            <div>
+                <label for="status" class="label">สถานะ</label>
+                <select id="status" name="status" class="input w-44">
+                    <option value="">ยังต้องติดตาม</option>
+                    @foreach (var s in ArStatusCodes.ALL) { <option value="@s" selected="@(q.Status == s)">@Name(s)</option> }
+                    <option value="ALL" selected="@(q.Status == "ALL")">ทุกสถานะ</option>
+                </select>
+            </div>
+            <div>
+                <label for="aging" class="label">อายุหนี้</label>
+                <select id="aging" name="aging" class="input w-36">
+                    <option value="">ทั้งหมด</option>
+                    @foreach (var a in AgingRanges.ALL) { <option value="@a.Code" selected="@(q.Aging == a.Code)">@a.Label</option> }
+                </select>
+            </div>
+            <div>
+                <label for="billFrom" class="label">วันออกบิล ตั้งแต่</label>
+                <input type="date" id="billFrom" name="billFrom" class="input w-40" value="@q.BillFrom?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label for="billTo" class="label">ถึง</label>
+                <input type="date" id="billTo" name="billTo" class="input w-40" value="@q.BillTo?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label for="payor" class="label">ผู้จ่าย</label>
+                <input type="text" id="payor" name="payor" class="input w-48" value="@q.Payor" maxlength="100" />
+            </div>
+            <div>
+                <label for="search" class="label">เลขบิล / VN-AN (เต็ม)</label>
+                <input type="text" id="search" name="search" class="input w-44" value="@q.Search" maxlength="30" autocomplete="off" />
+            </div>
+            <button type="submit" class="btn-primary">ค้นหา</button>
+            <a asp-action="Index" asp-route-scheme="@q.SchemeCode" class="btn-ghost">ล้างตัวกรอง</a>
+        </form>
+    </section>
+
+    <section class="card card-body">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-semibold text-stone-900">
+                @Model.Total.ToString("N0") รายการ · คงค้าง <span class="tabular-nums">@Model.TotalOutstanding.ToString("N2")</span> บาท
+            </h2>
+            <form method="post" asp-action="Export" data-loading="กำลังสร้างไฟล์..." data-download>
+                @foreach (var (key, value) in Route(1).Where(kv => kv.Key != "page" && kv.Value is not null))
+                {
+                    <input type="hidden" name="@key" value="@value" />
+                }
+                <button type="submit" class="btn-dark">ส่งออก Excel</button>
+            </form>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>เลขที่บิล</th>
+                        <th>VN/AN</th>
+                        @if (showIdentity) { <th>HN</th> }
+                        <th>ประเภท</th>
+                        <th>เปิด visit</th>
+                        <th>จำหน่าย</th>
+                        <th>วันออกบิล</th>
+                        <th class="text-right">อายุ (วัน)</th>
+                        <th>ผู้จ่าย / เงื่อนไข</th>
+                        @if (hasZones) { <th>เขต</th> }
+                        <th class="text-right">ยอดเรียกเก็บ</th>
+                        <th class="text-right">คงค้าง</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <tr><td colspan="@colCount" class="py-14 text-center text-stone-500">ไม่มีข้อมูล</td></tr>
+                    }
+                    @foreach (var i in Model.Items)
+                    {
+                        <tr>
+                            <td class="font-mono text-xs">@i.BillNumber</td>
+                            <td class="font-mono text-xs">@i.VisitNumber</td>
+                            @if (showIdentity) { <td class="font-mono text-xs">@i.Hn</td> }
+                            <td>@PatientTypeCodes.Abbreviation(i.PatientTypeCode)</td>
+                            <td>@Date(i.VisitStartDate)</td>
+                            <td>@Date(i.DischargeDate)</td>
+                            <td>@Date(i.BillDate)</td>
+                            <td class="num @(i.AgeDays > 90 ? "font-medium text-amber-700" : "")">@i.AgeDays.ToString("N0")</td>
+                            <td class="whitespace-normal">
+                                <div>@i.PayorName</div>
+                                <div class="text-xs text-stone-500">@i.AgreementName</div>
+                            </td>
+                            @if (hasZones)
+                            {
+                                <td><span class="badge @(i.IsOutOfZone ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700")">@(i.IsOutOfZone ? "นอกเขต" : "ในเขต")</span></td>
+                            }
+                            <td class="num">@i.BilledAmount.ToString("N2")</td>
+                            <td class="num font-medium">@i.OutstandingAmount.ToString("N2")</td>
+                            <td><span class="badge @(i.StatusCode == ArStatusCodes.CANCELLED ? "bg-sand-100 text-stone-500" : "bg-sky-50 text-sky-700")">@Name(i.StatusCode)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (totalPages > 1)
+        {
+            <nav class="mt-4 flex items-center justify-between text-sm" aria-label="หน้า">
+                <span class="text-stone-500">หน้า @Model.Page / @totalPages</span>
+                <div class="flex gap-2">
+                    @if (Model.Page > 1)
+                    {
+                        <a asp-action="Index" asp-all-route-data="@Route(Model.Page - 1)" class="btn-outline">ก่อนหน้า</a>
+                    }
+                    @if (Model.Page < totalPages)
+                    {
+                        <a asp-action="Index" asp-all-route-data="@Route(Model.Page + 1)" class="btn-outline">ถัดไป</a>
+                    }
+                </div>
+            </nav>
+        }
+        <p class="mt-3 text-xs text-stone-500">
+            ลูกหนี้ = บิลเครดิตใน HIS ของสิทธิ์นี้ (กลุ่มผู้จ่ายเดียวกับรายงานตามปีงบ) · อายุหนี้นับจากวันออกบิล ·
+            @(showIdentity ? "HN และ VN/AN แสดงเฉพาะผู้ดูแลระบบ และบันทึกการเข้าถึง" : "VN/AN แสดงเฉพาะ 4 ตัวท้าย (ข้อมูลส่วนบุคคล)")
+        </p>
+    </section>
+</div>

@@ -1,0 +1,14 @@
+@model (string Current, string Controller, string Action)
+@inject Microsoft.Extensions.Options.IOptions<Financial.Services.Reports.FiscalReportOptions> Fiscal
+@inject Financial.Services.IReferenceValueService ReferenceValues
+@* แท็บ 4 สิทธิ์ (ชุดเดียวกับรายงานตามปีงบ) — ใช้ทุกหน้าในส่วนงานลูกหนี้ *@
+<nav class="flex flex-wrap gap-2" aria-label="สิทธิ์">
+    @foreach (var s in Fiscal.Value.EffectiveSchemes)
+    {
+        var active = string.Equals(s.Code, Model.Current, StringComparison.OrdinalIgnoreCase);
+        var name = await ReferenceValues.GetNameAsync(ReferenceCategories.PAYOR_SCHEME, s.Code, s.Name);
+        <a asp-area="@ReceivablesMenu.AREA" asp-controller="@Model.Controller" asp-action="@Model.Action" asp-route-scheme="@s.Code"
+           class="rounded-xl border px-4 py-2 text-sm font-medium transition @(active ? "border-brand-500 bg-brand-500 text-white" : "border-sand-300 bg-white text-stone-600 hover:bg-sand-50")"
+           aria-current="@(active ? "page" : null)">@name</a>
+    }
+</nav>

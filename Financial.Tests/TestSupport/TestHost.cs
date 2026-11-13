@@ -24,6 +24,7 @@ namespace Financial.Tests.TestSupport
             builder.UseSetting("Security:LoginAttemptsPerMinute", "1000");
             builder.UseSetting("Database:AutoMigrate", "false");
             builder.UseSetting("Reports:Fiscal:AutoRefreshEnabled", "false");
+            builder.UseSetting("Receivables:AutoSyncEnabled", "false");
             builder.UseSetting("ConnectionStrings:DefaultConnection", UNREACHABLE_SQL);
             builder.UseSetting("ConnectionStrings:HealthObject", UNREACHABLE_SQL);
             builder.UseSetting("ConnectionStrings:InterfaceSystem", UNREACHABLE_SQL);

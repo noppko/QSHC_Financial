@@ -91,6 +91,16 @@ namespace Financial.Tests.Integration
             { "admin1", "/ReferenceValues/Create?category=PAY_MODE", true },
             { "cash1", "/ReferenceValues",           false },
             { "user1", "/ReferenceValues",           false },
+            // ส่วนงานลูกหนี้สิทธิ (Area Receivables)
+            { "cash1", "/Receivables",               true },
+            { "cash1", "/Receivables/Home/Index?scheme=LGO", true },
+            { "cash1", "/Receivables/Receivables?scheme=CSMBS&aging=91-180", true },
+            { "admin1", "/Receivables",              true },
+            { "admin1", "/Receivables/Receivables",  true },
+            { "admin1", "/Receivables/Home/SyncStatus", true },
+            { "cash1", "/Receivables/Home/SyncStatus", false },
+            { "user1", "/Receivables",               false },
+            { "user1", "/Receivables/Receivables",   false },
         };
 
         [Theory]
@@ -210,6 +220,53 @@ namespace Financial.Tests.Integration
             (await LoginAs("user1")).GetAsync("/InterfaceSystem/DownloadTemplate").Result.StatusCode.Should().NotBe(HttpStatusCode.OK, "ผู้ใช้ทั่วไปไม่มีสิทธิ์");
 
             (await cash.GetStringAsync("/Home/SiteMap")).Should().Contain("EDC — นำเข้าไฟล์").And.Contain("EDC — ข้อมูล");
+        }
+
+        [Fact]
+        public async Task ReceivablesArea_HasOwnSidebar_WithBackLink_AndMainMenuLinksIntoArea()
+        {
+            var cash = await LoginAs("cash1");
+
+            var home = await cash.GetStringAsync("/");
+            home.Should().Contain("href=\"/Receivables\"", "เมนูหลักลิงก์เข้าส่วนงานลูกหนี้").And.NotContain("data-back-to-main");
+
+            var area = await cash.GetStringAsync("/Receivables");
+            var nav = Regex.Match(area, "<nav class=\"flex-1(?s:.*?)</nav>").Value;
+            nav.Should().Contain("data-back-to-main").And.Contain("กลับระบบหลัก");
+            var back = Regex.Match(nav, "<a[^>]*data-back-to-main[^>]*>").Value;
+            Regex.Match(back, "href=\"([^\"]*)\"").Groups[1].Value.Should().Be("/", "กลับหน้าแรกของระบบหลัก (ไม่ติด area)");
+            nav.Should().Contain("href=\"/Receivables/Receivables\"").And.Contain("ภาพรวมลูกหนี้");
+            nav.Should().NotContain("Discharge IPD", "sidebar ใน Area แสดงเฉพาะเมนูลูกหนี้");
+            area.Should().Contain("ส่วนงานลูกหนี้สิทธิ");
+            area.Should().Contain("action=\"/Account/Logout\"", "ลิงก์ของงานหลักต้องไม่ติด area");
+            area.Should().Contain("data-scheme-card=\"NHSO\"").And.Contain("data-scheme-card=\"CSMBS\"").And.Contain("data-scheme-card=\"SSO\"").And.Contain("data-scheme-card=\"LGO\"");
+            area.Should().NotContain("id=\"arSync\"", "ปุ่มดึงข้อมูลเฉพาะ Admin");
+
+            var list = await cash.GetStringAsync("/Receivables/Receivables?scheme=SSO");
+            list.Should().NotContain("<th>HN</th>").And.Contain("4 ตัวท้าย");
+            list.Should().NotContain(">เขต</th>", "เขตเฉพาะ สปสช.");
+            (await cash.GetStringAsync("/Receivables/Receivables?scheme=NHSO")).Should().Contain(">เขต</th>");
+
+            (await (await LoginAs("admin1")).GetStringAsync("/Receivables")).Should().Contain("id=\"arSync\"");
+            (await (await LoginAs("admin1")).GetStringAsync("/Receivables/Receivables")).Should().Contain("<th>HN</th>");
+        }
+
+        [Fact]
+        public async Task ReceivablesSync_IsAdminOnly()
+        {
+            async Task<HttpStatusCode> Post(string user)
+            {
+                var client = await LoginAs(user);
+                var page = await client.GetStringAsync("/");
+                var token = Regex.Match(page, "name=\"csrf-token\" content=\"([^\"]+)\"").Groups[1].Value;
+                var request = new HttpRequestMessage(HttpMethod.Post, "/Receivables/Home/Sync") { Content = new FormUrlEncodedContent([new("days", "30")]) };
+                request.Headers.Add("RequestVerificationToken", WebUtility.HtmlDecode(token));
+                request.Headers.Add("X-Requested-With", "fetch");
+                return (await client.SendAsync(request)).StatusCode;
+            }
+
+            (await Post("cash1")).Should().Be(HttpStatusCode.Forbidden);
+            (await Post("admin1")).Should().Be(HttpStatusCode.OK);
         }
 
         [Fact]

@@ -71,7 +71,7 @@ namespace Financial.Tests.Integration
             (await cashier.GetStringAsync("/")).Should().Contain("Discharge IPD");
 
             // ซ่อนกลุ่ม "ผู้ป่วยจำหน่าย" (ไม่ส่ง discharge) และพยายามซ่อนกลุ่มผู้ดูแลระบบด้วย (ไม่ส่ง admin)
-            var saved = await Save(admin, "overview", "reports", "interface", "other");
+            var saved = await Save(admin, "overview", "reports", "interface", "receivables", "other");
             saved.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
             var cashierHome = await cashier.GetStringAsync("/");
@@ -85,7 +85,7 @@ namespace Financial.Tests.Integration
             adminPage.Should().Contain("ซ่อน 1 กลุ่มเมนู").And.Contain("admin1");
 
             // เปิดกลับ
-            await Save(admin, "overview", "discharge", "reports", "interface", "other");
+            await Save(admin, "overview", "discharge", "reports", "interface", "receivables", "other");
             (await cashier.GetStringAsync("/")).Should().Contain("Discharge IPD");
         }
 

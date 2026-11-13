@@ -101,7 +101,7 @@ namespace Financial.Tests.Services
 
             var groups = await AppMenuFilter.VisibleGroupsAsync(_services.GetRequiredService<IAuthorizationService>(), admin, store);
 
-            groups.Select(g => g.Key).Should().Equal("overview", "reports", "interface", "admin");
+            groups.Select(g => g.Key).Should().Equal("overview", "reports", "interface", "receivables", "admin");
         }
 
         [Fact]

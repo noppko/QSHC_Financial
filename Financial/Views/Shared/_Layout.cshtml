@@ -29,6 +29,8 @@
         ("อีเมล", User.FindFirst(ClaimTypes.Email)?.Value),
     };
     var csrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    // ส่วนงานแยก (Area) — หัว sidebar บอกว่าอยู่ส่วนไหน; ลิงก์ในหน้านี้ต้องระบุ asp-area="" เพื่อไม่ติด area ปัจจุบัน
+    var inReceivables = Financial.Navigation.ReceivablesMenu.IsArea(ViewContext.RouteData.Values["area"]?.ToString());
 }
 <!DOCTYPE html>
 <html lang="th">
@@ -53,7 +55,7 @@
             <img src="~/images/qshclogo.png" alt="" class="size-9 rounded-lg object-contain" />
             <div class="leading-tight">
                 <div class="font-semibold text-stone-900">QSHC Financial</div>
-                <div class="text-xs text-stone-500">ระบบการเงิน ศูนย์หัวใจสิริกิติ์ฯ</div>
+                <div class="text-xs @(inReceivables ? "font-medium text-brand-600" : "text-stone-500")">@(inReceivables ? "ส่วนงานลูกหนี้สิทธิ" : "ระบบการเงิน ศูนย์หัวใจสิริกิติ์ฯ")</div>
             </div>
         </div>
         @await Component.InvokeAsync("SidebarMenu")
@@ -110,7 +112,7 @@
                                     </ul>
                                 }
                             </div>
-                            <form asp-controller="Account" asp-action="Logout" method="post" class="p-2">
+                            <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="p-2">
                                 <button type="submit" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
                                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h3M16 17l5-5-5-5M21 12H9" /></svg>
                                     ออกจากระบบ

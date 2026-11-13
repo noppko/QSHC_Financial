@@ -13,7 +13,7 @@
     {
         <p class="mt-4 text-xs text-stone-500">รหัสอ้างอิง: <code class="rounded bg-sand-200 px-2 py-0.5">@Model.RequestId</code></p>
     }
-    <a asp-controller="Home" asp-action="Index" class="btn-primary mt-6">กลับหน้าหลัก</a>
+    <a asp-area="" asp-controller="Home" asp-action="Index" class="btn-primary mt-6">กลับหน้าหลัก</a>
     @if (Env.IsDevelopment())
     {
         <p class="alert-info mt-8 text-left">โหมด Development: ดูรายละเอียดข้อผิดพลาดใน Logs/log-*.txt</p>

@@ -49,16 +49,7 @@ namespace Financial.Services.Reports
             await using var cmd = new SqlCommand(BuildSql(categories.Count, keywords.Count), conn) { CommandTimeout = _options.CommandTimeoutSeconds };
             cmd.Parameters.Add(new SqlParameter("@from", SqlDbType.DateTime) { Value = year.Start });
             cmd.Parameters.Add(new SqlParameter("@to", SqlDbType.DateTime) { Value = year.End });
-            for (var i = 0; i < categories.Count; i++)
-            {
-                cmd.Parameters.Add(new SqlParameter($"@c{i}", SqlDbType.VarChar, 20) { Value = categories[i] });
-            }
-            for (var i = 0; i < keywords.Count; i++)
-            {
-                // LIKE แบบมีพารามิเตอร์ (ไม่ต่อสตริง) — escape อักขระพิเศษของ LIKE
-                var escaped = keywords[i].Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]");
-                cmd.Parameters.Add(new SqlParameter($"@k{i}", SqlDbType.NVarChar, 210) { Value = $"%{escaped}%" });
-            }
+            AddPayorParameters(cmd, categories, keywords);
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             var aggregator = new FiscalYearAggregator(year.BuddhistYear, _options);
@@ -68,9 +59,27 @@ namespace Financial.Services.Reports
         }
 
         internal static string BuildSql(int categoryCount, int keywordCount = 0)
-            => HisQueries.FiscalPayor
+            => ApplyPayorFilter(HisQueries.FiscalPayor, categoryCount, keywordCount);
+
+        /// <summary>แทน placeholder กลุ่มผู้จ่าย/คำในชื่อ ด้วยชื่อพารามิเตอร์ (ใช้ร่วมกับ SQL ลูกหนี้สิทธิ)</summary>
+        internal static string ApplyPayorFilter(string sql, int categoryCount, int keywordCount)
+            => sql
                 .Replace(PAYOR_CATEGORIES_PLACEHOLDER, string.Join(", ", Enumerable.Range(0, categoryCount).Select(i => $"@c{i}")))
                 .Replace(PAYOR_NAME_FILTER_PLACEHOLDER, string.Concat(Enumerable.Range(0, keywordCount).Select(i => $" OR PD.PayorName LIKE @k{i} OR PA.Name LIKE @k{i}")));
+
+        /// <summary>พารามิเตอร์ @c0.. (PYRACAT) และ @k0.. (LIKE แบบมีพารามิเตอร์ ไม่ต่อสตริง — escape อักขระพิเศษของ LIKE)</summary>
+        internal static void AddPayorParameters(SqlCommand cmd, IReadOnlyList<string> categories, IReadOnlyList<string> keywords)
+        {
+            for (var i = 0; i < categories.Count; i++)
+            {
+                cmd.Parameters.Add(new SqlParameter($"@c{i}", SqlDbType.VarChar, 20) { Value = categories[i] });
+            }
+            for (var i = 0; i < keywords.Count; i++)
+            {
+                var escaped = keywords[i].Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]");
+                cmd.Parameters.Add(new SqlParameter($"@k{i}", SqlDbType.NVarChar, 210) { Value = $"%{escaped}%" });
+            }
+        }
 
         internal static void ReadRows(IDataReader r, FiscalYearAggregator aggregator, IProgress<int>? rowsRead = null, CancellationToken cancellationToken = default)
         {

@@ -6,6 +6,7 @@ using Financial.Services.Authorization;
 using Financial.Services.Dashboard;
 using Financial.Services.Discharges;
 using Financial.Services.Notifications;
+using Financial.Services.Receivables;
 using Financial.Services.Reports;
 using Financial.Services.Settings;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -158,6 +159,13 @@ try
     builder.Services.AddScoped<FiscalSummaryRefresher>();
     builder.Services.AddSingleton<FiscalRefreshQueue>();
     builder.Services.AddHostedService<FiscalRefreshWorker>();
+    // ลูกหนี้สิทธิ (Area Receivables) — ตั้งหนี้จากบิลเครดิตใน HIS, เก็บที่ QSHC_Financial
+    builder.Services.Configure<ReceivableOptions>(builder.Configuration.GetSection(ReceivableOptions.SECTION_NAME));
+    builder.Services.AddScoped<IReceivableHisSource, ReceivableHisSource>();
+    builder.Services.AddScoped<ReceivableSyncService>();
+    builder.Services.AddScoped<IReceivableQueryService, ReceivableQueryService>();
+    builder.Services.AddSingleton<ReceivableSyncQueue>();
+    builder.Services.AddHostedService<ReceivableSyncWorker>();
     // Dashboard:Source = "His" (HealthObject จริง, ค่าเริ่มต้น) หรือ "Sample" (ข้อมูลตัวอย่างสำหรับทดสอบหน้าจอ)
     if (string.Equals(builder.Configuration["Dashboard:Source"], "Sample", StringComparison.OrdinalIgnoreCase))
     {
@@ -239,6 +247,12 @@ try
     // .NET 10: static assets ถูก fingerprint + บีบอัดตอน build และ cache ที่ browser ได้นาน
     // AllowAnonymous: หน้า Login ต้องโหลด CSS/ฟอนต์ได้ก่อนเข้าสู่ระบบ (fallback policy บังคับ login ทุก endpoint)
     app.MapStaticAssets().AllowAnonymous();
+
+    // ส่วนงานแยก (Areas) เช่น /Receivables/... — ต้องมาก่อน route หลัก
+    app.MapControllerRoute(
+        name: "areas",
+        pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}")
+        .WithStaticAssets();
 
     app.MapControllerRoute(
         name: "default",

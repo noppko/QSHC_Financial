@@ -3,6 +3,7 @@
 -- RemoveAspNetIdentity: ลบตาราง AspNet* (ไม่ได้ใช้ — ยืนยันตัวตนผ่าน External Auth API)
 -- FiscalReportsBySchemeAndPatients: แทน NhsoFiscalSummaries ด้วย FiscalSchemeTotals/FiscalPayorSummaries (ต้องกด "ดึงข้อมูลจาก HIS" ใหม่)
 -- AddLgoPayorScheme: เพิ่มสิทธิ์ อปท. (LGO) ใน ReferenceValues (PAYOR_SCHEME)
+-- AddReceivables: ตารางลูกหนี้สิทธิ ArReceivables / ArStatusHistories + สถานะ AR_STATUS ใน ReferenceValues (ส่วนงาน Areas/Receivables)
 USE QSHC_Financial;
 GO
 
@@ -607,6 +608,173 @@ IF NOT EXISTS (
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
     VALUES (N'20261111041041_FiscalReportsBySchemeAndPatients', N'10.0.13');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261112045159_AddLgoPayorScheme'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] ON;
+    EXEC(N'INSERT INTO [ReferenceValues] ([Id], [Category], [Code], [CreatedAt], [CreatedBy], [Description], [DisplayOrder], [IsActive], [IsSystem], [Metadata], [NameEN], [NameTH], [ParentCategory], [ParentId], [UpdatedAt], [UpdatedBy])
+    VALUES (23, N''PAYOR_SCHEME'', N''LGO'', ''2025-01-01T00:00:00.0000000'', N''System'', N''องค์กรปกครองส่วนท้องถิ่น'', 40, CAST(1 AS bit), CAST(1 AS bit), NULL, N''LGO'', N''อปท.'', NULL, NULL, NULL, NULL)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261112045159_AddLgoPayorScheme'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261112045159_AddLgoPayorScheme', N'10.0.13');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE TABLE [ArReceivables] (
+        [Id] int NOT NULL IDENTITY,
+        [HisBillUid] bigint NOT NULL,
+        [BillNumber] nvarchar(30) NOT NULL,
+        [HisVisitUid] bigint NOT NULL,
+        [VisitNumber] nvarchar(20) NULL,
+        [Hn] nvarchar(20) NULL,
+        [PatientTypeCode] nvarchar(1) NOT NULL,
+        [VisitStartDate] datetime2(0) NULL,
+        [DischargeDate] datetime2(0) NULL,
+        [BillDate] datetime2(0) NOT NULL,
+        [SchemeCode] nvarchar(10) NOT NULL,
+        [PayorCode] nvarchar(50) NULL,
+        [PayorName] nvarchar(200) NULL,
+        [PayorCategoryCode] nvarchar(10) NULL,
+        [AgreementName] nvarchar(400) NULL,
+        [IsOutOfZone] bit NOT NULL,
+        [BilledAmount] decimal(18,2) NOT NULL,
+        [PaidAmount] decimal(18,2) NOT NULL,
+        [DeniedAmount] decimal(18,2) NOT NULL,
+        [WriteOffAmount] decimal(18,2) NOT NULL,
+        [OutstandingAmount] decimal(18,2) NOT NULL,
+        [StatusCode] nvarchar(20) NOT NULL,
+        [LastSyncedAt] datetime2(0) NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArReceivables] PRIMARY KEY ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE TABLE [ArStatusHistories] (
+        [Id] int NOT NULL IDENTITY,
+        [ReceivableId] int NOT NULL,
+        [FromStatus] nvarchar(20) NULL,
+        [ToStatus] nvarchar(20) NOT NULL,
+        [Reason] nvarchar(500) NULL,
+        [ChangedAt] datetime2(0) NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArStatusHistories] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ArStatusHistories_ArReceivables_ReceivableId] FOREIGN KEY ([ReceivableId]) REFERENCES [ArReceivables] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] ON;
+    EXEC(N'INSERT INTO [ReferenceValues] ([Id], [Category], [Code], [CreatedAt], [CreatedBy], [Description], [DisplayOrder], [IsActive], [IsSystem], [Metadata], [NameEN], [NameTH], [ParentCategory], [ParentId], [UpdatedAt], [UpdatedBy])
+    VALUES (24, N''AR_STATUS'', N''OPEN'', ''2025-01-01T00:00:00.0000000'', N''System'', N''ดึงจาก HIS ยังไม่ได้ส่งเรียกเก็บ'', 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Open'', N''ตั้งหนี้'', NULL, NULL, NULL, NULL),
+    (25, N''AR_STATUS'', N''CLAIMED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Claimed'', N''ส่งเรียกเก็บแล้ว'', NULL, NULL, NULL, NULL),
+    (26, N''AR_STATUS'', N''PARTIAL'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Partially paid'', N''ได้รับบางส่วน'', NULL, NULL, NULL, NULL),
+    (27, N''AR_STATUS'', N''PAID'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 40, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Paid'', N''ได้รับครบ'', NULL, NULL, NULL, NULL),
+    (28, N''AR_STATUS'', N''DENIED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 50, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Denied'', N''ถูกปฏิเสธ'', NULL, NULL, NULL, NULL),
+    (29, N''AR_STATUS'', N''APPEAL'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 60, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Appeal'', N''อุทธรณ์/ส่งใหม่'', NULL, NULL, NULL, NULL),
+    (30, N''AR_STATUS'', N''WRITE_OFF'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 70, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Write-off'', N''ตัดหนี้'', NULL, NULL, NULL, NULL),
+    (31, N''AR_STATUS'', N''CANCELLED'', ''2025-01-01T00:00:00.0000000'', N''System'', N''บิลถูกยกเลิก/คืนเงินใน HIS หลังตั้งหนี้'', 80, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Cancelled'', N''ยกเลิก'', NULL, NULL, NULL, NULL)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE INDEX [IX_ArReceivables_BillDate] ON [ArReceivables] ([BillDate]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_ArReceivables_HisBillUid] ON [ArReceivables] ([HisBillUid]) WHERE [IsActive] = 1');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE INDEX [IX_ArReceivables_SchemeCode_Hn_VisitStartDate] ON [ArReceivables] ([SchemeCode], [Hn], [VisitStartDate]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE INDEX [IX_ArReceivables_SchemeCode_StatusCode_BillDate] ON [ArReceivables] ([SchemeCode], [StatusCode], [BillDate]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE INDEX [IX_ArReceivables_SchemeCode_VisitNumber] ON [ArReceivables] ([SchemeCode], [VisitNumber]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    CREATE INDEX [IX_ArStatusHistories_ReceivableId] ON [ArStatusHistories] ([ReceivableId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113032054_AddReceivables'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261113032054_AddReceivables', N'10.0.13');
 END;
 
 COMMIT;

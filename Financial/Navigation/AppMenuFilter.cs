@@ -11,12 +11,13 @@ namespace Financial.Navigation
     public static class AppMenuFilter
     {
         public static async Task<IReadOnlyList<AppMenu.Group>> VisibleGroupsAsync(
-            IAuthorizationService authorization, ClaimsPrincipal user, IAppSettingsStore settingsStore, CancellationToken cancellationToken = default)
+            IAuthorizationService authorization, ClaimsPrincipal user, IAppSettingsStore settingsStore, CancellationToken cancellationToken = default,
+            IReadOnlyList<AppMenu.Group>? source = null)
         {
             var setting = await settingsStore.GetAsync(cancellationToken);
             var groups = new List<AppMenu.Group>();
 
-            foreach (var group in AppMenu.Groups)
+            foreach (var group in source ?? AppMenu.Groups)
             {
                 if (IsHidden(group, setting)) continue;
 
