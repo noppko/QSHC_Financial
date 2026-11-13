@@ -84,7 +84,7 @@
         <div class="flex flex-wrap items-center gap-3 border-b border-sand-200 px-5 py-3">
             <div>
                 <h2 id="twinTitle" class="font-semibold text-stone-900">3D Digital Twin — เงินที่รอชำระ แยก OPD / Premium Clinic / IPD</h2>
-                <p class="text-xs text-stone-500">แต่ละคนคือผู้ป่วย 1 ราย · สีเสื้อ = ระยะเวลารอ · เหรียญเหนือศีรษะ = ค่าใช้จ่ายรวม (ยิ่งสูงยิ่งมาก) · ยืนที่เคาน์เตอร์ = การเงินรับเรื่องแล้ว · OPD นับจากตรวจเสร็จ (Examination Completed) หรือออกจากห้องตรวจ (CHKOUT) ถึงปิดบัญชี (FINDIS) · Premium Clinic แยกห้องการเงิน · IPD นับจาก Medical Discharge</p>
+                <p class="text-xs text-stone-500">แต่ละคนคือผู้ป่วย 1 ราย · สีเสื้อ = ระยะเวลารอ · เหรียญเหนือศีรษะ = ค่าใช้จ่ายรวม (ยิ่งสูงยิ่งมาก) · ยืนที่เคาน์เตอร์ = การเงินรับเรื่องแล้ว · OPD ไม่มียา นับจากตรวจเสร็จ (Examination Completed) หรือออกจากห้องตรวจ (CHKOUT) ถึงปิดบัญชี (FINDIS) · <span class="text-violet-700">OPD มียา ต้องให้ห้องยา (เภสัช) คัดกรองก่อน — นับจากคัดกรองเสร็จ · เสื้อม่วง 💊 = ยังรอเภสัชคัดกรอง (ยังไม่นับเวลารอการเงิน)</span> · Premium Clinic แยกห้องการเงิน · IPD นับจาก Medical Discharge</p>
             </div>
             <div class="ml-auto flex flex-wrap items-center gap-2" role="group" aria-label="ตัวกรอง 3D">
                 <button type="button" class="btn-outline px-3 py-1.5 aria-pressed:border-brand-500 aria-pressed:bg-brand-50 aria-pressed:text-brand-700" data-twin-filter="all" aria-pressed="true">ทั้งหมด</button>
@@ -110,6 +110,7 @@
                     <span class="badge bg-white/90 text-stone-600"><span class="mr-1 inline-block size-2 rounded-full bg-emerald-500"></span>รอไม่นาน</span>
                     <span class="badge bg-white/90 text-stone-600"><span class="mr-1 inline-block size-2 rounded-full bg-amber-500"></span>เริ่มนาน</span>
                     <span class="badge bg-white/90 text-stone-600"><span class="mr-1 inline-block size-2 rounded-full bg-red-500"></span>รอนาน</span>
+                    <span class="badge bg-white/90 text-violet-700" title="ผู้ป่วยมียา ต้องให้ห้องยาคัดกรองก่อน — ยังไม่นับเวลารอการเงิน"><span class="mr-1 inline-block size-2 rounded-full bg-violet-500"></span>💊 รอเภสัชคัดกรอง</span>
                     <span class="badge bg-white/90 text-stone-500"><span class="mr-1 inline-block size-2 rounded-full bg-amber-400"></span>เหรียญ = ค่าใช้จ่าย</span>
                     <span class="badge bg-white/90 text-stone-500">คลิกซ้ายลาก = เลื่อน · คลิกขวาลาก = หมุน · scroll = ซูม</span>
                 </div>

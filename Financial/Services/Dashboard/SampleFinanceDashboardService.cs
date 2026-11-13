@@ -74,9 +74,20 @@ namespace Financial.Services.Dashboard
                 var payer = PickPayer(rng);
                 var wait = rng.Next(1, 95);
                 var premium = rng.NextDouble() < 0.2; // ราว 1 ใน 5 มาจาก Premium Clinic (ห้องการเงินแยก)
+                var inBilling = wait > 10;
+                // ราว 2 ใน 3 มียา: บางคนยังรอเภสัชคัดกรอง (ยังไม่นับเวลารอการเงิน) ที่เหลือนับจากเวลาคัดกรอง
+                string? drug = null;
+                int? screening = null;
+                if (rng.NextDouble() < 0.65)
+                {
+                    var screened = inBilling ? rng.NextDouble() < 0.9 : rng.NextDouble() < 0.5; // ข้อมูลตัวอย่าง: มีคนรอคัดกรองให้เห็นเสมอ
+                    drug = screened ? (inBilling ? DrugStages.IN_BILLING : DrugStages.SCREENED) : DrugStages.WAIT_SCREENING;
+                    if (!screened) { screening = wait; wait = 0; inBilling = false; } // ยังไม่คัดกรอง = การเงินยังรับเรื่องไม่ได้
+                    else wait = Math.Max(0, wait - rng.Next(0, Math.Min(wait, 15) + 1));
+                }
                 pending.Add(Identify(new PendingPayment("O", DashboardText.Reference(rng.Next(1_000_000, 9_999_999)), payer.Code, payer.Name,
-                    premium ? "Premium Clinic" : Clinics[rng.Next(Clinics.Length)], Money(rng, 300, payer.Code == "F" ? 25_000 : 8_000), wait, wait > 10,
-                    Zone: premium ? PendingZones.PREMIUM : PendingZones.OPD), includePatientIdentity, pending.Count));
+                    premium ? "Premium Clinic" : Clinics[rng.Next(Clinics.Length)], Money(rng, 300, payer.Code == "F" ? 25_000 : 8_000), wait, inBilling,
+                    Zone: premium ? PendingZones.PREMIUM : PendingZones.OPD, DrugStage: drug, ScreeningMinutes: screening), includePatientIdentity, pending.Count));
             }
             for (int i = 0, n = rng.Next(6, 16); i < n; i++)
             {

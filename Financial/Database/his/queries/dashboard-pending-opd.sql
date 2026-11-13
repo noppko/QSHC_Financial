@@ -6,6 +6,10 @@
 --   LocationCode = รหัสคลินิก (Location.Code) ใช้แยกห้องการเงิน Premium Clinic (Dashboard:PremiumClinicCodes)
 --   ยอดเงิน = ค่าใช้จ่ายรวมของ visit SUM(PatientBillableItem.NetAmount)
 --   สิทธิ = PatientVisitPayor ลำดับแรก (PAYRTP 13838 PRIMARY) → กลุ่มผู้จ่าย PYRACAT
+--   ยา (HO63Database pharm-status.sql, service-points.md 2026-11-13): คำสั่งยา PatientOrder.ORDCTUID 48581
+--     log PatientOrderDetailHistory.ORDSTUID: RAISED สั่ง → VERFD เภสัชคัดกรอง → DISPE จ่าย (+ CANCLD/DISPCANCL)
+--     การเงินคิดค่ายาได้หลังเภสัชคัดกรอง (VERFD ก่อน BLINP 99%) → แอปนับเวลารอการเงินของคนที่มียาจาก
+--     MAX(ออกจากห้องตรวจ, เภสัชคัดกรองครั้งล่าสุด) · ยังไม่คัดกรอง = "รอเภสัชคัดกรอง" (ยังไม่นับเวลารอการเงิน)
 -- ไม่คืน HN/ชื่อ — คืนเฉพาะ VisitUid ซึ่งแอปจะแสดงเป็นรหัสอ้างอิงแบบย่อ
 -- params: @today, @tomorrow, @since (datetime; @since = ขณะนี้ − 8 ชม.)
 WITH ev AS (
@@ -28,7 +32,11 @@ SELECT ev.pv                                     AS VisitUid,
        loc.Code                                  AS LocationCode,
        ISNULL(pay.PayorCategoryCode, '?')        AS PayorCategoryCode,
        ISNULL(pay.PayorCategory, N'(ไม่ระบุ)')   AS PayorCategory,
-       ISNULL(amt.Amount, 0)                     AS Amount
+       ISNULL(amt.Amount, 0)                     AS Amount,
+       ISNULL(rx.nRaised, 0) - ISNULL(rx.nCancelled, 0) AS DrugItems,
+       ISNULL(rx.nVerified, 0)                   AS DrugVerified,
+       ISNULL(rx.nDispensed, 0)                  AS DrugDispensed,
+       rx.verifiedAt                             AS DrugVerifiedAt
 FROM ev
 JOIN PatientVisit v WITH (NOLOCK) ON v.UID = ev.pv
 LEFT JOIN Location loc WITH (NOLOCK) ON loc.UID = v.LocationUID
@@ -45,6 +53,18 @@ OUTER APPLY (
     FROM PatientBillableItem bi WITH (NOLOCK)
     WHERE bi.PatientVisitUID = ev.pv AND bi.StatusFlag = 'A'
 ) amt
+OUTER APPLY (
+    SELECT SUM(CASE WHEN rv.ValueCode = 'RAISED' THEN 1 ELSE 0 END)                  AS nRaised,
+           SUM(CASE WHEN rv.ValueCode = 'VERFD'  THEN 1 ELSE 0 END)                  AS nVerified,
+           SUM(CASE WHEN rv.ValueCode = 'DISPE'  THEN 1 ELSE 0 END)                  AS nDispensed,
+           SUM(CASE WHEN rv.ValueCode IN ('CANCLD', 'DISPCANCL') THEN 1 ELSE 0 END) AS nCancelled,
+           MAX(CASE WHEN rv.ValueCode = 'VERFD'  THEN h.CWhen END)                  AS verifiedAt
+    FROM PatientOrder po WITH (NOLOCK)
+    JOIN PatientOrderDetail pod WITH (NOLOCK)         ON pod.PatientOrderUID = po.UID
+    JOIN PatientOrderDetailHistory h WITH (NOLOCK)    ON h.PatientOrderDetailUID = pod.UID
+    JOIN ReferenceValue rv WITH (NOLOCK)              ON rv.UID = h.ORDSTUID
+    WHERE po.PatientVisitUID = ev.pv AND po.ORDCTUID = 48581 AND po.StatusFlag = 'A'
+) rx
 WHERE ev.done = 0
   AND ev.chkAt IS NOT NULL
   AND ev.chkAt >= @since

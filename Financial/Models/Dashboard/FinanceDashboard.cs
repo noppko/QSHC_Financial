@@ -89,10 +89,54 @@ namespace Financial.Models.Dashboard
         [property: System.Text.Json.Serialization.JsonIgnore] long VisitUid = 0,
         string? Hn = null,
         string? PatientName = null,
-        string? Zone = null)  // ห้องการเงินใน 3D: PendingZones.OPD / PREMIUM / IPD (null = ตาม Type)
+        string? Zone = null,   // ห้องการเงินใน 3D: PendingZones.OPD / PREMIUM / IPD (null = ตาม Type)
+        string? DrugStage = null,      // DrugStages.* (OPD ที่มีคำสั่งยา) · null = ไม่มียา
+        int? ScreeningMinutes = null)  // รอเภสัชคัดกรองมาแล้ว (นับจากออกจากห้องตรวจ) — เฉพาะ DrugStage = WAIT_SCREENING
     {
         /// <summary>ห้องการเงินที่ผู้ป่วยไปรอ — Premium Clinic แยกห้องจากคลินิก OPD อื่น</summary>
         public string CounterZone => Zone ?? Type;
+
+        public bool HasDrugs => DrugStage is not null;
+
+        public string? DrugStageText => DrugStage is null ? null : DrugStages.Text(DrugStage);
+
+        /// <summary>ยังรอเภสัชคัดกรอง — การเงินยังคิดค่ายาไม่ได้ จึงยังไม่นับเวลารอการเงิน (WaitingMinutes = 0)</summary>
+        public bool WaitingScreening => DrugStage == DrugStages.WAIT_SCREENING;
+    }
+
+    /// <summary>
+    /// สถานะยาของผู้ป่วยนอกที่รอชำระ (HO63Database pharm-status.sql): สั่งยา RAISED → เภสัชคัดกรอง VERFD → การเงิน BLINP/FINDIS → จ่ายยา DISPE
+    /// เวลารอการเงินของคนที่มียา = นับจาก MAX(ออกจากห้องตรวจ, เภสัชคัดกรองครั้งล่าสุด)
+    /// </summary>
+    public static class DrugStages
+    {
+        public const string WAIT_SCREENING = "1";  // รอเภสัชคัดกรอง (การเงินยังคิดค่ายาไม่ได้)
+        public const string SCREENED = "2a";       // คัดกรองแล้ว รอการเงินรับเรื่อง
+        public const string IN_BILLING = "2b";     // คัดกรองแล้ว การเงินกำลังคิดเงิน (BLINP)
+        public const string DISPENSED_EARLY = "4"; // จ่ายยาแล้ว (บางส่วน/ทั้งหมด) ก่อนชำระเงิน
+
+        public static string Text(string stage) => stage switch
+        {
+            WAIT_SCREENING => "รอเภสัชคัดกรองยา",
+            SCREENED => "เภสัชคัดกรองแล้ว — รอการเงิน",
+            IN_BILLING => "เภสัชคัดกรองแล้ว — การเงินกำลังคิดเงิน",
+            DISPENSED_EARLY => "รับยาแล้ว (ก่อนชำระเงิน)",
+            _ => stage,
+        };
+
+        /// <summary>
+        /// สถานะยา + เวลาเริ่มรอการเงิน
+        /// </summary>
+        /// <param name="examDoneAt">ออกจากห้องตรวจ (SEEEN/CHKOUT)</param>
+        /// <returns>Stage null = ไม่มียา (เวลารอเริ่มที่ examDoneAt) · WAIT_SCREENING = ยังไม่นับเวลารอการเงิน (FinanceSince null)</returns>
+        public static (string? Stage, DateTime? FinanceSince) Resolve(int items, int verified, int dispensed, DateTime? verifiedAt, bool inBilling, DateTime examDoneAt)
+        {
+            if (items <= 0) return (null, examDoneAt);
+            DateTime Later(DateTime? at) => at is DateTime v && v > examDoneAt ? v : examDoneAt;
+            if (dispensed > 0) return (DISPENSED_EARLY, Later(verifiedAt));
+            if (verified <= 0) return (WAIT_SCREENING, null);
+            return (inBilling ? IN_BILLING : SCREENED, Later(verifiedAt));
+        }
     }
 
     /// <summary>รหัสห้องการเงินใน 3D Digital Twin</summary>

@@ -24,6 +24,13 @@ const STATUS = {
   late: { hex: "#ef4444", soft: "#fbd9d6", label: "✕ เกินเป้า", badge: "bg-red-50 text-red-700", tone: "text-red-600" },
 };
 const TEAL = "#02a49f";
+// ผู้ป่วยมียาที่ยังรอเภสัชคัดกรอง — การเงินยังคิดค่ายาไม่ได้ จึงยังไม่นับเวลารอการเงิน (เสื้อสีม่วง)
+const SCREENING = { hex: "#8b5cf6", label: "💊 รอเภสัชคัดกรอง" };
+const shirtOf = (zoneKey, item) => item.WaitingScreening ? SCREENING.hex : STATUS[statusOfMinutes(zoneKey, item.WaitingMinutes)].hex;
+function statusOfMinutes(zoneKey, minutes) {
+  const [warn, late] = THRESHOLDS[zoneKey] ?? THRESHOLDS.O;
+  return minutes < warn ? "ok" : minutes < late ? "warn" : "late";
+}
 
 // ผัง (เมตร): พื้นที่ x -30..30, z -18..18, +z = ด้านหน้า (ทางเข้า)
 const FLOOR = [-30, -18, 30, 18];
@@ -368,7 +375,7 @@ function init() {
 
       for (const { key, item } of list) {
         let f = figures.get(key);
-        const shirt = STATUS[statusOf(item.Type, item.WaitingMinutes, 1)].hex;
+        const shirt = shirtOf(zone.key, item);
         if (!f) {
           const seed = hash(key);
           const person = makePerson(shirt, seed, { coin: true });
@@ -424,8 +431,11 @@ function init() {
     for (const zone of Object.values(ZONES)) {
       const list = byZone[zone.key];
       const total = list.reduce((s, x) => s + x.item.Amount, 0);
-      const avg = list.length ? list.reduce((s, x) => s + x.item.WaitingMinutes, 0) / list.length : 0;
-      const status = statusOf(zone.key, avg, list.length);
+      // เวลารอเฉลี่ยของการเงิน ไม่รวมคนที่ยังรอเภสัชคัดกรองยา
+      const timed = list.filter(x => !x.item.WaitingScreening);
+      const screening = list.length - timed.length;
+      const avg = timed.length ? timed.reduce((s, x) => s + x.item.WaitingMinutes, 0) / timed.length : 0;
+      const status = statusOf(zone.key, avg, timed.length);
       const st = STATUS[status];
       const zo = zoneObjects[zone.key];
       zo.status = status;
@@ -441,7 +451,7 @@ function init() {
           <b class="text-[22px] font-semibold leading-none text-stone-900">${format.num(list.length)}</b> คนรออยู่
           <span class="ml-1 text-[9px] text-stone-400">${format.thb(total)}</span>
         </span>
-        <span class="block text-[9.5px] text-stone-500">${list.length ? `รอเฉลี่ย <b class="font-semibold ${st.tone}">${waitText}</b>` : "ไม่มีผู้รอชำระ"}</span>`;
+        <span class="block text-[9.5px] text-stone-500">${timed.length ? `รอเฉลี่ย <b class="font-semibold ${st.tone}">${waitText}</b>` : list.length ? "" : "ไม่มีผู้รอชำระ"}${screening ? ` <span class="ml-1 font-medium text-violet-700">💊 รอคัดกรอง ${format.num(screening)}</span>` : ""}</span>`;
     }
   }
 
@@ -470,9 +480,13 @@ function init() {
         <span>HN</span><span class="text-right tabular-nums">${escapeHtml(item.Hn ?? "-")}</span>` : ""}
         <span>ค่าใช้จ่ายรวม</span><b class="text-right text-stone-900">${format.thb(item.Amount)}</b>
         <span>สถานะ</span><span class="text-right">${statusText(item)}</span>
+        ${item.DrugStage ? `<span>ยา</span><span class="text-right text-violet-700">💊 ${escapeHtml(item.DrugStageText ?? "")}</span>` : item.Type === "O" ? `<span>ยา</span><span class="text-right text-stone-500">ไม่มียา — ชำระได้ทันที</span>` : ""}
         <span>กลุ่มผู้จ่าย</span><span class="text-right">${escapeHtml(item.PayerName)}</span>
         <span>${item.Type === "O" ? "คลินิก" : "หอผู้ป่วย"}</span><span class="text-right">${escapeHtml(item.Location)}</span>
-        <span>รอมาแล้ว</span><span class="text-right">${waitText(item.WaitingMinutes)}</span>
+        ${item.WaitingScreening
+          ? `<span>รอคัดกรองยา</span><span class="text-right text-violet-700">${waitText(item.ScreeningMinutes ?? 0)}</span>
+             <span>รอการเงิน</span><span class="text-right text-stone-500">ยังไม่เริ่มนับ</span>`
+          : `<span>${item.DrugStage ? "รอการเงิน (หลังคัดกรอง)" : "รอมาแล้ว"}</span><span class="text-right">${waitText(item.WaitingMinutes)}</span>`}
       </div>`;
   }
 

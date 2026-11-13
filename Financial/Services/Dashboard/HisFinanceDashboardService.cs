@@ -246,26 +246,41 @@ namespace Financial.Services.Dashboard
         {
             int uid = r.GetOrdinal("VisitUid"), since = r.GetOrdinal("WaitingSince"), inBilling = r.GetOrdinal("InBilling"),
                 loc = r.GetOrdinal("LocationName"), code = r.GetOrdinal("PayorCategoryCode"), name = r.GetOrdinal("PayorCategory"), amount = r.GetOrdinal("Amount");
-            var locCode = Enumerable.Range(0, r.FieldCount).FirstOrDefault(i => r.GetName(i) == "LocationCode", -1);
+            int Optional(string column) => Enumerable.Range(0, r.FieldCount).FirstOrDefault(i => r.GetName(i) == column, -1);
+            var locCode = Optional("LocationCode");
+            // ยา (เฉพาะ OPD query) — ไม่มีคอลัมน์ = ไม่คิดสถานะยา
+            int drugItems = Optional("DrugItems"), drugVerified = Optional("DrugVerified"), drugDispensed = Optional("DrugDispensed"), drugVerifiedAt = Optional("DrugVerifiedAt");
             var rows = new List<PendingPayment>();
             while (r.Read())
             {
-                var waitingSince = r.IsDBNull(since) ? now : r.GetDateTime(since);
+                // อ่านตามลำดับคอลัมน์ (รองรับ SequentialAccess)
                 var visitUid = Convert.ToInt64(r.GetValue(uid));
+                var examDoneAt = r.IsDBNull(since) ? now : r.GetDateTime(since);
+                var billing = Convert.ToInt32(r.GetValue(inBilling)) == 1;
+                var location = r.IsDBNull(loc) ? "-" : r.GetString(loc);
+                var locationCode = locCode >= 0 && !r.IsDBNull(locCode) ? Convert.ToString(r.GetValue(locCode)) : null;
+                var payerCode = r.GetString(code);
+                var payerName = r.GetString(name);
+                var amountValue = Dec(r, amount);
+                int Int(int i) => i >= 0 && !r.IsDBNull(i) ? Convert.ToInt32(r.GetValue(i)) : 0;
+                int items = Int(drugItems), verified = Int(drugVerified), dispensed = Int(drugDispensed);
+                DateTime? verifiedAt = drugVerifiedAt >= 0 && !r.IsDBNull(drugVerifiedAt) ? r.GetDateTime(drugVerifiedAt) : null;
+
+                var (drugStage, financeSince) = DrugStages.Resolve(items, verified, dispensed, verifiedAt, billing, examDoneAt);
+                static int Minutes(DateTime now, DateTime? since) => since is null ? 0 : Math.Max(0, (int)(now - since.Value).TotalMinutes);
                 rows.Add(new PendingPayment(
                     type,
                     DashboardText.Reference(visitUid),
-                    r.GetString(code),
-                    r.GetString(name),
-                    r.GetString(loc),
-                    Dec(r, amount),
-                    Math.Max(0, (int)(now - waitingSince).TotalMinutes),
-                    Convert.ToInt32(r.GetValue(inBilling)) == 1,
+                    payerCode,
+                    payerName,
+                    location,
+                    amountValue,
+                    Minutes(now, financeSince),
+                    billing,
                     visitUid,
-                    Zone: type == PendingZones.OPD && PendingZones.IsPremium(
-                            locCode >= 0 && !r.IsDBNull(locCode) ? Convert.ToString(r.GetValue(locCode)) : null,
-                            r.IsDBNull(loc) ? null : r.GetString(loc), premiumClinicCodes)
-                        ? PendingZones.PREMIUM : type));
+                    Zone: type == PendingZones.OPD && PendingZones.IsPremium(locationCode, location, premiumClinicCodes) ? PendingZones.PREMIUM : type,
+                    DrugStage: drugStage,
+                    ScreeningMinutes: drugStage == DrugStages.WAIT_SCREENING ? Minutes(now, examDoneAt) : null));
             }
             return rows;
         }

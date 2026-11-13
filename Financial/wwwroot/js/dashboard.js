@@ -35,17 +35,31 @@
 
     // สถานะแบบสั้นสำหรับตาราง (tooltip ใน 3D ใช้แบบเต็ม)
     function statusShort(p) {
-        if (p.Type === "O") return p.InBilling ? "รับเรื่องแล้ว" : "รอรับเรื่อง";
+        if (p.Type === "O") return p.WaitingScreening ? "รอคัดกรองยา" : p.InBilling ? "รับเรื่องแล้ว" : "รอรับเรื่อง";
         return p.InBilling ? "Medical D/C" : "สั่งจำหน่าย";
     }
 
     function statusText(p) {
-        if (p.Type === "O") return p.InBilling ? "การเงินรับเรื่องแล้ว" : "รอการเงินรับเรื่อง";
+        if (p.Type === "O") return p.WaitingScreening ? "รอเภสัชคัดกรองยา (การเงินยังคิดค่ายาไม่ได้)" : p.InBilling ? "การเงินรับเรื่องแล้ว" : "รอการเงินรับเรื่อง";
         return p.InBilling ? "Medical Discharge แล้ว" : "มีคำสั่งจำหน่าย";
+    }
+
+    // ป้ายยา: มียา (คัดกรองแล้ว) / รอคัดกรอง / รับยาก่อนชำระ
+    function drugBadge(p) {
+        if (!p.DrugStage) return "";
+        const tone = p.WaitingScreening ? "bg-violet-100 text-violet-800" : p.DrugStage === "4" ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700";
+        const label = p.WaitingScreening ? "💊 รอคัดกรอง" : p.DrugStage === "4" ? "💊 รับยาแล้ว" : "💊 คัดกรองแล้ว";
+        return ` <span class="badge ${tone}" title="${escapeHtml(p.DrugStageText ?? "")}">${label}</span>`;
+    }
+
+    // เวลารอ: คนที่ยังรอเภสัชคัดกรอง แสดงเวลารอคัดกรองแทน (ยังไม่นับเวลารอการเงิน)
+    function waitCell(p) {
+        return p.WaitingScreening ? `<span class="text-violet-700" title="รอเภสัชคัดกรองมาแล้ว — ยังไม่นับเวลารอการเงิน">คัดกรอง ${waitText(p.ScreeningMinutes ?? 0)}</span>` : waitText(p.WaitingMinutes);
     }
 
     // สีเวลารอ ตามเกณฑ์เดียวกับ 3D (OPD เป้าหมาย 15 นาที, IPD 6/24 ชม.)
     function waitClass(p) {
+        if (p.WaitingScreening) return "";
         const [warn, late] = p.Type === "O" ? [15, 30] : [6 * 60, 24 * 60];
         return p.WaitingMinutes < warn ? "text-emerald-700" : p.WaitingMinutes < late ? "text-amber-700" : "text-red-600 font-medium";
     }
@@ -58,7 +72,8 @@
         const o = pending.filter(p => p.Type === "O");
         const i = pending.filter(p => p.Type === "I");
         const sum = list => list.reduce((s, p) => s + p.Amount, 0);
-        const avg = list => list.length ? list.reduce((s, p) => s + p.WaitingMinutes, 0) / list.length : 0;
+        // เวลารอเฉลี่ยของการเงิน: ไม่รวมคนที่ยังรอเภสัชคัดกรองยา (ยังไม่ถึงคิวการเงิน)
+        const avg = all => { const list = all.filter(p => !p.WaitingScreening); return list.length ? list.reduce((s, p) => s + p.WaitingMinutes, 0) / list.length : 0; };
         const prev = d.RevenuePreviousMonthToDate.Total;
         const change = prev ? (d.RevenueMonth.Total - prev) / prev * 100 : 0;
 
@@ -109,11 +124,11 @@
                 const premiumBadge = (p.CounterZone === "P" || (p.Type === "O" && /premium/i.test(p.Location ?? ""))) ? ` <span class="badge bg-amber-50 text-amber-700">ห้อง Premium</span>` : "";
                 return `
                 <tr data-ref="${escapeHtml(p.Reference)}" class="${p.InBilling ? "bg-sky-50 hover:bg-sky-100/70" : ""}">
-                    <td class="tabular-nums">${escapeHtml(p.Reference)}${showIdentity ? "" : premiumBadge}</td>${showIdentity ? `
+                    <td class="tabular-nums">${escapeHtml(p.Reference)}${showIdentity ? "" : premiumBadge + drugBadge(p)}</td>${showIdentity ? `
                     <td class="tabular-nums">${escapeHtml(p.Hn ?? "-")}</td>
-                    <td class="whitespace-nowrap">${escapeHtml(p.PatientName ?? "-")}${premiumBadge}</td>` : ""}
+                    <td class="whitespace-nowrap">${escapeHtml(p.PatientName ?? "-")}${premiumBadge}${drugBadge(p)}</td>` : ""}
                     <td class="num font-medium text-stone-900">${format.thb(p.Amount)}</td>
-                    <td class="num ${waitClass(p)}">${waitText(p.WaitingMinutes)}</td>
+                    <td class="num ${waitClass(p)}">${waitCell(p)}</td>
                     <td>${escapeHtml(p.PayerName)}</td>
                     <td>${escapeHtml(p.Location)}</td>
                     <td title="${escapeHtml(statusText(p))}"><span class="badge ${p.InBilling ? "bg-sky-100 text-sky-800" : "bg-sand-100 text-stone-600"}">${statusShort(p)}</span></td>

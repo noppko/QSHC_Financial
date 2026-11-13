@@ -126,6 +126,45 @@ namespace Financial.Tests.Services
         }
 
         [Fact]
+        public void ReadPending_DrugsMustBeScreenedFirst_WaitCountsFromLaterOfExamAndScreening()
+        {
+            var table = new DataTable();
+            foreach (var c in new[] { "VisitUid", "WaitingSince", "InBilling", "LocationName", "LocationCode", "PayorCategoryCode", "PayorCategory", "Amount",
+                                      "DrugItems", "DrugVerified", "DrugDispensed", "DrugVerifiedAt" })
+                table.Columns.Add(c, c switch
+                {
+                    "VisitUid" => typeof(long), "WaitingSince" or "DrugVerifiedAt" => typeof(DateTime), "Amount" => typeof(decimal),
+                    "InBilling" or "DrugItems" or "DrugVerified" or "DrugDispensed" => typeof(int), _ => typeof(string),
+                });
+            var exam = Now.AddMinutes(-40);
+            table.Rows.Add(1L, exam, 0, "คลินิก", "D1", "F", "เงินสด", 100m, 0, 0, 0, DBNull.Value);                 // ไม่มียา → ชำระได้ทันที นับจากออกห้องตรวจ
+            table.Rows.Add(2L, exam, 0, "คลินิก", "D1", "F", "เงินสด", 100m, 3, 0, 0, DBNull.Value);                 // มียา ยังไม่คัดกรอง → ยังไม่นับ
+            table.Rows.Add(3L, exam, 0, "คลินิก", "D1", "F", "เงินสด", 100m, 3, 3, 0, Now.AddMinutes(-12));         // คัดกรองหลังออกห้องตรวจ → นับจากคัดกรอง
+            table.Rows.Add(4L, exam, 1, "คลินิก", "D1", "F", "เงินสด", 100m, 2, 2, 0, Now.AddMinutes(-55));         // คัดกรองก่อนออกห้องตรวจ → นับจากออกห้องตรวจ
+            table.Rows.Add(5L, exam, 0, "คลินิก", "D1", "F", "เงินสด", 100m, 2, 2, 1, Now.AddMinutes(-20));         // รับยาก่อนชำระ
+
+            using var reader = table.CreateDataReader();
+            var rows = HisFinanceDashboardService.ReadPending(reader, "O", Now);
+
+            rows[0].Should().Match<PendingPayment>(p => p.DrugStage == null && p.WaitingMinutes == 40 && !p.WaitingScreening);
+            rows[1].Should().Match<PendingPayment>(p => p.DrugStage == DrugStages.WAIT_SCREENING && p.WaitingMinutes == 0 && p.ScreeningMinutes == 40 && p.WaitingScreening);
+            rows[2].Should().Match<PendingPayment>(p => p.DrugStage == DrugStages.SCREENED && p.WaitingMinutes == 12 && p.ScreeningMinutes == null);
+            rows[3].Should().Match<PendingPayment>(p => p.DrugStage == DrugStages.IN_BILLING && p.WaitingMinutes == 40);
+            rows[4].Should().Match<PendingPayment>(p => p.DrugStage == DrugStages.DISPENSED_EARLY && p.WaitingMinutes == 20);
+            rows[1].DrugStageText.Should().Contain("คัดกรอง");
+        }
+
+        [Fact]
+        public void PendingOpdSql_ReadsMedicationOrderLog()
+        {
+            var sql = typeof(HisFinanceDashboardService).Assembly.GetManifestResourceNames().Single(n => n.EndsWith("dashboard-pending-opd.sql"));
+            using var stream = typeof(HisFinanceDashboardService).Assembly.GetManifestResourceStream(sql)!;
+            var text = new StreamReader(stream).ReadToEnd();
+            text.Should().Contain("ORDCTUID = 48581").And.Contain("'VERFD'").And.Contain("DrugVerifiedAt").And.Contain("WITH (NOLOCK)");
+            text.Should().NotContainAny("INSERT", "UPDATE ", "DELETE", "EXEC");
+        }
+
+        [Fact]
         public void ReadPending_PremiumClinicCode_GoesToSeparateCounterRoom()
         {
             var table = new DataTable();
