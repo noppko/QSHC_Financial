@@ -66,11 +66,7 @@
         markDirty();
     });
 
-    // ยืนยันก่อนลบ (ข้อความอยู่ใน data-confirm ไม่ใช้ inline script)
-    body.addEventListener("submit", e => {
-        const form = e.target.closest("form[data-confirm]");
-        if (form && !window.confirm(form.dataset.confirm)) e.preventDefault();
-    });
+    // ยืนยันก่อนลบ: form[data-confirm] จัดการที่ site.js (ทั้งระบบ)
 
     resetBtn.addEventListener("click", () => window.location.reload());
 

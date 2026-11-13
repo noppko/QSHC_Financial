@@ -109,6 +109,30 @@ namespace Financial.Tests.Services
         }
 
         [Fact]
+        public async Task Sync_ChecksDuplicatesBeforeSaving()
+        {
+            using var db = TestHost.CreateInMemoryDb();
+            var his = new FakeHis { Bills = [Bill(1, amount: 100m), Bill(1, amount: 100m), Bill(2, amount: 200m)] };
+
+            var first = await Sync(db, his).SyncAsync(FROM, TO);
+            first.Should().Be(new ReceivableSyncResult(3, 2, 0, 0, 0, Duplicates: 1), "บิลเดียวกันซ้ำในผลจาก HIS บันทึกครั้งเดียว");
+
+            // บิล 2 วันออกบิลใน HIS เปลี่ยนไปอยู่นอกช่วงเดิม → อัปเดตแถวเดิม ไม่สร้างใหม่
+            his.Bills = [Bill(2, amount: 250m, billDate: new DateTime(2026, 11, 12))];
+            var moved = await Sync(db, his).SyncAsync(new DateTime(2026, 11, 12), TO);
+            moved.Added.Should().Be(0);
+            (await db.ArReceivables.CountAsync(r => r.HisBillUid == 2)).Should().Be(1);
+            (await db.ArReceivables.SingleAsync(r => r.HisBillUid == 2)).BilledAmount.Should().Be(250m);
+
+            // เลขที่บิลเดียวกันแต่คนละ UID → ไม่บันทึก
+            his.Bills = [Bill(1, amount: 100m), Bill(3, amount: 300m) with { BillNumber = "I69000001" }, Bill(4) with { BillNumber = "I69NEW" }, Bill(5) with { BillNumber = "I69NEW" }];
+            var sameNumber = await Sync(db, his).SyncAsync(FROM, TO);
+            sameNumber.Duplicates.Should().Be(2, "I69000001 มีอยู่แล้ว (UID 1) และ I69NEW ซ้ำกันในรอบเดียว");
+            sameNumber.Added.Should().Be(1);
+            (await db.ArReceivables.Select(r => r.HisBillUid).OrderBy(u => u).ToListAsync()).Should().Equal(1, 2, 4);
+        }
+
+        [Fact]
         public async Task Sync_OnlyTouchesBillsInsideWindow()
         {
             using var db = TestHost.CreateInMemoryDb();
@@ -208,21 +232,38 @@ namespace Financial.Tests.Services
         public void Mask_KeepsLastFour(string? value, string? expected) => ReceivableQueryService.Mask(value).Should().Be(expected);
 
         [Fact]
-        public void Worker_WindowStartsAtMidnight_AndIncludesToday()
+        public void Worker_WindowNeverBeforeStartDate_AndIncludesToday()
         {
-            var (from, to) = ReceivableSyncWorker.Window(TODAY, 90);
-            from.Should().Be(new DateTime(2026, 8, 15));
-            to.Should().Be(new DateTime(2026, 11, 14));
+            var start = new DateTime(2026, 10, 1);
+            ReceivableSyncWorker.Window(TODAY, new DateTime(2026, 8, 15), start).Should().Be((start, new DateTime(2026, 11, 14)), "ไม่ดึงบิลก่อนต้นปีงบ");
+            ReceivableSyncWorker.Window(TODAY, new DateTime(2026, 11, 6, 9, 0, 0), start).From.Should().Be(new DateTime(2026, 11, 6));
+            ReceivableSyncWorker.Window(TODAY, new DateTime(2026, 10, 5), start, new DateTime(2026, 10, 20))
+                .Should().Be((new DateTime(2026, 10, 5), new DateTime(2026, 10, 21)), "ถึงสิ้นวันที่สิ้นสุด");
+            ReceivableSyncWorker.Window(TODAY, new DateTime(2026, 10, 5), start, new DateTime(2027, 1, 1)).To.Should().Be(new DateTime(2026, 11, 14), "ไม่เกินวันนี้");
+        }
+
+        [Fact]
+        public void StartDate_DefaultsToFiscalYearStart_AndNightlyIsClamped()
+        {
+            new ReceivableOptions().EffectiveStartDate(TODAY).Should().Be(new DateTime(2026, 10, 1), "ปีงบ 2570 เริ่ม 1 ต.ค. 2569");
+            new ReceivableOptions { StartDate = new DateTime(2026, 10, 1) }.EffectiveStartDate(new DateTime(2027, 11, 1)).Should().Be(new DateTime(2026, 10, 1), "กำหนดเองแล้วไม่เลื่อนตามปีงบ");
+            ReceivableSyncWorker.NightlyFrom(TODAY, new ReceivableOptions { StartDate = new DateTime(2026, 10, 1), SyncDaysBack = 90 }).Should().Be(new DateTime(2026, 10, 1));
+            ReceivableSyncWorker.NightlyFrom(new DateTime(2027, 6, 1), new ReceivableOptions { StartDate = new DateTime(2026, 10, 1), SyncDaysBack = 90 }).Should().Be(new DateTime(2027, 3, 3));
         }
 
         [Fact]
         public void Queue_AcceptsOneJobAtATime()
         {
             var queue = new ReceivableSyncQueue();
-            queue.Enqueue(90).Should().BeTrue();
-            queue.Enqueue(30).Should().BeFalse();
+            queue.Enqueue(new DateTime(2026, 10, 1)).Should().BeTrue();
+            queue.Enqueue(new DateTime(2026, 11, 1)).Should().BeFalse();
+            queue.Status!.From.Should().Be(new DateTime(2026, 10, 1));
             queue.SetStatus(new ReceivableSyncStatus(RefreshStatus.DONE, DateTime.Now));
-            queue.Enqueue(30).Should().BeTrue();
+            queue.Enqueue(new DateTime(2026, 10, 5), new DateTime(2026, 10, 20)).Should().BeTrue();
+            queue.Status!.To.Should().Be(new DateTime(2026, 10, 20));
+            queue.Enqueue(new DateTime(2026, 11, 1)).Should().BeFalse();
+            queue.SetStatus(new ReceivableSyncStatus(RefreshStatus.DONE, DateTime.Now));
+            queue.Enqueue(new DateTime(2026, 11, 1)).Should().BeTrue();
         }
     }
 }

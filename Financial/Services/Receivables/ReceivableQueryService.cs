@@ -47,17 +47,20 @@ namespace Financial.Services.Receivables
         public int Count { get; init; }
         public decimal Outstanding { get; init; }
         public DateTime? LastSyncedAt { get; init; }
+        /// <summary>ลูกหนี้ที่ต้องตรวจ (บิลใน HIS เปลี่ยน/หายหลังส่งเรียกเก็บ)</summary>
+        public int ReviewCount { get; init; }
         public IReadOnlyList<string> Warnings { get; init; } = [];
     }
 
+    /// <param name="NeedsReview">true = เฉพาะที่ติดธงต้องตรวจ (ทุกสถานะ)</param>
     public sealed record ReceivableListQuery(string SchemeCode, string? Side = null, string? Status = null, string? Aging = null,
-        string? Payor = null, DateTime? BillFrom = null, DateTime? BillTo = null, string? Search = null, int Page = 1);
+        string? Payor = null, DateTime? BillFrom = null, DateTime? BillTo = null, string? Search = null, int Page = 1, bool NeedsReview = false);
 
     /// <param name="VisitNumber">VN/AN — ผู้ใช้ที่ไม่ใช่ Admin เห็นแบบปิดบัง (4 ตัวท้าย)</param>
     /// <param name="Hn">HN — เฉพาะ Admin (null สำหรับผู้อื่น)</param>
     public sealed record ReceivableListItem(int Id, string BillNumber, string? VisitNumber, string? Hn, string PatientTypeCode,
         DateTime? VisitStartDate, DateTime? DischargeDate, DateTime BillDate, int AgeDays, string? PayorName, string? AgreementName,
-        bool IsOutOfZone, decimal BilledAmount, decimal PaidAmount, decimal OutstandingAmount, string StatusCode);
+        bool IsOutOfZone, decimal BilledAmount, decimal PaidAmount, decimal OutstandingAmount, string StatusCode, string? ReviewReason = null);
 
     public sealed record ReceivableListResult(IReadOnlyList<ReceivableListItem> Items, int Total, int Page, int PageSize, decimal TotalOutstanding);
 
@@ -68,6 +71,9 @@ namespace Financial.Services.Receivables
         Task<ReceivableListResult> GetListAsync(ReceivableListQuery query, bool includeIdentity, int pageSize = ReceivableQueryService.PAGE_SIZE, CancellationToken cancellationToken = default);
 
         Task<Dictionary<string, string>> StatusNamesAsync();
+
+        /// <summary>เจ้าหน้าที่ตรวจแล้ว — ล้างธงต้องตรวจ และลงประวัติ</summary>
+        Task<bool> ClearReviewAsync(int id, string? note, string? userName, CancellationToken cancellationToken = default);
     }
 
     /// <summary>อ่านลูกหนี้สิทธิจาก QSHC_Financial — ยอดคงค้างนับเฉพาะสถานะที่ยังต้องติดตาม (ArStatusCodes.OUTSTANDING)</summary>
@@ -144,7 +150,8 @@ namespace Financial.Services.Receivables
                         .Select(s => Row(statusNames.GetValueOrDefault(s, s), rows.Where(r => r.StatusCode == s).Select(r => r.OutstandingAmount)))
                         .Where(r => r.Count > 0).ToList(),
                     LastSyncedAt = lastSynced,
-                    Warnings = lastSynced is null ? ["ยังไม่มีข้อมูลลูกหนี้ของสิทธิ์นี้ — ผู้ดูแลระบบกด \"ดึงลูกหนี้จาก HIS\" ที่หน้านี้"] : [],
+                    ReviewCount = await _db.ArReceivables.AsNoTracking().CountAsync(r => r.SchemeCode == scheme.Code && r.ReviewReason != null, cancellationToken),
+                    Warnings = lastSynced is null ? ["ยังไม่มีข้อมูลลูกหนี้ของสิทธิ์นี้ — ระบบดึงจาก HIS ให้อัตโนมัติเมื่อยังไม่มีข้อมูล (หรือผู้ดูแลระบบดึงที่หน้า ตั้งค่าระบบ)"] : [],
                 };
             }
             catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException or DbUpdateException)
@@ -169,8 +176,9 @@ namespace Financial.Services.Receivables
 
             if (q.Side is PatientTypeCodes.OPD or PatientTypeCodes.IPD) query = query.Where(r => r.PatientTypeCode == q.Side);
 
-            // ไม่ระบุสถานะ = เฉพาะที่ยังต้องติดตาม · "ALL" = ทุกสถานะ
-            if (string.IsNullOrEmpty(q.Status)) query = query.Where(r => ArStatusCodes.OUTSTANDING.Contains(r.StatusCode));
+            // ไม่ระบุสถานะ = เฉพาะที่ยังต้องติดตาม · "ALL" = ทุกสถานะ · ต้องตรวจ = ทุกสถานะที่ติดธง
+            if (q.NeedsReview) query = query.Where(r => r.ReviewReason != null);
+            else if (string.IsNullOrEmpty(q.Status)) query = query.Where(r => ArStatusCodes.OUTSTANDING.Contains(r.StatusCode));
             else if (q.Status != "ALL") query = query.Where(r => r.StatusCode == q.Status);
 
             if (AgingRanges.Find(q.Aging) is { } aging)
@@ -202,15 +210,27 @@ namespace Financial.Services.Receivables
                 .Select(r => new
                 {
                     r.Id, r.BillNumber, r.VisitNumber, r.Hn, r.PatientTypeCode, r.VisitStartDate, r.DischargeDate, r.BillDate,
-                    r.PayorName, r.AgreementName, r.IsOutOfZone, r.BilledAmount, r.PaidAmount, r.OutstandingAmount, r.StatusCode,
+                    r.PayorName, r.AgreementName, r.IsOutOfZone, r.BilledAmount, r.PaidAmount, r.OutstandingAmount, r.StatusCode, r.ReviewReason,
                 })
                 .ToListAsync(cancellationToken);
 
             var items = rows.Select(r => new ReceivableListItem(r.Id, r.BillNumber,
                 includeIdentity ? r.VisitNumber : Mask(r.VisitNumber), includeIdentity ? r.Hn : null,
                 r.PatientTypeCode, r.VisitStartDate, r.DischargeDate, r.BillDate, AgingRanges.AgeDays(r.BillDate, today),
-                r.PayorName, r.AgreementName, r.IsOutOfZone, r.BilledAmount, r.PaidAmount, r.OutstandingAmount, r.StatusCode)).ToList();
+                r.PayorName, r.AgreementName, r.IsOutOfZone, r.BilledAmount, r.PaidAmount, r.OutstandingAmount, r.StatusCode, r.ReviewReason)).ToList();
             return new ReceivableListResult(items, total, page, pageSize, totalOutstanding);
+        }
+
+        public async Task<bool> ClearReviewAsync(int id, string? note, string? userName, CancellationToken cancellationToken = default)
+        {
+            var r = await _db.ArReceivables.FirstOrDefaultAsync(x => x.Id == id && x.ReviewReason != null, cancellationToken);
+            if (r is null) return false;
+            var reason = $"ตรวจแล้วโดย {userName}: {r.ReviewReason}" + (string.IsNullOrWhiteSpace(note) ? "" : $" · {note.Trim()}");
+            r.StatusHistories.Add(new Models.Receivables.ArStatusHistory { FromStatus = r.StatusCode, ToStatus = r.StatusCode, Reason = reason.Length <= 500 ? reason : reason[..500], ChangedAt = DateTime.Now });
+            r.ReviewReason = null;
+            r.ReviewFlaggedAt = null;
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
         }
 
         /// <summary>ปิดบัง VN/AN เหลือ 4 ตัวท้าย</summary>

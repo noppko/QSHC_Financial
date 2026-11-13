@@ -217,6 +217,416 @@ namespace Financial.Data.Migrations
                     b.ToTable("FiscalSchemeTotals");
                 });
 
+            modelBuilder.Entity("Financial.Models.Receivables.ArClaimBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BatchNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PatientTypeCode")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)");
+
+                    b.Property<string>("PayorFilter")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("PeriodFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("PeriodTo")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReferenceDocNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SchemeCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("SentBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("SentDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("StatusCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchNo")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("SchemeCode", "StatusCode");
+
+                    b.ToTable("ArClaimBatches");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArClaimBatchItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClaimBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ClaimedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("ReceivableId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivableId");
+
+                    b.HasIndex("ClaimBatchId", "ReceivableId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("ArClaimBatchItems");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArImportBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("CancelledBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ClaimBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("ConfirmedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SchemeCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("StatementNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("StatusCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("TotalReceived")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("TransferDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileSha256");
+
+                    b.HasIndex("SchemeCode", "StatusCode");
+
+                    b.ToTable("ArImportBatches");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArImportRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BillNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("CandidateIds")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<decimal?>("ClaimedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("DeniedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("DischargeDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Hn")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("ImportBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("MatchResultCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("MatchStep")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReasonText")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("ReceivableId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ReceivedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("RowNo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StatementNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("TransferDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("VisitDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("VisitNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivableId");
+
+                    b.HasIndex("ImportBatchId", "MatchResultCode");
+
+                    b.ToTable("ArImportRows");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("DeniedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("ImportBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ImportRowId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReasonText")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ReceivableId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("StatementNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("TransferDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportBatchId");
+
+                    b.HasIndex("ReceivableId");
+
+                    b.HasIndex("StatementNo", "ReceivableId");
+
+                    b.ToTable("ArPayments");
+                });
+
             modelBuilder.Entity("Financial.Models.Receivables.ArReceivable", b =>
                 {
                     b.Property<int>("Id")
@@ -297,6 +707,13 @@ namespace Financial.Data.Migrations
                     b.Property<string>("PayorName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ReviewFlaggedAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("ReviewReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("SchemeCode")
                         .IsRequired()
@@ -886,7 +1303,276 @@ namespace Financial.Data.Migrations
                             IsSystem = true,
                             NameEN = "Cancelled",
                             NameTH = "ยกเลิก"
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "MATCHED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "MATCHED",
+                            NameTH = "จับคู่ได้"
+                        },
+                        new
+                        {
+                            Id = 33,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "AMOUNT_DIFF",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 20,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "AMOUNT_DIFF",
+                            NameTH = "ยอดต่าง"
+                        },
+                        new
+                        {
+                            Id = 34,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "DENIED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 30,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "DENIED",
+                            NameTH = "ปฏิเสธ"
+                        },
+                        new
+                        {
+                            Id = 35,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "SUGGESTED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 40,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "SUGGESTED",
+                            NameTH = "แนะนำ (ต้องยืนยัน)"
+                        },
+                        new
+                        {
+                            Id = 36,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "MULTIPLE",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 50,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "MULTIPLE",
+                            NameTH = "พบหลายรายการ"
+                        },
+                        new
+                        {
+                            Id = 37,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "NOT_FOUND",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 60,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "NOT_FOUND",
+                            NameTH = "ไม่พบ"
+                        },
+                        new
+                        {
+                            Id = 38,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "DUPLICATE",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 70,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "DUPLICATE",
+                            NameTH = "ซ้ำ"
+                        },
+                        new
+                        {
+                            Id = 39,
+                            Category = "AR_MATCH_RESULT",
+                            Code = "INVALID",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 80,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "INVALID",
+                            NameTH = "ข้อมูลไม่ถูกต้อง"
+                        },
+                        new
+                        {
+                            Id = 40,
+                            Category = "AR_IMPORT_STATUS",
+                            Code = "VALIDATED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "VALIDATED",
+                            NameTH = "รอยืนยัน"
+                        },
+                        new
+                        {
+                            Id = 41,
+                            Category = "AR_IMPORT_STATUS",
+                            Code = "CONFIRMED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 20,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "CONFIRMED",
+                            NameTH = "ยืนยันแล้ว"
+                        },
+                        new
+                        {
+                            Id = 42,
+                            Category = "AR_IMPORT_STATUS",
+                            Code = "CANCELLED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 30,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "CANCELLED",
+                            NameTH = "ยกเลิก"
+                        },
+                        new
+                        {
+                            Id = 43,
+                            Category = "AR_PAYMENT_SOURCE",
+                            Code = "IMPORT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Import",
+                            NameTH = "นำเข้าไฟล์ผลการเรียกเก็บ"
+                        },
+                        new
+                        {
+                            Id = 44,
+                            Category = "AR_PAYMENT_SOURCE",
+                            Code = "MANUAL",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 20,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Manual",
+                            NameTH = "บันทึกเอง"
+                        },
+                        new
+                        {
+                            Id = 45,
+                            Category = "AR_PAYMENT_SOURCE",
+                            Code = "WRITE_OFF",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 30,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "Write-off",
+                            NameTH = "ตัดหนี้"
+                        },
+                        new
+                        {
+                            Id = 46,
+                            Category = "AR_CLAIM_BATCH_STATUS",
+                            Code = "DRAFT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "DRAFT",
+                            NameTH = "จัดชุด (ยังไม่ส่ง)"
+                        },
+                        new
+                        {
+                            Id = 47,
+                            Category = "AR_CLAIM_BATCH_STATUS",
+                            Code = "SENT",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 20,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "SENT",
+                            NameTH = "ส่งแล้ว"
+                        },
+                        new
+                        {
+                            Id = 48,
+                            Category = "AR_CLAIM_BATCH_STATUS",
+                            Code = "CANCELLED",
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedBy = "System",
+                            DisplayOrder = 30,
+                            IsActive = true,
+                            IsSystem = true,
+                            NameEN = "CANCELLED",
+                            NameTH = "ยกเลิก"
                         });
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArClaimBatchItem", b =>
+                {
+                    b.HasOne("Financial.Models.Receivables.ArClaimBatch", "ClaimBatch")
+                        .WithMany("Items")
+                        .HasForeignKey("ClaimBatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Financial.Models.Receivables.ArReceivable", "Receivable")
+                        .WithMany()
+                        .HasForeignKey("ReceivableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClaimBatch");
+
+                    b.Navigation("Receivable");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArImportRow", b =>
+                {
+                    b.HasOne("Financial.Models.Receivables.ArImportBatch", "ImportBatch")
+                        .WithMany("Rows")
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Financial.Models.Receivables.ArReceivable", "Receivable")
+                        .WithMany()
+                        .HasForeignKey("ReceivableId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ImportBatch");
+
+                    b.Navigation("Receivable");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArPayment", b =>
+                {
+                    b.HasOne("Financial.Models.Receivables.ArReceivable", "Receivable")
+                        .WithMany()
+                        .HasForeignKey("ReceivableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Receivable");
                 });
 
             modelBuilder.Entity("Financial.Models.Receivables.ArStatusHistory", b =>
@@ -908,6 +1594,16 @@ namespace Financial.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArClaimBatch", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Financial.Models.Receivables.ArImportBatch", b =>
+                {
+                    b.Navigation("Rows");
                 });
 
             modelBuilder.Entity("Financial.Models.Receivables.ArReceivable", b =>

@@ -6,7 +6,7 @@
     var hasZones = ViewData["HasZones"] is true;
     var showIdentity = ViewData["ShowIdentity"] is true;
     var totalPages = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
-    var colCount = 11 + (showIdentity ? 1 : 0) + (hasZones ? 1 : 0);
+    var colCount = 12 +(showIdentity ? 1 : 0) + (hasZones ? 1 : 0);
     string Name(string code) => statusNames.GetValueOrDefault(code, code);
     string? Date(DateTime? d) => d?.ToString("dd/MM/yyyy");
     // คงค่าตัวกรองตอนเปลี่ยนหน้า/สิทธิ์
@@ -14,11 +14,16 @@
     {
         ["scheme"] = q.SchemeCode, ["side"] = q.Side, ["status"] = q.Status, ["aging"] = q.Aging, ["payor"] = q.Payor,
         ["billFrom"] = q.BillFrom?.ToString("yyyy-MM-dd"), ["billTo"] = q.BillTo?.ToString("yyyy-MM-dd"), ["search"] = q.Search, ["page"] = page.ToString(),
+        ["review"] = q.NeedsReview ? "true" : null,
     };
 }
 
 <div class="space-y-5">
     <partial name="_SchemeTabs" model="@((q.SchemeCode, "Receivables", "Index"))" />
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert-success" role="status">@message</div>
+    }
 
     <section class="card card-body">
         <form method="get" asp-action="Index" class="flex flex-wrap items-end gap-4" data-loading="กำลังค้นหา...">
@@ -62,6 +67,10 @@
                 <label for="search" class="label">เลขบิล / VN-AN (เต็ม)</label>
                 <input type="text" id="search" name="search" class="input w-44" value="@q.Search" maxlength="30" autocomplete="off" />
             </div>
+            <label class="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-stone-700">
+                <input type="checkbox" name="review" value="true" class="size-4 accent-brand-500" checked="@q.NeedsReview" />
+                เฉพาะที่ต้องตรวจ
+            </label>
             <button type="submit" class="btn-primary">ค้นหา</button>
             <a asp-action="Index" asp-route-scheme="@q.SchemeCode" class="btn-ghost">ล้างตัวกรอง</a>
         </form>
@@ -96,6 +105,7 @@
                         <th>ผู้จ่าย / เงื่อนไข</th>
                         @if (hasZones) { <th>เขต</th> }
                         <th class="text-right">ยอดเรียกเก็บ</th>
+                        <th class="text-right">ได้รับ</th>
                         <th class="text-right">คงค้าง</th>
                         <th>สถานะ</th>
                     </tr>
@@ -125,9 +135,29 @@
                                 <td><span class="badge @(i.IsOutOfZone ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700")">@(i.IsOutOfZone ? "นอกเขต" : "ในเขต")</span></td>
                             }
                             <td class="num">@i.BilledAmount.ToString("N2")</td>
+                            <td class="num text-emerald-700">@(i.PaidAmount == 0 ? "" : i.PaidAmount.ToString("N2"))</td>
                             <td class="num font-medium">@i.OutstandingAmount.ToString("N2")</td>
-                            <td><span class="badge @(i.StatusCode == ArStatusCodes.CANCELLED ? "bg-sand-100 text-stone-500" : "bg-sky-50 text-sky-700")">@Name(i.StatusCode)</span></td>
+                            <td>
+                                <span class="badge @(i.StatusCode == ArStatusCodes.CANCELLED ? "bg-sand-100 text-stone-500" : "bg-sky-50 text-sky-700")">@Name(i.StatusCode)</span>
+                                @if (i.ReviewReason is not null) { <span class="badge ml-1 bg-amber-50 text-amber-700">ต้องตรวจ</span> }
+                            </td>
                         </tr>
+                        @if (i.ReviewReason is not null)
+                        {
+                            <!-- ธงต้องตรวจ: บิลใน HIS เปลี่ยน/หายหลังส่งเรียกเก็บ (เช่น คีย์ยาเพิ่มหลังจำหน่าย) -->
+                            <tr class="bg-amber-50/60" data-review>
+                                <td colspan="@colCount" class="whitespace-normal">
+                                    <div class="flex flex-wrap items-center gap-3 text-sm">
+                                        <span class="text-amber-800">⚠ @i.ReviewReason</span>
+                                        <form method="post" asp-action="ClearReview" asp-route-id="@i.Id" class="flex gap-1" data-confirm="บันทึกว่าตรวจแล้ว?">
+                                            <input type="hidden" name="scheme" value="@q.SchemeCode" />
+                                            <input type="text" name="note" placeholder="หมายเหตุ เช่น เรียกเก็บส่วนต่างแล้ว" maxlength="200" class="input w-64 !py-1 text-xs" aria-label="หมายเหตุการตรวจ" />
+                                            <button type="submit" class="rounded-lg border border-amber-300 bg-white px-3 py-1 text-xs text-amber-700 hover:bg-amber-50">ตรวจแล้ว</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>

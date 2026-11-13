@@ -26,6 +26,11 @@ namespace Financial.Data
         public DbSet<FiscalSchemeTotal> FiscalSchemeTotals { get; set; } = null!;
         public DbSet<Models.Receivables.ArReceivable> ArReceivables { get; set; } = null!;
         public DbSet<Models.Receivables.ArStatusHistory> ArStatusHistories { get; set; } = null!;
+        public DbSet<Models.Receivables.ArImportBatch> ArImportBatches { get; set; } = null!;
+        public DbSet<Models.Receivables.ArImportRow> ArImportRows { get; set; } = null!;
+        public DbSet<Models.Receivables.ArPayment> ArPayments { get; set; } = null!;
+        public DbSet<Models.Receivables.ArClaimBatch> ArClaimBatches { get; set; } = null!;
+        public DbSet<Models.Receivables.ArClaimBatchItem> ArClaimBatchItems { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -69,6 +74,38 @@ namespace Financial.Data
             modelBuilder.Entity<Models.Receivables.ArStatusHistory>()
                 .HasOne(h => h.Receivable).WithMany(r => r.StatusHistories)
                 .HasForeignKey(h => h.ReceivableId).OnDelete(DeleteBehavior.Restrict);
+
+            // ไฟล์ผลการเรียกเก็บ → แถว → รับชำระ (ไม่ลบจริง ใช้ soft delete / สถานะ CANCELLED)
+            modelBuilder.Entity<Models.Receivables.ArImportBatch>(e =>
+            {
+                e.HasIndex(b => new { b.SchemeCode, b.StatusCode });
+                e.HasIndex(b => b.FileSha256);
+            });
+            modelBuilder.Entity<Models.Receivables.ArImportRow>(e =>
+            {
+                e.HasOne(r => r.ImportBatch).WithMany(b => b.Rows).HasForeignKey(r => r.ImportBatchId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(r => r.Receivable).WithMany().HasForeignKey(r => r.ReceivableId).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(r => new { r.ImportBatchId, r.MatchResultCode });
+            });
+            modelBuilder.Entity<Models.Receivables.ArClaimBatch>(e =>
+            {
+                e.HasIndex(b => b.BatchNo).IsUnique().HasFilter("[IsActive] = 1");
+                e.HasIndex(b => new { b.SchemeCode, b.StatusCode });
+            });
+            modelBuilder.Entity<Models.Receivables.ArClaimBatchItem>(e =>
+            {
+                e.HasOne(i => i.ClaimBatch).WithMany(b => b.Items).HasForeignKey(i => i.ClaimBatchId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(i => i.Receivable).WithMany().HasForeignKey(i => i.ReceivableId).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(i => new { i.ClaimBatchId, i.ReceivableId }).IsUnique().HasFilter("[IsActive] = 1");
+                e.HasIndex(i => i.ReceivableId);
+            });
+            modelBuilder.Entity<Models.Receivables.ArPayment>(e =>
+            {
+                e.HasOne(p => p.Receivable).WithMany().HasForeignKey(p => p.ReceivableId).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(p => p.ReceivableId);
+                e.HasIndex(p => p.ImportBatchId);
+                e.HasIndex(p => new { p.StatementNo, p.ReceivableId });
+            });
 
             // Self-referencing relationship สำหรับ ReferenceValue
             modelBuilder.Entity<ReferenceValue>()
@@ -294,6 +331,32 @@ namespace Financial.Data
                 new ReferenceValue { Id = 30, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.WRITE_OFF, NameTH = "ตัดหนี้", NameEN = "Write-off", DisplayOrder = 70, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
                 new ReferenceValue { Id = 31, Category = ReferenceCategories.AR_STATUS, Code = ArStatusCodes.CANCELLED, NameTH = "ยกเลิก", NameEN = "Cancelled", Description = "บิลถูกยกเลิก/คืนเงินใน HIS หลังตั้งหนี้", DisplayOrder = 80, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate },
             };
+
+            // AR_MATCH_RESULT / AR_IMPORT_STATUS / AR_PAYMENT_SOURCE — นำเข้าผลการเรียกเก็บ (ระยะ 2)
+            var id = 32;
+            var order = 10;
+            foreach (var (code, name) in ArMatchResultCodes.DEFAULT_NAMES)
+            {
+                referenceValues.Add(new ReferenceValue { Id = id++, Category = ReferenceCategories.AR_MATCH_RESULT, Code = code, NameTH = name, NameEN = code, DisplayOrder = order, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate });
+                order += 10;
+            }
+            order = 10;
+            foreach (var (code, name) in ArImportStatusCodes.DEFAULT_NAMES)
+            {
+                referenceValues.Add(new ReferenceValue { Id = id++, Category = ReferenceCategories.AR_IMPORT_STATUS, Code = code, NameTH = name, NameEN = code, DisplayOrder = order, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate });
+                order += 10;
+            }
+            referenceValues.Add(new ReferenceValue { Id = id++, Category = ReferenceCategories.AR_PAYMENT_SOURCE, Code = ArPaymentSourceCodes.IMPORT, NameTH = "นำเข้าไฟล์ผลการเรียกเก็บ", NameEN = "Import", DisplayOrder = 10, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate });
+            referenceValues.Add(new ReferenceValue { Id = id++, Category = ReferenceCategories.AR_PAYMENT_SOURCE, Code = ArPaymentSourceCodes.MANUAL, NameTH = "บันทึกเอง", NameEN = "Manual", DisplayOrder = 20, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate });
+            referenceValues.Add(new ReferenceValue { Id = id++, Category = ReferenceCategories.AR_PAYMENT_SOURCE, Code = ArPaymentSourceCodes.WRITE_OFF, NameTH = "ตัดหนี้", NameEN = "Write-off", DisplayOrder = 30, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate });
+
+            // AR_CLAIM_BATCH_STATUS — ชุดเรียกเก็บ (ระยะ 3), Id เริ่ม 46
+            order = 10;
+            foreach (var (code, name) in ArClaimBatchStatusCodes.DEFAULT_NAMES)
+            {
+                referenceValues.Add(new ReferenceValue { Id = id++, Category = ReferenceCategories.AR_CLAIM_BATCH_STATUS, Code = code, NameTH = name, NameEN = code, DisplayOrder = order, IsSystem = true, CreatedBy = "System", CreatedAt = seedDate });
+                order += 10;
+            }
 
             modelBuilder.Entity<ReferenceValue>().HasData(referenceValues);
         }

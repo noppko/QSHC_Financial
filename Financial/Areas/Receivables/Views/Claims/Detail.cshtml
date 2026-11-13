@@ -1,0 +1,122 @@
+@model ClaimBatchDetail
+@{
+    var b = Model.Batch;
+    ViewData["Title"] = $"ชุดเรียกเก็บ {b.BatchNo}";
+    var showIdentity = ViewData["ShowIdentity"] is true;
+    var draft = b.StatusCode == ArClaimBatchStatusCodes.DRAFT;
+    var totalPages = Math.Max(1, (int)Math.Ceiling(b.ItemCount / (double)Model.PageSize));
+    var statusName = ArClaimBatchStatusCodes.DEFAULT_NAMES.GetValueOrDefault(b.StatusCode, b.StatusCode);
+    string? Vn(string? vn) => showIdentity ? vn : ReceivableQueryService.Mask(vn);
+}
+
+<div class="space-y-5">
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert-success" role="status">@message</div>
+    }
+
+    <section class="card card-body flex flex-wrap items-start justify-between gap-4">
+        <div class="space-y-1 text-sm">
+            <div class="text-lg font-semibold text-stone-900">@ViewData["SchemeName"] · <span class="font-mono">@b.BatchNo</span>
+                <span class="badge ml-1 @(draft ? "bg-amber-50 text-amber-700" : b.StatusCode == ArClaimBatchStatusCodes.SENT ? "bg-emerald-50 text-emerald-700" : "bg-sand-100 text-stone-500")">@statusName</span></div>
+            <div class="text-stone-600">@b.ItemCount.ToString("N0") รายการ · ยอดเรียกเก็บ @b.TotalAmount.ToString("N2") บาท · @(b.PatientTypeCode is null ? "OPD+IPD" : PatientTypeCodes.Abbreviation(b.PatientTypeCode))</div>
+            <div class="text-xs text-stone-500">
+                ช่วงวันออกบิล @(b.PeriodFrom?.ToString("dd/MM/yyyy") ?? "…") – @(b.PeriodTo?.ToString("dd/MM/yyyy") ?? "…")
+                @if (!string.IsNullOrEmpty(b.PayorFilter)) { <span>· ผู้จ่าย "@b.PayorFilter"</span> }
+                · จัดชุดโดย @b.CreatedBy @b.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                @if (b.SentDate is DateTime sent) { <span>· ส่ง @sent.ToString("dd/MM/yyyy") โดย @b.SentBy @(string.IsNullOrEmpty(b.ReferenceDocNo) ? "" : "· หนังสือ " + b.ReferenceDocNo)</span> }
+                @if (Model.WithResults > 0) { <span>· มีผลการเรียกเก็บแล้ว @Model.WithResults.ToString("N0") รายการ</span> }
+            </div>
+            @if (!string.IsNullOrEmpty(b.Note)) { <div class="text-xs text-stone-500">@b.Note</div> }
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            @if (b.StatusCode != ArClaimBatchStatusCodes.CANCELLED)
+            {
+                <form method="post" asp-action="Export" asp-route-id="@b.Id" data-loading="กำลังสร้างไฟล์..." data-download>
+                    <button type="submit" class="btn-dark">ส่งออก Excel</button>
+                </form>
+                <form method="post" asp-action="Cancel" asp-route-id="@b.Id" data-confirm="@(draft ? "ยกเลิกชุดนี้?" : "ยกเลิกชุดที่ส่งแล้ว? ลูกหนี้จะกลับเป็น ตั้งหนี้")">
+                    <button type="submit" class="btn-outline text-red-600">ยกเลิกชุด</button>
+                </form>
+            }
+            <a asp-action="Index" asp-route-scheme="@b.SchemeCode" class="btn-ghost">กลับรายการชุด</a>
+        </div>
+    </section>
+
+    @if (draft)
+    {
+        <section class="card card-body">
+            <h2 class="mb-3 font-semibold text-stone-900">บันทึกส่งแล้ว</h2>
+            <form method="post" asp-action="Send" asp-route-id="@b.Id" class="flex flex-wrap items-end gap-4" data-confirm="บันทึกว่าส่งเรียกเก็บชุด @b.BatchNo แล้ว? ลูกหนี้ @b.ItemCount.ToString("N0") รายการจะเป็น ส่งเรียกเก็บแล้ว">
+                <div>
+                    <label for="sentDate" class="label">วันที่ส่ง</label>
+                    <input type="date" id="sentDate" name="sentDate" class="input w-40" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div>
+                    <label for="referenceDocNo" class="label">เลขหนังสือนำส่ง / เลขอ้างอิง</label>
+                    <input type="text" id="referenceDocNo" name="referenceDocNo" class="input w-56" maxlength="100" />
+                </div>
+                <button type="submit" class="btn-primary">บันทึกส่งแล้ว</button>
+            </form>
+            <p class="mt-2 text-xs text-stone-500">Excel ที่ส่งออกคือ template ผลการเรียกเก็บที่เติม VN/AN วันที่ เลขบิล และยอดเรียกเก็บไว้แล้ว — เมื่อหน่วยงานแจ้งผล กรอก "ยอดที่ได้รับ" แล้วนำเข้าที่เมนู นำเข้าผลการเรียกเก็บ (จับคู่ด้วย VN/AN ได้ทุกแถว)</p>
+        </section>
+    }
+
+    <section class="card card-body">
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>เลขที่บิล</th><th>VN/AN</th>
+                        @if (showIdentity) { <th>HN</th> }
+                        <th>ประเภท</th><th>วันออกบิล</th><th>ผู้จ่าย</th>
+                        <th class="text-right">ยอดเรียกเก็บ</th><th class="text-right">ได้รับ</th><th class="text-right">คงค้าง</th><th>สถานะลูกหนี้</th>
+                        @if (draft) { <th></th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <tr><td colspan="11" class="py-10 text-center text-stone-500">ไม่มีรายการ</td></tr>
+                    }
+                    @foreach (var i in Model.Items)
+                    {
+                        var r = i.Receivable!;
+                        <tr>
+                            <td class="font-mono text-xs">@r.BillNumber</td>
+                            <td class="font-mono text-xs">@Vn(r.VisitNumber)</td>
+                            @if (showIdentity) { <td class="font-mono text-xs">@r.Hn</td> }
+                            <td>@PatientTypeCodes.Abbreviation(r.PatientTypeCode)</td>
+                            <td>@r.BillDate.ToString("dd/MM/yyyy")</td>
+                            <td class="whitespace-normal">@r.PayorName</td>
+                            <td class="num">@i.ClaimedAmount.ToString("N2")</td>
+                            <td class="num text-emerald-700">@(r.PaidAmount == 0 ? "" : r.PaidAmount.ToString("N2"))</td>
+                            <td class="num font-medium">@r.OutstandingAmount.ToString("N2")</td>
+                            <td><span class="badge bg-sky-50 text-sky-700">@ArStatusCodes.DEFAULT_NAMES.GetValueOrDefault(r.StatusCode, r.StatusCode)</span></td>
+                            @if (draft)
+                            {
+                                <td>
+                                    <form method="post" asp-action="RemoveItem" asp-route-id="@b.Id">
+                                        <input type="hidden" name="itemId" value="@i.Id" />
+                                        <input type="hidden" name="page" value="@Model.Page" />
+                                        <button type="submit" class="text-xs text-red-600 hover:underline">เอาออก</button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (totalPages > 1)
+        {
+            <nav class="mt-4 flex items-center justify-between text-sm" aria-label="หน้า">
+                <span class="text-stone-500">หน้า @Model.Page / @totalPages</span>
+                <div class="flex gap-2">
+                    @if (Model.Page > 1) { <a asp-action="Detail" asp-route-id="@b.Id" asp-route-page="@(Model.Page - 1)" class="btn-outline">ก่อนหน้า</a> }
+                    @if (Model.Page < totalPages) { <a asp-action="Detail" asp-route-id="@b.Id" asp-route-page="@(Model.Page + 1)" class="btn-outline">ถัดไป</a> }
+                </div>
+            </nav>
+        }
+    </section>
+</div>

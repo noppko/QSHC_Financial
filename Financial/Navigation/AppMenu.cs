@@ -32,10 +32,10 @@ namespace Financial.Navigation
         internal const string ICON_DASHBOARD = "M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z";
         private const string ICON_BED = "M3 7v11m0-4h18v4M7 10a2 2 0 1 0 0-.01M11 14V9h6a4 4 0 0 1 4 4v1";
         private const string ICON_WALK = "M13 4a1.5 1.5 0 1 0 0-.01M9 21l2.5-6.5L14 17v4m-6-9 3-3.5 3 1.5 2.5 3M11.5 14.5 10 9";
-        private const string ICON_UPLOAD = "M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3";
+        internal const string ICON_UPLOAD = "M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3";
         private const string ICON_CARD = "M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm0 3h18M7 15h3";
         private const string ICON_MAP = "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14";
-        private const string ICON_REPORT = "M9 17v-6m4 6V7m4 10v-3M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z";
+        internal const string ICON_REPORT = "M9 17v-6m4 6V7m4 10v-3M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z";
         private const string ICON_SHIELD = "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z";
         internal const string ICON_LIST = "M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01";
         public const string ICON_WALLET = "M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2Zm14 7h.01";

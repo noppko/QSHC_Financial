@@ -10,6 +10,74 @@ namespace Financial.Models
         public const string PAYOR_SCHEME = "PAYOR_SCHEME";
         public const string FISCAL_ZONE = "FISCAL_ZONE";
         public const string AR_STATUS = "AR_STATUS";
+        public const string AR_MATCH_RESULT = "AR_MATCH_RESULT";
+        public const string AR_IMPORT_STATUS = "AR_IMPORT_STATUS";
+        public const string AR_PAYMENT_SOURCE = "AR_PAYMENT_SOURCE";
+        public const string AR_CLAIM_BATCH_STATUS = "AR_CLAIM_BATCH_STATUS";
+
+        /// <summary>รหัสเหตุผลการปฏิเสธแยกตามสิทธิ์ เช่น AR_DENY_REASON_NHSO (dropdown ใน Excel template)</summary>
+        public static string ArDenyReason(string schemeCode) => $"AR_DENY_REASON_{schemeCode.ToUpperInvariant()}";
+    }
+
+    /// <summary>ผลการจับคู่แถวในไฟล์ผลการเรียกเก็บกับลูกหนี้ (ReferenceValues category AR_MATCH_RESULT)</summary>
+    public static class ArMatchResultCodes
+    {
+        public const string MATCHED = "MATCHED";         // คู่ชัด ยอดได้ = ยอดค้าง
+        public const string AMOUNT_DIFF = "AMOUNT_DIFF"; // คู่ชัด ยอดต่าง
+        public const string DENIED = "DENIED";           // หน่วยงานไม่จ่าย
+        public const string SUGGESTED = "SUGGESTED";     // จากขั้น 3 (HN + วันที่ใกล้ + ยอดใกล้) ต้องให้คนยืนยัน
+        public const string MULTIPLE = "MULTIPLE";       // พบหลายรายการ — กระจายยอดหรือเลือกเอง
+        public const string NOT_FOUND = "NOT_FOUND";     // ไม่พบลูกหนี้
+        public const string DUPLICATE = "DUPLICATE";     // เคยบันทึกแล้ว / ซ้ำในไฟล์
+        public const string INVALID = "INVALID";         // ข้อมูลไม่ครบ/ผิดรูปแบบ
+
+        public static readonly IReadOnlyList<string> ALL = [MATCHED, AMOUNT_DIFF, DENIED, SUGGESTED, MULTIPLE, NOT_FOUND, DUPLICATE, INVALID];
+
+        /// <summary>ผลที่รวมตอนยืนยันโดยอัตโนมัติ (ไม่ต้องติ๊ก)</summary>
+        public static readonly IReadOnlyList<string> AUTO_ACCEPT = [MATCHED, AMOUNT_DIFF, DENIED];
+
+        /// <summary>ผลที่ยอมรับได้ (มีลูกหนี้ปลายทาง)</summary>
+        public static readonly IReadOnlyList<string> ACCEPTABLE = [MATCHED, AMOUNT_DIFF, DENIED, SUGGESTED, MULTIPLE];
+
+        public static readonly IReadOnlyDictionary<string, string> DEFAULT_NAMES = new Dictionary<string, string>
+        {
+            [MATCHED] = "จับคู่ได้", [AMOUNT_DIFF] = "ยอดต่าง", [DENIED] = "ปฏิเสธ", [SUGGESTED] = "แนะนำ (ต้องยืนยัน)",
+            [MULTIPLE] = "พบหลายรายการ", [NOT_FOUND] = "ไม่พบ", [DUPLICATE] = "ซ้ำ", [INVALID] = "ข้อมูลไม่ถูกต้อง",
+        };
+    }
+
+    /// <summary>สถานะไฟล์นำเข้า (ReferenceValues category AR_IMPORT_STATUS)</summary>
+    public static class ArImportStatusCodes
+    {
+        public const string VALIDATED = "VALIDATED";
+        public const string CONFIRMED = "CONFIRMED";
+        public const string CANCELLED = "CANCELLED";
+
+        public static readonly IReadOnlyDictionary<string, string> DEFAULT_NAMES = new Dictionary<string, string>
+        {
+            [VALIDATED] = "รอยืนยัน", [CONFIRMED] = "ยืนยันแล้ว", [CANCELLED] = "ยกเลิก",
+        };
+    }
+
+    /// <summary>สถานะชุดเรียกเก็บ (ReferenceValues category AR_CLAIM_BATCH_STATUS)</summary>
+    public static class ArClaimBatchStatusCodes
+    {
+        public const string DRAFT = "DRAFT";
+        public const string SENT = "SENT";
+        public const string CANCELLED = "CANCELLED";
+
+        public static readonly IReadOnlyDictionary<string, string> DEFAULT_NAMES = new Dictionary<string, string>
+        {
+            [DRAFT] = "จัดชุด (ยังไม่ส่ง)", [SENT] = "ส่งแล้ว", [CANCELLED] = "ยกเลิก",
+        };
+    }
+
+    /// <summary>ที่มาของการรับชำระ (ReferenceValues category AR_PAYMENT_SOURCE)</summary>
+    public static class ArPaymentSourceCodes
+    {
+        public const string IMPORT = "IMPORT";
+        public const string MANUAL = "MANUAL";
+        public const string WRITE_OFF = "WRITE_OFF";
     }
 
     /// <summary>

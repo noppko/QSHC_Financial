@@ -4,25 +4,70 @@
     ViewData["Title"] = "ภาพรวมลูกหนี้สิทธิ";
     var th = System.Globalization.CultureInfo.GetCultureInfo("th-TH");
     var isAdmin = Financial.Services.Authorization.AppPolicies.IsAdmin(User, RoleSettings.Value);
-    var syncDays = ViewData["SyncDays"] as int[] ?? [];
-    var defaultDays = ViewData["DefaultSyncDays"] as int? ?? 90;
     var syncStatus = ViewData["SyncStatus"] as ReceivableSyncStatus;
 }
 
 <div class="space-y-5">
-    <!-- ================= 4 สิทธิ์ ================= -->
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="ยอดคงค้างแยกสิทธิ์">
+    <!-- ================= 4 สิทธิ์ (card ที่เปิดอยู่ = พื้นสีประจำสิทธิ์ + ป้าย "กำลังดู") ================= -->
+    @{
+        var totalAll = Model.Schemes.Sum(s => s.Outstanding);
+        var activeColor = ReceivablesMenu.SchemeColor(Model.SchemeCode);
+        string Pct(decimal v) => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+    }
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="ยอดคงค้างแยกสิทธิ์ — เลือกสิทธิ์ที่จะดู">
         @foreach (var card in Model.Schemes)
         {
             var active = card.Code == Model.SchemeCode;
-            <a asp-action="Index" asp-route-scheme="@card.Code" aria-current="@(active ? "page" : null)" data-scheme-card="@card.Code"
-               class="card card-body block transition hover:-translate-y-0.5 hover:shadow-md @(active ? "ring-2 ring-brand-500" : "")">
-                <div class="flex items-center justify-between">
-                    <span class="font-semibold text-stone-900">@card.Name</span>
-                    <span class="text-xs text-stone-500">@card.Count.ToString("N0") รายการ</span>
+            var color = ReceivablesMenu.SchemeColor(card.Code);
+            var share = totalAll == 0 ? 0 : Math.Round(card.Outstanding / totalAll * 100, 1);
+            var over90Share = card.Outstanding == 0 ? 0 : Math.Round(card.Over90 / card.Outstanding * 100, 1);
+            <a asp-action="Index" asp-route-scheme="@card.Code" aria-current="@(active ? "page" : null)" data-scheme-card="@card.Code" data-active="@(active ? "true" : "false")"
+               class="group relative block overflow-hidden rounded-2xl border p-5 transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2
+                      @(active ? "-translate-y-1 text-white shadow-xl" : "border-sand-200 bg-white text-stone-900 shadow-sm hover:-translate-y-0.5 hover:shadow-md")"
+               style="@(active ? $"background: linear-gradient(135deg, {color} 0%, {color}d9 100%); border-color: {color}; outline-color: {color};" : $"border-top: 4px solid {color}; outline-color: {color};")">
+                @if (active)
+                {
+                    <!-- วงกลมตกแต่งมุมขวาบน -->
+                    <span class="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full bg-white/10" aria-hidden="true"></span>
+                    <span class="pointer-events-none absolute -right-4 -bottom-12 size-24 rounded-full bg-white/10" aria-hidden="true"></span>
+                }
+                <div class="relative flex items-start justify-between gap-2">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                        <span class="grid size-10 shrink-0 place-items-center rounded-xl text-base font-bold"
+                              style="@(active ? "background: rgba(255,255,255,.22); color: #fff;" : $"background: {color}1a; color: {color};")">@card.Name[..1]</span>
+                        <div class="min-w-0 leading-tight">
+                            <div class="truncate font-semibold" title="@card.Name">@card.Name</div>
+                            <div class="text-xs @(active ? "text-white/80" : "text-stone-500")">@card.Count.ToString("N0") รายการคงค้าง</div>
+                        </div>
+                    </div>
+                    @if (active)
+                    {
+                        <span class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-white/25 px-2.5 py-1 text-xs font-semibold backdrop-blur">
+                            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7" /></svg>
+                            กำลังดู
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs text-stone-400 transition group-hover:text-stone-700" aria-hidden="true">ดู →</span>
+                    }
                 </div>
-                <div class="mt-2 text-2xl font-semibold text-stone-900 tabular-nums">@card.Outstanding.ToString("N2")</div>
-                <div class="text-xs text-stone-500">บาท คงค้าง · เกิน 90 วัน <span class="font-medium @(card.Over90 > 0 ? "text-amber-700" : "")">@card.Over90.ToString("N2")</span></div>
+
+                <div class="relative mt-4">
+                    <div class="text-2xl font-bold tabular-nums tracking-tight">@card.Outstanding.ToString("N2")</div>
+                    <div class="text-xs @(active ? "text-white/80" : "text-stone-500")">บาท คงค้าง</div>
+                </div>
+
+                <!-- สัดส่วนของยอดคงค้างทั้ง 4 สิทธิ์ -->
+                <div class="relative mt-4">
+                    <div class="h-1.5 overflow-hidden rounded-full @(active ? "bg-white/25" : "bg-sand-100")">
+                        <div class="h-full rounded-full" style="width: @Pct(share)%; background: @(active ? "#fff" : color);"></div>
+                    </div>
+                    <div class="mt-1.5 flex justify-between gap-2 text-[11px] @(active ? "text-white/85" : "text-stone-500")">
+                        <span>@Pct(share)% ของทั้งหมด</span>
+                        <span class="@(card.Over90 > 0 && !active ? "font-medium text-amber-700" : "")">เกิน 90 วัน @Pct(over90Share)%</span>
+                    </div>
+                </div>
             </a>
         }
     </section>
@@ -31,17 +76,28 @@
     {
         <div class="alert-info" role="status">@warning</div>
     }
+    @if (Model.ReviewCount > 0)
+    {
+        <div class="alert-error flex flex-wrap items-center justify-between gap-2" role="status" data-review-count="@Model.ReviewCount">
+            <span>⚠ @Model.SchemeName มีลูกหนี้ @Model.ReviewCount.ToString("N0") รายการที่บิลใน HIS เปลี่ยนหลังส่งเรียกเก็บ/รับชำระแล้ว (เช่น คีย์ยาเพิ่มหลังจำหน่าย) — ต้องตรวจ</span>
+            <a asp-controller="Receivables" asp-action="Index" asp-route-scheme="@Model.SchemeCode" asp-route-review="true" class="btn-outline">ดูรายการที่ต้องตรวจ</a>
+        </div>
+    }
 
     <!-- ================= ส่วนหัวสิทธิ์ที่เลือก ================= -->
-    <section class="card card-body flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h2 class="text-lg font-semibold text-stone-900">@Model.SchemeName</h2>
-            <p class="text-xs text-stone-500">
-                คงค้าง @Model.Outstanding.ToString("N2") บาท จาก @Model.Count.ToString("N0") รายการ ·
-                @(Model.LastSyncedAt is DateTime synced ? $"ดึงจาก HIS ล่าสุด {synced.ToString("d MMM yyyy HH:mm", th)} น." : "ยังไม่มีข้อมูล")
-            </p>
+    <section class="card card-body flex flex-wrap items-center justify-between gap-4 border-l-4" style="border-left-color: @activeColor;" data-scheme-header="@Model.SchemeCode">
+        <div class="flex items-center gap-3">
+            <span class="grid size-11 place-items-center rounded-xl text-lg font-bold text-white shadow-sm" style="background: @activeColor;">@Model.SchemeName[..1]</span>
+            <div>
+                <div class="text-xs font-semibold tracking-wide" style="color: @activeColor;">สิทธิ์ที่กำลังดู</div>
+                <h2 class="text-lg font-semibold text-stone-900">@Model.SchemeName</h2>
+                <p class="text-xs text-stone-500">
+                    คงค้าง @Model.Outstanding.ToString("N2") บาท จาก @Model.Count.ToString("N0") รายการ ·
+                    @(Model.LastSyncedAt is DateTime synced ? $"ดึงจาก HIS ล่าสุด {synced.ToString("d MMM yyyy HH:mm", th)} น." : "ยังไม่มีข้อมูล")
+                </p>
+            </div>
         </div>
-        <a asp-controller="Receivables" asp-action="Index" asp-route-scheme="@Model.SchemeCode" class="btn-primary">ดูรายการลูกหนี้</a>
+        <a asp-controller="Receivables" asp-action="Index" asp-route-scheme="@Model.SchemeCode" class="btn-primary" style="background: @activeColor;">ดูรายการลูกหนี้</a>
     </section>
 
     <div class="grid gap-5 xl:grid-cols-2">
@@ -78,7 +134,7 @@
                         {
                             <li>
                                 <div class="flex justify-between text-sm"><span>@r.Label <span class="text-xs text-stone-500">(@r.Count.ToString("N0"))</span></span><span class="tabular-nums">@r.Amount.ToString("N2")</span></div>
-                                <div class="mt-1 h-2 rounded-full bg-sand-100"><div class="h-2 rounded-full bg-brand-500" style="width:@(Math.Clamp(r.Percent, 0, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></div></div>
+                                <div class="mt-1 h-2 rounded-full bg-sand-100"><div class="h-2 rounded-full" style="width:@(Math.Clamp(r.Percent, 0, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%; background: @activeColor;"></div></div>
                             </li>
                         }
                     </ul>
@@ -112,34 +168,12 @@
         </div>
     </section>
 
+    @if (syncStatus?.IsActive == true)
+    {
+        <div class="alert-info" role="status"><span class="spinner"></span> กำลังดึงลูกหนี้จาก HIS (@syncStatus.From?.ToString("dd/MM/yyyy")–@syncStatus.To?.ToString("dd/MM/yyyy")) — โหลดหน้านี้ใหม่เมื่อเสร็จ</div>
+    }
     @if (isAdmin)
     {
-        <!-- ================= ดึงลูกหนี้จาก HIS (Admin) ================= -->
-        <section class="card card-body" id="arSync" data-status-url="@Url.Action("SyncStatus")" data-sync-url="@Url.Action("Sync")" data-active="@((syncStatus?.IsActive == true) ? "true" : "false")">
-            <h3 class="mb-1 font-semibold text-stone-900">ดึงลูกหนี้จาก HIS</h3>
-            <p class="mb-3 text-xs text-stone-500">อ่านบิลเครดิตของ 4 สิทธิ์จาก HIS (อ่านอย่างเดียว) มาตั้งหนี้ที่ QSHC_Financial · ดึงอัตโนมัติทุกคืนย้อนหลัง @defaultDays วัน · ทำงานเบื้องหลัง ปิดหน้านี้ได้</p>
-            <div class="flex flex-wrap items-end gap-3">
-                <div>
-                    <label for="syncDays" class="label">ย้อนหลัง (ตามวันออกบิล)</label>
-                    <select id="syncDays" class="input w-40">
-                        @foreach (var d in syncDays) { <option value="@d" selected="@(d == defaultDays)">@d วัน</option> }
-                    </select>
-                </div>
-                <button type="button" id="syncButton" class="btn-primary">ดึงข้อมูล</button>
-            </div>
-            <div id="syncStatus" class="mt-3 text-sm text-stone-600" aria-live="polite">
-                @if (syncStatus is not null)
-                {
-                    <span>@syncStatus.State · @syncStatus.Message</span>
-                }
-            </div>
-        </section>
+        <p class="text-xs text-stone-500">ดึงลูกหนี้จาก HIS ใหม่ (เลือกวันที่เริ่ม–สิ้นสุด) ที่หน้า <a asp-area="" asp-controller="Admin" asp-action="Index" asp-fragment="receivables-sync" class="font-medium text-brand-600 hover:underline" data-admin-sync-link>ตั้งค่าระบบ</a></p>
     }
 </div>
-
-@section Scripts {
-    @if (isAdmin)
-    {
-        <script src="~/js/receivables-sync.js" asp-append-version="true"></script>
-    }
-}

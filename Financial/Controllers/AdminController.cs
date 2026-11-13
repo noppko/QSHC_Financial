@@ -3,6 +3,7 @@ using Financial.Data;
 using Financial.Navigation;
 using Financial.Services.Authorization;
 using Financial.Services.Notifications;
+using Financial.Services.Receivables;
 using Financial.Services.Reports;
 using Financial.Services.Settings;
 using Microsoft.AspNetCore.Authorization;
@@ -43,6 +44,8 @@ namespace Financial.Controllers
         private readonly ILogger<AdminController> _logger;
         private readonly ITelegramNotifier? _telegram;
         private readonly IOptions<TelegramOptions>? _telegramOptions;
+        private readonly ReceivableSyncQueue? _receivableQueue;
+        private readonly ReceivableOptions _receivableOptions;
 
         public AdminController(
             IConfiguration configuration,
@@ -57,8 +60,12 @@ namespace Financial.Controllers
             TimeProvider timeProvider,
             ILogger<AdminController> logger,
             ITelegramNotifier? telegram = null,
-            IOptions<TelegramOptions>? telegramOptions = null)
+            IOptions<TelegramOptions>? telegramOptions = null,
+            ReceivableSyncQueue? receivableQueue = null,
+            IOptions<ReceivableOptions>? receivableOptions = null)
         {
+            _receivableQueue = receivableQueue;
+            _receivableOptions = receivableOptions?.Value ?? new ReceivableOptions();
             _telegram = telegram;
             _telegramOptions = telegramOptions;
             _configuration = configuration;
@@ -97,8 +104,35 @@ namespace Financial.Controllers
             ViewData["TelegramChat"] = telegram.IsConfigured ? telegram.MaskedChatId : null;
             ViewData["TelegramProxy"] = !string.IsNullOrWhiteSpace(telegram.Proxy);
             ViewData["TelegramOnSuccess"] = telegram.NotifyRefreshSuccess;
+            ViewData["ReceivableStartDate"] = _receivableOptions.EffectiveStartDate(model.Now);
+            ViewData["ReceivableSyncStatus"] = _receivableQueue?.Status;
             return View(model);
         }
+
+        /// <summary>
+        /// ดึงลูกหนี้สิทธิจาก HIS ตามช่วงวันออกบิล (ทำงานเบื้องหลัง) — ไม่ก่อนวันเริ่มตั้งหนี้ (Receivables:StartDate), ไม่เกินวันนี้
+        /// ใช้ดึงใหม่เมื่อบิลถูกแก้หลังจำหน่าย (เช่น เภสัชคีย์ยาเพิ่ม) ที่เก่ากว่ารอบกลางคืน
+        /// </summary>
+        [HttpPost]
+        public IActionResult RefreshReceivables(DateTime? from, DateTime? to)
+        {
+            if (_receivableQueue is null) return BadRequest(new { message = "ไม่ได้เปิดใช้งานลูกหนี้สิทธิ" });
+            var today = Financial.Services.Dashboard.ThaiClock.Now(_timeProvider).Date;
+            var start = _receivableOptions.EffectiveStartDate(today);
+            var f = from?.Date ?? start;
+            var t = to?.Date ?? today;
+            if (f > t) (f, t) = (t, f);
+            if (f < start) f = start;
+            if (t > today) t = today;
+            if (t < f) return BadRequest(new { message = $"ช่วงวันที่ต้องอยู่ระหว่าง {start:dd/MM/yyyy} ถึง {today:dd/MM/yyyy}" });
+
+            var queued = _receivableQueue.Enqueue(f, t);
+            _logger.LogInformation("Receivable sync {From:yyyy-MM-dd}–{To:yyyy-MM-dd} requested by {User}: {Queued}", f, t, User.Identity?.Name, queued);
+            return Json(new { queued, message = queued ? $"เริ่มดึงลูกหนี้ {f:dd/MM/yyyy}–{t:dd/MM/yyyy}" : "มีงานดึงลูกหนี้กำลังทำอยู่", status = _receivableQueue.Status });
+        }
+
+        [HttpGet]
+        public IActionResult ReceivableSyncStatus() => Json(_receivableQueue?.Status);
 
         /// <summary>ส่งข้อความทดสอบ Telegram (Admin เท่านั้น) — ข้อความไม่มีข้อมูลผู้ป่วย</summary>
         [HttpPost]

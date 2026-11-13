@@ -11,11 +11,19 @@ namespace Financial.Services.Receivables
     {
         public const string SECTION_NAME = "Receivables";
 
-        /// <summary>ดึงบิลเครดิตย้อนหลังกี่วัน (ตามวันออกบิล) ในรอบอัตโนมัติ</summary>
+        /// <summary>
+        /// วันเริ่มตั้งหนี้ (ตามวันออกบิล) — ไม่ดึงบิลก่อนวันนี้ · ไม่ระบุ = วันแรกของปีงบปัจจุบัน (1 ต.ค.)
+        /// ฝ่ายการเงินกำหนดเริ่มปีงบ 2570 = 1 ต.ค. 2569 (2026-10-01)
+        /// </summary>
+        public DateTime? StartDate { get; set; }
+
+        /// <summary>รอบอัตโนมัติทุกคืน ดึงย้อนหลังกี่วัน (ไม่ก่อน StartDate) — บิลเก่ากว่านี้ไม่ค่อยเปลี่ยน</summary>
         public int SyncDaysBack { get; set; } = 90;
 
-        /// <summary>ดึงย้อนหลังสูงสุดที่เลือกได้จากหน้าเว็บ</summary>
-        public int MaxSyncDaysBack { get; set; } = 730;
+        /// <summary>ยังไม่มีลูกหนี้เลยตอนแอปเริ่ม → ดึงตั้งแต่ StartDate ทันที (ไม่ต้องรอรอบกลางคืน)</summary>
+        public bool InitialSyncOnStartup { get; set; } = true;
+
+        public DateTime EffectiveStartDate(DateTime now) => StartDate?.Date ?? Reports.FiscalYear.Of(now).Start;
 
         public bool AutoSyncEnabled { get; set; } = true;
 
@@ -28,6 +36,19 @@ namespace Financial.Services.Receivables
         public string[] ExcludedPayorCodes { get; set; } = [];
 
         public static readonly string[] DEFAULT_EXCLUDED_PAYORS = ["PDQSHC001"];
+
+        /// <summary>เกณฑ์ปัดเศษ (บาท): คงค้าง ≤ ค่านี้ถือว่าได้รับครบ และยอดต่าง ≤ ค่านี้ถือว่าตรง</summary>
+        public decimal PaidTolerance { get; set; } = 1.00m;
+
+        /// <summary>จับคู่ขั้น 3: วันที่เปิด visit ต่างกันได้ไม่เกิน ± วัน</summary>
+        public int SuggestDays { get; set; } = 1;
+
+        /// <summary>จับคู่ขั้น 3: ยอดต่างจากยอดเรียกเก็บได้ไม่เกิน % </summary>
+        public decimal SuggestAmountPercent { get; set; } = 1m;
+
+        public int MaxImportRows { get; set; } = 20_000;
+
+        public int MaxImportFileMb { get; set; } = 10;
 
         public IReadOnlyList<string> EffectiveExcludedPayors
             => (ExcludedPayorCodes.Length > 0 ? ExcludedPayorCodes : DEFAULT_EXCLUDED_PAYORS)

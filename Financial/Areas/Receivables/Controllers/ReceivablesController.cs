@@ -36,9 +36,9 @@ namespace Financial.Areas.Receivables.Controllers
 
         // GET: /Receivables/Receivables?scheme=NHSO&side=I&status=&aging=91-180&payor=&billFrom=&billTo=&search=&page=1
         public async Task<IActionResult> Index(string? scheme, string? side, string? status, string? aging, string? payor,
-            DateTime? billFrom, DateTime? billTo, string? search, int page, CancellationToken cancellationToken)
+            DateTime? billFrom, DateTime? billTo, string? search, int page, bool review, CancellationToken cancellationToken)
         {
-            var query = Normalize(scheme, side, status, aging, payor, billFrom, billTo, search, page);
+            var query = Normalize(scheme, side, status, aging, payor, billFrom, billTo, search, page, review);
             var result = await _query.GetListAsync(query, IsAdmin, cancellationToken: cancellationToken);
             Audit(result.Items, "list");
 
@@ -51,9 +51,9 @@ namespace Financial.Areas.Receivables.Controllers
 
         [HttpPost]
         public async Task<IActionResult> Export(string? scheme, string? side, string? status, string? aging, string? payor,
-            DateTime? billFrom, DateTime? billTo, string? search, CancellationToken cancellationToken)
+            DateTime? billFrom, DateTime? billTo, string? search, bool review, CancellationToken cancellationToken)
         {
-            var query = Normalize(scheme, side, status, aging, payor, billFrom, billTo, search, 1);
+            var query = Normalize(scheme, side, status, aging, payor, billFrom, billTo, search, 1, review);
             var admin = IsAdmin;
             var result = await _query.GetListAsync(query, admin, ReceivableQueryService.EXPORT_MAX_ROWS, cancellationToken);
             Audit(result.Items, "excel export");
@@ -62,14 +62,23 @@ namespace Financial.Areas.Receivables.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"AR_{query.SchemeCode}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
         }
 
+        /// <summary>ตรวจแล้ว: ล้างธง "ต้องตรวจ" (บิลใน HIS เปลี่ยนหลังส่งเรียกเก็บ) พร้อมบันทึกหมายเหตุในประวัติ</summary>
+        [HttpPost]
+        public async Task<IActionResult> ClearReview(int id, string? note, string? scheme, CancellationToken cancellationToken)
+        {
+            var ok = await _query.ClearReviewAsync(id, note, User.Identity?.Name, cancellationToken);
+            TempData[ok ? "Message" : "Error"] = ok ? "บันทึกว่าตรวจแล้ว" : "ไม่พบรายการที่ต้องตรวจ";
+            return RedirectToAction(nameof(Index), new { scheme, review = true });
+        }
+
         internal ReceivableListQuery Normalize(string? scheme, string? side, string? status, string? aging, string? payor,
-            DateTime? billFrom, DateTime? billTo, string? search, int page)
+            DateTime? billFrom, DateTime? billTo, string? search, int page, bool review = false)
         {
             var schemeCode = _fiscal.Scheme(scheme)?.Code ?? _fiscal.EffectiveSchemes[0].Code;
             var s = side?.Trim().ToUpperInvariant() is "O" or "I" ? side.Trim().ToUpperInvariant() : null;
             var st = status == "ALL" || ArStatusCodes.ALL.Contains(status ?? "") ? status : null;
             if (billFrom is not null && billTo is not null && billFrom > billTo) (billFrom, billTo) = (billTo, billFrom);
-            return new ReceivableListQuery(schemeCode, s, st, AgingRanges.Find(aging)?.Code, payor?.Trim(), billFrom, billTo, search?.Trim(), Math.Max(1, page));
+            return new ReceivableListQuery(schemeCode, s, st, AgingRanges.Find(aging)?.Code, payor?.Trim(), billFrom, billTo, search?.Trim(), Math.Max(1, page), review);
         }
 
         private void Audit(IReadOnlyList<ReceivableListItem> items, string action)

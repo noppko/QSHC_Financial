@@ -56,6 +56,13 @@
         document.querySelectorAll("details[data-user-menu][open]").forEach(d => { if (!d.contains(e.target)) d.removeAttribute("open"); });
     });
 
+    // ---------- ยืนยันก่อนส่งฟอร์ม (ข้อความใน data-confirm ไม่ใช้ inline script) ----------
+    // capture phase: ถ้าไม่ยืนยัน ฟอร์มไม่ถูกส่งและไม่เข้าสถานะ "กำลังโหลด"
+    document.addEventListener("submit", e => {
+        const form = e.target.closest("form[data-confirm]");
+        if (form && !window.confirm(form.dataset.confirm)) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+
     // ---------- ฟอร์มที่ใช้เวลานาน: แสดงสถานะกำลังโหลด และกันกดซ้ำ ----------
     document.querySelectorAll("form[data-loading]").forEach(form => {
         form.addEventListener("submit", () => {

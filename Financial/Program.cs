@@ -164,6 +164,8 @@ try
     builder.Services.AddScoped<IReceivableHisSource, ReceivableHisSource>();
     builder.Services.AddScoped<ReceivableSyncService>();
     builder.Services.AddScoped<IReceivableQueryService, ReceivableQueryService>();
+    builder.Services.AddScoped<RemittanceImportService>();
+    builder.Services.AddScoped<ClaimBatchService>();
     builder.Services.AddSingleton<ReceivableSyncQueue>();
     builder.Services.AddHostedService<ReceivableSyncWorker>();
     // Dashboard:Source = "His" (HealthObject จริง, ค่าเริ่มต้น) หรือ "Sample" (ข้อมูลตัวอย่างสำหรับทดสอบหน้าจอ)

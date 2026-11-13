@@ -1,0 +1,86 @@
+@model List<Financial.Models.Receivables.ArImportBatch>
+@{
+    ViewData["Title"] = "นำเข้าผลการเรียกเก็บ";
+    var scheme = (string)ViewData["Scheme"]!;
+    var schemeName = (string)ViewData["SchemeName"]!;
+    string StatusName(string code) => ArImportStatusCodes.DEFAULT_NAMES.GetValueOrDefault(code, code);
+    string StatusBadge(string code) => code switch
+    {
+        ArImportStatusCodes.CONFIRMED => "bg-emerald-50 text-emerald-700",
+        ArImportStatusCodes.CANCELLED => "bg-sand-100 text-stone-500",
+        _ => "bg-amber-50 text-amber-700",
+    };
+}
+
+<div class="space-y-5">
+    <partial name="_SchemeTabs" model="@((scheme, "Imports", "Index"))" />
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert-success" role="status">@message</div>
+    }
+
+    <div class="grid gap-5 xl:grid-cols-[1fr_340px]">
+        <section class="card card-body">
+            <h2 class="mb-1 font-semibold text-stone-900">นำเข้าไฟล์ผลการเรียกเก็บ — @schemeName</h2>
+            <p class="mb-4 text-sm text-stone-500">ระบบอ่านไฟล์และจับคู่กับลูกหนี้ของสิทธิ์นี้ทันที แต่ยัง<strong>ไม่บันทึกรับชำระ</strong>จนกว่าจะกดยืนยันในหน้าตรวจผล</p>
+            <form method="post" asp-action="Upload" enctype="multipart/form-data" class="grid gap-4 sm:grid-cols-2" data-loading="กำลังอ่านและจับคู่...">
+                <input type="hidden" name="scheme" value="@scheme" />
+                <div class="sm:col-span-2">
+                    <label for="file" class="label">ไฟล์ Excel (.xlsx)</label>
+                    <input type="file" id="file" name="file" accept=".xlsx" required class="input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-brand-700" />
+                </div>
+                <div>
+                    <label for="statementNo" class="label">เลขที่ statement / REP <span class="text-stone-400">(ไม่บังคับ)</span></label>
+                    <input type="text" id="statementNo" name="statementNo" maxlength="100" class="input" autocomplete="off" />
+                </div>
+                <div>
+                    <label for="transferDate" class="label">วันที่รับโอน <span class="text-stone-400">(ไม่บังคับ)</span></label>
+                    <input type="date" id="transferDate" name="transferDate" class="input" />
+                </div>
+                <div class="sm:col-span-2">
+                    <button type="submit" class="btn-primary">นำเข้าและจับคู่</button>
+                </div>
+            </form>
+        </section>
+
+        <aside class="alert-info h-fit flex-col">
+            <strong class="font-semibold">Template ของ @schemeName</strong>
+            <ul class="list-disc space-y-1 pl-5 text-sm">
+                <li>ใช้ template ของสิทธิ์นี้เท่านั้น (นำเข้าผิดสิทธิ์ระบบไม่รับ)</li>
+                <li>ต้องมี VN/AN หรือ HN + วันที่เปิด visit และ ยอดที่ได้รับ</li>
+                <li>วันที่รับทั้ง พ.ศ. และ ค.ศ. · .xlsx ไม่เกิน @ViewData["MaxFileMb"] MB / @(((int)ViewData["MaxRows"]!).ToString("N0")) แถว</li>
+                <li>ไฟล์เดิมนำเข้าซ้ำไม่ได้ · ไม่เก็บไฟล์ต้นฉบับ</li>
+            </ul>
+            <a asp-action="Template" asp-route-scheme="@scheme" class="btn-outline mt-3" download>ดาวน์โหลด template</a>
+        </aside>
+    </div>
+
+    <section class="card card-body">
+        <h2 class="mb-4 font-semibold text-stone-900">ไฟล์ที่นำเข้าล่าสุด</h2>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>#</th><th>วันที่นำเข้า</th><th>ไฟล์</th><th>statement</th><th>วันที่รับโอน</th><th class="text-right">แถว</th><th class="text-right">ยอดที่ได้รับ (บาท)</th><th>สถานะ</th><th></th></tr></thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="9" class="py-10 text-center text-stone-500">ยังไม่มีไฟล์ของสิทธิ์นี้</td></tr>
+                    }
+                    @foreach (var b in Model)
+                    {
+                        <tr>
+                            <td>@b.Id</td>
+                            <td>@b.CreatedAt.ToString("dd/MM/yyyy HH:mm") <span class="text-xs text-stone-500">@b.CreatedBy</span></td>
+                            <td class="max-w-64 truncate" title="@b.FileName">@b.FileName</td>
+                            <td>@b.StatementNo</td>
+                            <td>@b.TransferDate?.ToString("dd/MM/yyyy")</td>
+                            <td class="num">@b.RowCount.ToString("N0")</td>
+                            <td class="num">@b.TotalReceived.ToString("N2")</td>
+                            <td><span class="badge @StatusBadge(b.StatusCode)">@StatusName(b.StatusCode)</span></td>
+                            <td class="text-right"><a asp-action="Review" asp-route-id="@b.Id" class="text-sm text-brand-600 hover:underline">@(b.StatusCode == ArImportStatusCodes.VALIDATED ? "ตรวจ/ยืนยัน" : "ดู")</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

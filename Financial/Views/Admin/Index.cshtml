@@ -150,6 +150,50 @@
         </div>
     </section>
 
+    <!-- ================= ดึงลูกหนี้สิทธิจาก HIS ================= -->
+    @{
+        var arStart = ViewData["ReceivableStartDate"] as DateTime? ?? Model.Now.Date;
+        var arStatus = ViewData["ReceivableSyncStatus"] as Financial.Services.Receivables.ReceivableSyncStatus;
+        var arToday = Model.Now.Date;
+        var arTh = System.Globalization.CultureInfo.GetCultureInfo("th-TH");
+    }
+    <section class="card card-body" id="receivables-sync" data-status-url="@Url.Action("ReceivableSyncStatus")" data-sync-url="@Url.Action("RefreshReceivables")"
+             data-active="@((arStatus?.IsActive == true) ? "true" : "false")">
+        <h2 class="mb-1 font-semibold text-stone-900">ดึงลูกหนี้สิทธิจาก HIS (สปสช. / กรมบัญชีกลาง / ประกันสังคม / อปท.)</h2>
+        <p class="mb-4 text-sm text-stone-500">
+            อ่านบิลเครดิตจาก HIS (อ่านอย่างเดียว) มาตั้งหนี้ในตาราง <code>ArReceivables</code> ของ QSHC_Financial — ตรวจซ้ำก่อนบันทึก ·
+            ตั้งหนี้ตั้งแต่ <strong>@arStart.ToString("d MMM yyyy", arTh)</strong> (ต้นปีงบ) · ดึงอัตโนมัติทุกคืน · ทำงานเบื้องหลัง ปิดหน้านี้ได้<br />
+            บิลแก้ไขหลังจำหน่าย (เช่น เภสัชคีย์ยาเพิ่ม) — เลือกช่วงที่ครอบวันออกบิลเดิม ระบบอัปเดตยอด/เพิ่มบิลใหม่ และติดธง "ต้องตรวจ" ถ้าส่งเรียกเก็บไปแล้ว
+        </p>
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label for="arFrom" class="label">วันออกบิล ตั้งแต่</label>
+                <input type="date" id="arFrom" class="input w-44" min="@arStart.ToString("yyyy-MM-dd")" max="@arToday.ToString("yyyy-MM-dd")" value="@arStart.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div>
+                <label for="arTo" class="label">ถึง</label>
+                <input type="date" id="arTo" class="input w-44" min="@arStart.ToString("yyyy-MM-dd")" max="@arToday.ToString("yyyy-MM-dd")" value="@arToday.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="flex flex-wrap gap-1 pb-1" aria-label="เลือกช่วงเร็ว">
+                <button type="button" class="rounded-lg border border-sand-300 px-2 py-1 text-xs text-stone-600 hover:bg-sand-50" data-ar-range="@arStart.ToString("yyyy-MM-dd")">ต้นปีงบ–วันนี้</button>
+                @foreach (var d in new[] { 7, 30, 90 }.Where(d => arToday.AddDays(-d) > arStart))
+                {
+                    <button type="button" class="rounded-lg border border-sand-300 px-2 py-1 text-xs text-stone-600 hover:bg-sand-50" data-ar-range="@arToday.AddDays(-d).ToString("yyyy-MM-dd")">@d วันล่าสุด</button>
+                }
+            </div>
+            <button type="button" class="btn-primary" id="arSyncButton">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5" /></svg>
+                ดึงลูกหนี้จาก HIS
+            </button>
+        </div>
+        <div id="arSyncStatus" class="mt-3 text-sm text-stone-600" aria-live="polite">
+            @if (arStatus is not null)
+            {
+                <span>@arStatus.State · @arStatus.Message</span>
+            }
+        </div>
+    </section>
+
     <!-- ================= แจ้งเตือน Telegram ================= -->
     <section class="card card-body" id="telegram">
         <h2 class="mb-1 font-semibold text-stone-900">แจ้งเตือนผ่าน Telegram</h2>
@@ -241,6 +285,7 @@
 
 @section Scripts {
     <script src="~/js/fiscal-refresh.js" asp-append-version="true"></script>
+    <script src="~/js/receivables-sync.js" asp-append-version="true"></script>
     <script>
         document.querySelectorAll("[data-test]").forEach(btn => btn.addEventListener("click", async () => {
             const target = document.getElementById(btn.dataset.target);

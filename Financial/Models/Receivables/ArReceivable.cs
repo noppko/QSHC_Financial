@@ -73,7 +73,10 @@ namespace Financial.Models.Receivables
         [Column(TypeName = "decimal(18,2)")]
         public decimal WriteOffAmount { get; set; }
 
-        /// <summary>= BilledAmount − PaidAmount − DeniedAmount − WriteOffAmount (คำนวณใหม่ทุกครั้งด้วย <see cref="Recalculate"/>)</summary>
+        /// <summary>
+        /// = BilledAmount − PaidAmount − WriteOffAmount (คำนวณใหม่ทุกครั้งด้วย <see cref="Recalculate"/>)
+        /// ยอดปฏิเสธ (DeniedAmount) ไม่หักออก — ยังเป็นหนี้ที่ต้องติดตาม/อุทธรณ์ จนกว่าจะอนุมัติตัดหนี้
+        /// </summary>
         [Column(TypeName = "decimal(18,2)")]
         public decimal OutstandingAmount { get; set; }
 
@@ -84,9 +87,35 @@ namespace Financial.Models.Receivables
         [Column(TypeName = "datetime2(0)")]
         public DateTime LastSyncedAt { get; set; }
 
+        /// <summary>
+        /// ต้องให้คนตรวจ: บิลใน HIS เปลี่ยน/หายไป หลังส่งเรียกเก็บหรือมีผลการเรียกเก็บแล้ว (เช่น เภสัชคีย์ยาเพิ่มหลังจำหน่าย แล้วแก้บิล)
+        /// ระบบไม่เปลี่ยนสถานะเอง — ล้างธงเมื่อเจ้าหน้าที่กด "ตรวจแล้ว" หรือบิลกลับมาตรงตามเดิม
+        /// </summary>
+        [MaxLength(300)]
+        public string? ReviewReason { get; set; }
+
+        [Column(TypeName = "datetime2(0)")]
+        public DateTime? ReviewFlaggedAt { get; set; }
+
+        /// <summary>ส่งเรียกเก็บแล้วหรือมีผลการเรียกเก็บแล้ว — ยอด/บิลเปลี่ยนต้องให้คนตรวจ</summary>
+        public bool IsBeyondOpen => StatusCode != ArStatusCodes.OPEN || PaidAmount > 0 || DeniedAmount > 0;
+
         public List<ArStatusHistory> StatusHistories { get; set; } = [];
 
-        public void Recalculate() => OutstandingAmount = BilledAmount - PaidAmount - DeniedAmount - WriteOffAmount;
+        public void Recalculate() => OutstandingAmount = BilledAmount - PaidAmount - WriteOffAmount;
+
+        /// <summary>
+        /// สถานะตามยอด (ยกเว้น CANCELLED / WRITE_OFF ที่คงไว้): ไม่มีผลการเรียกเก็บ = OPEN ·
+        /// คงค้าง ≤ เกณฑ์ปัดเศษ = PAID · ได้บางส่วน = PARTIAL · ไม่ได้เลยแต่มีผลปฏิเสธ = DENIED
+        /// </summary>
+        /// <param name="claimed">อยู่ในชุดเรียกเก็บที่ส่งแล้ว — ไม่มีผลการเรียกเก็บ (เช่น ยกเลิกไฟล์นำเข้า) กลับเป็น CLAIMED ไม่ใช่ OPEN</param>
+        public string DeriveStatus(decimal tolerance, bool hasResults, bool claimed = false)
+        {
+            if (StatusCode is ArStatusCodes.CANCELLED or ArStatusCodes.WRITE_OFF) return StatusCode;
+            if (!hasResults) return StatusCode == ArStatusCodes.APPEAL ? StatusCode : claimed || StatusCode == ArStatusCodes.CLAIMED ? ArStatusCodes.CLAIMED : ArStatusCodes.OPEN;
+            if (OutstandingAmount <= tolerance) return ArStatusCodes.PAID;
+            return PaidAmount > 0 ? ArStatusCodes.PARTIAL : ArStatusCodes.DENIED;
+        }
     }
 
     /// <summary>ประวัติการเปลี่ยนสถานะ/ยอดของลูกหนี้ (ตรวจย้อนได้ว่าใคร ทำอะไร เมื่อไร)</summary>

@@ -97,10 +97,16 @@ namespace Financial.Tests.Integration
             { "cash1", "/Receivables/Receivables?scheme=CSMBS&aging=91-180", true },
             { "admin1", "/Receivables",              true },
             { "admin1", "/Receivables/Receivables",  true },
-            { "admin1", "/Receivables/Home/SyncStatus", true },
-            { "cash1", "/Receivables/Home/SyncStatus", false },
+            { "admin1", "/Admin/ReceivableSyncStatus", true },
+            { "cash1", "/Admin/ReceivableSyncStatus", false },
             { "user1", "/Receivables",               false },
             { "user1", "/Receivables/Receivables",   false },
+            { "cash1", "/Receivables/Imports?scheme=SSO", true },
+            { "user1", "/Receivables/Imports",       false },
+            { "user1", "/Receivables/Imports/Template?scheme=NHSO", false },
+            { "cash1", "/Receivables/Claims?scheme=CSMBS", true },
+            { "user1", "/Receivables/Claims",        false },
+            { "cash1", "/Receivables/Receivables?scheme=NHSO&review=true", true },
         };
 
         [Theory]
@@ -240,15 +246,45 @@ namespace Financial.Tests.Integration
             area.Should().Contain("ส่วนงานลูกหนี้สิทธิ");
             area.Should().Contain("action=\"/Account/Logout\"", "ลิงก์ของงานหลักต้องไม่ติด area");
             area.Should().Contain("data-scheme-card=\"NHSO\"").And.Contain("data-scheme-card=\"CSMBS\"").And.Contain("data-scheme-card=\"SSO\"").And.Contain("data-scheme-card=\"LGO\"");
-            area.Should().NotContain("id=\"arSync\"", "ปุ่มดึงข้อมูลเฉพาะ Admin");
+            area.Should().NotContain("id=\"receivables-sync\"").And.NotContain("data-admin-sync-link", "ลิงก์ไปหน้าดึงข้อมูลเฉพาะ Admin");
 
             var list = await cash.GetStringAsync("/Receivables/Receivables?scheme=SSO");
             list.Should().NotContain("<th>HN</th>").And.Contain("4 ตัวท้าย");
             list.Should().NotContain(">เขต</th>", "เขตเฉพาะ สปสช.");
             (await cash.GetStringAsync("/Receivables/Receivables?scheme=NHSO")).Should().Contain(">เขต</th>");
 
-            (await (await LoginAs("admin1")).GetStringAsync("/Receivables")).Should().Contain("id=\"arSync\"");
+            (await (await LoginAs("admin1")).GetStringAsync("/Receivables")).Should().Contain("data-admin-sync-link").And.NotContain("id=\"receivables-sync\"", "ปุ่มดึงข้อมูลย้ายไปหน้า ตั้งค่าระบบ");
+            (await (await LoginAs("admin1")).GetStringAsync("/Admin")).Should().Contain("id=\"receivables-sync\"").And.Contain("id=\"arFrom\"").And.Contain("id=\"arTo\"");
             (await (await LoginAs("admin1")).GetStringAsync("/Receivables/Receivables")).Should().Contain("<th>HN</th>");
+        }
+
+        [Theory]
+        [InlineData(null, "NHSO")]
+        [InlineData("SSO", "SSO")]
+        [InlineData("lgo", "LGO")]
+        public async Task ReceivablesOverview_HighlightsOnlyTheOpenScheme(string? scheme, string expected)
+        {
+            var html = await (await LoginAs("cash1")).GetStringAsync("/Receivables" + (scheme is null ? "" : "?scheme=" + scheme));
+
+            var active = Regex.Matches(html, "<a[^>]*data-scheme-card=\"(\\w+)\"[^>]*data-active=\"true\"").Select(m => m.Groups[1].Value).ToList();
+            active.Should().Equal([expected], "ไฮไลต์เฉพาะ card สิทธิ์ที่เปิดอยู่");
+            Regex.Matches(html, "data-active=\"false\"").Count.Should().Be(3);
+            html.Should().Contain("กำลังดู").And.Contain($"data-scheme-header=\"{expected}\"");
+            html.Should().Contain(Financial.Navigation.ReceivablesMenu.SchemeColor(expected), "สีประจำสิทธิ์ที่เปิด");
+        }
+
+        [Fact]
+        public async Task ReceivablesImports_TemplateDownloadsPerScheme_AndMenuHasImportPage()
+        {
+            var cash = await LoginAs("cash1");
+
+            var page = await cash.GetStringAsync("/Receivables/Imports?scheme=LGO");
+            page.Should().Contain("href=\"/Receivables/Imports\"", "เมนู นำเข้าผลการเรียกเก็บ").And.Contain("/Receivables/Imports/Template?scheme=LGO");
+
+            var file = await cash.GetAsync("/Receivables/Imports/Template?scheme=LGO");
+            file.StatusCode.Should().Be(HttpStatusCode.OK);
+            file.Content.Headers.ContentDisposition!.FileName.Should().Contain("AR_REMITTANCE_LGO.xlsx");
+            file.Content.Headers.ContentType!.MediaType.Should().Contain("spreadsheetml");
         }
 
         [Fact]
@@ -259,7 +295,7 @@ namespace Financial.Tests.Integration
                 var client = await LoginAs(user);
                 var page = await client.GetStringAsync("/");
                 var token = Regex.Match(page, "name=\"csrf-token\" content=\"([^\"]+)\"").Groups[1].Value;
-                var request = new HttpRequestMessage(HttpMethod.Post, "/Receivables/Home/Sync") { Content = new FormUrlEncodedContent([new("days", "30")]) };
+                var request = new HttpRequestMessage(HttpMethod.Post, "/Admin/RefreshReceivables") { Content = new FormUrlEncodedContent([new("from", "2026-10-01"), new("to", "2026-10-31")]) };
                 request.Headers.Add("RequestVerificationToken", WebUtility.HtmlDecode(token));
                 request.Headers.Add("X-Requested-With", "fetch");
                 return (await client.SendAsync(request)).StatusCode;

@@ -4,6 +4,8 @@
 -- FiscalReportsBySchemeAndPatients: แทน NhsoFiscalSummaries ด้วย FiscalSchemeTotals/FiscalPayorSummaries (ต้องกด "ดึงข้อมูลจาก HIS" ใหม่)
 -- AddLgoPayorScheme: เพิ่มสิทธิ์ อปท. (LGO) ใน ReferenceValues (PAYOR_SCHEME)
 -- AddReceivables: ตารางลูกหนี้สิทธิ ArReceivables / ArStatusHistories + สถานะ AR_STATUS ใน ReferenceValues (ส่วนงาน Areas/Receivables)
+-- AddRemittanceImports: นำเข้าผลการเรียกเก็บ ArImportBatches / ArImportRows / ArPayments + AR_MATCH_RESULT, AR_IMPORT_STATUS, AR_PAYMENT_SOURCE
+-- AddClaimBatchesAndReviewFlag: ชุดเรียกเก็บ ArClaimBatches / ArClaimBatchItems, ArImportBatches.ClaimBatchId, ธงต้องตรวจ ArReceivables.ReviewReason/ReviewFlaggedAt + AR_CLAIM_BATCH_STATUS
 USE QSHC_Financial;
 GO
 
@@ -775,6 +777,329 @@ IF NOT EXISTS (
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
     VALUES (N'20261113032054_AddReceivables', N'10.0.13');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE TABLE [ArImportBatches] (
+        [Id] int NOT NULL IDENTITY,
+        [SchemeCode] nvarchar(10) NOT NULL,
+        [StatementNo] nvarchar(100) NULL,
+        [TransferDate] date NULL,
+        [FileName] nvarchar(260) NOT NULL,
+        [FileSha256] nvarchar(64) NOT NULL,
+        [RowCount] int NOT NULL,
+        [TotalReceived] decimal(18,2) NOT NULL,
+        [StatusCode] nvarchar(20) NOT NULL,
+        [ConfirmedBy] nvarchar(100) NULL,
+        [ConfirmedAt] datetime2(0) NULL,
+        [CancelledBy] nvarchar(100) NULL,
+        [CancelledAt] datetime2(0) NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArImportBatches] PRIMARY KEY ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE TABLE [ArPayments] (
+        [Id] int NOT NULL IDENTITY,
+        [ReceivableId] int NOT NULL,
+        [ImportBatchId] int NULL,
+        [ImportRowId] int NULL,
+        [Amount] decimal(18,2) NOT NULL,
+        [DeniedAmount] decimal(18,2) NOT NULL,
+        [ReasonCode] nvarchar(50) NULL,
+        [ReasonText] nvarchar(500) NULL,
+        [TransferDate] date NULL,
+        [StatementNo] nvarchar(100) NULL,
+        [SourceCode] nvarchar(20) NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArPayments] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ArPayments_ArReceivables_ReceivableId] FOREIGN KEY ([ReceivableId]) REFERENCES [ArReceivables] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE TABLE [ArImportRows] (
+        [Id] int NOT NULL IDENTITY,
+        [ImportBatchId] int NOT NULL,
+        [RowNo] int NOT NULL,
+        [VisitNumber] nvarchar(20) NULL,
+        [Hn] nvarchar(20) NULL,
+        [VisitDate] date NULL,
+        [DischargeDate] date NULL,
+        [BillNumber] nvarchar(30) NULL,
+        [ClaimedAmount] decimal(18,2) NULL,
+        [ReceivedAmount] decimal(18,2) NOT NULL,
+        [DeniedAmount] decimal(18,2) NOT NULL,
+        [ReasonCode] nvarchar(50) NULL,
+        [ReasonText] nvarchar(500) NULL,
+        [StatementNo] nvarchar(100) NULL,
+        [TransferDate] date NULL,
+        [Note] nvarchar(500) NULL,
+        [MatchResultCode] nvarchar(20) NOT NULL,
+        [MatchStep] nvarchar(10) NULL,
+        [ReceivableId] int NULL,
+        [CandidateIds] nvarchar(400) NULL,
+        [Message] nvarchar(500) NULL,
+        [IsAccepted] bit NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArImportRows] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ArImportRows_ArImportBatches_ImportBatchId] FOREIGN KEY ([ImportBatchId]) REFERENCES [ArImportBatches] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ArImportRows_ArReceivables_ReceivableId] FOREIGN KEY ([ReceivableId]) REFERENCES [ArReceivables] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] ON;
+    EXEC(N'INSERT INTO [ReferenceValues] ([Id], [Category], [Code], [CreatedAt], [CreatedBy], [Description], [DisplayOrder], [IsActive], [IsSystem], [Metadata], [NameEN], [NameTH], [ParentCategory], [ParentId], [UpdatedAt], [UpdatedBy])
+    VALUES (32, N''AR_MATCH_RESULT'', N''MATCHED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''MATCHED'', N''จับคู่ได้'', NULL, NULL, NULL, NULL),
+    (33, N''AR_MATCH_RESULT'', N''AMOUNT_DIFF'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''AMOUNT_DIFF'', N''ยอดต่าง'', NULL, NULL, NULL, NULL),
+    (34, N''AR_MATCH_RESULT'', N''DENIED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''DENIED'', N''ปฏิเสธ'', NULL, NULL, NULL, NULL),
+    (35, N''AR_MATCH_RESULT'', N''SUGGESTED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 40, CAST(1 AS bit), CAST(1 AS bit), NULL, N''SUGGESTED'', N''แนะนำ (ต้องยืนยัน)'', NULL, NULL, NULL, NULL),
+    (36, N''AR_MATCH_RESULT'', N''MULTIPLE'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 50, CAST(1 AS bit), CAST(1 AS bit), NULL, N''MULTIPLE'', N''พบหลายรายการ'', NULL, NULL, NULL, NULL),
+    (37, N''AR_MATCH_RESULT'', N''NOT_FOUND'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 60, CAST(1 AS bit), CAST(1 AS bit), NULL, N''NOT_FOUND'', N''ไม่พบ'', NULL, NULL, NULL, NULL),
+    (38, N''AR_MATCH_RESULT'', N''DUPLICATE'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 70, CAST(1 AS bit), CAST(1 AS bit), NULL, N''DUPLICATE'', N''ซ้ำ'', NULL, NULL, NULL, NULL),
+    (39, N''AR_MATCH_RESULT'', N''INVALID'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 80, CAST(1 AS bit), CAST(1 AS bit), NULL, N''INVALID'', N''ข้อมูลไม่ถูกต้อง'', NULL, NULL, NULL, NULL),
+    (40, N''AR_IMPORT_STATUS'', N''VALIDATED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''VALIDATED'', N''รอยืนยัน'', NULL, NULL, NULL, NULL),
+    (41, N''AR_IMPORT_STATUS'', N''CONFIRMED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''CONFIRMED'', N''ยืนยันแล้ว'', NULL, NULL, NULL, NULL),
+    (42, N''AR_IMPORT_STATUS'', N''CANCELLED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''CANCELLED'', N''ยกเลิก'', NULL, NULL, NULL, NULL),
+    (43, N''AR_PAYMENT_SOURCE'', N''IMPORT'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Import'', N''นำเข้าไฟล์ผลการเรียกเก็บ'', NULL, NULL, NULL, NULL),
+    (44, N''AR_PAYMENT_SOURCE'', N''MANUAL'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Manual'', N''บันทึกเอง'', NULL, NULL, NULL, NULL),
+    (45, N''AR_PAYMENT_SOURCE'', N''WRITE_OFF'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''Write-off'', N''ตัดหนี้'', NULL, NULL, NULL, NULL)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArImportBatches_FileSha256] ON [ArImportBatches] ([FileSha256]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArImportBatches_SchemeCode_StatusCode] ON [ArImportBatches] ([SchemeCode], [StatusCode]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArImportRows_ImportBatchId_MatchResultCode] ON [ArImportRows] ([ImportBatchId], [MatchResultCode]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArImportRows_ReceivableId] ON [ArImportRows] ([ReceivableId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArPayments_ImportBatchId] ON [ArPayments] ([ImportBatchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArPayments_ReceivableId] ON [ArPayments] ([ReceivableId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    CREATE INDEX [IX_ArPayments_StatementNo_ReceivableId] ON [ArPayments] ([StatementNo], [ReceivableId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113033824_AddRemittanceImports'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261113033824_AddRemittanceImports', N'10.0.13');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    ALTER TABLE [ArReceivables] ADD [ReviewFlaggedAt] datetime2(0) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    ALTER TABLE [ArReceivables] ADD [ReviewReason] nvarchar(300) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    ALTER TABLE [ArImportBatches] ADD [ClaimBatchId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    CREATE TABLE [ArClaimBatches] (
+        [Id] int NOT NULL IDENTITY,
+        [BatchNo] nvarchar(40) NOT NULL,
+        [SchemeCode] nvarchar(10) NOT NULL,
+        [PatientTypeCode] nvarchar(1) NULL,
+        [PayorFilter] nvarchar(100) NULL,
+        [PeriodFrom] date NULL,
+        [PeriodTo] date NULL,
+        [StatusCode] nvarchar(20) NOT NULL,
+        [SentDate] date NULL,
+        [ReferenceDocNo] nvarchar(100) NULL,
+        [SentBy] nvarchar(100) NULL,
+        [ItemCount] int NOT NULL,
+        [TotalAmount] decimal(18,2) NOT NULL,
+        [Note] nvarchar(500) NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArClaimBatches] PRIMARY KEY ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    CREATE TABLE [ArClaimBatchItems] (
+        [Id] int NOT NULL IDENTITY,
+        [ClaimBatchId] int NOT NULL,
+        [ReceivableId] int NOT NULL,
+        [ClaimedAmount] decimal(18,2) NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(100) NOT NULL,
+        [UpdatedBy] nvarchar(100) NULL,
+        [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+        CONSTRAINT [PK_ArClaimBatchItems] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ArClaimBatchItems_ArClaimBatches_ClaimBatchId] FOREIGN KEY ([ClaimBatchId]) REFERENCES [ArClaimBatches] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ArClaimBatchItems_ArReceivables_ReceivableId] FOREIGN KEY ([ReceivableId]) REFERENCES [ArReceivables] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] ON;
+    EXEC(N'INSERT INTO [ReferenceValues] ([Id], [Category], [Code], [CreatedAt], [CreatedBy], [Description], [DisplayOrder], [IsActive], [IsSystem], [Metadata], [NameEN], [NameTH], [ParentCategory], [ParentId], [UpdatedAt], [UpdatedBy])
+    VALUES (46, N''AR_CLAIM_BATCH_STATUS'', N''DRAFT'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 10, CAST(1 AS bit), CAST(1 AS bit), NULL, N''DRAFT'', N''จัดชุด (ยังไม่ส่ง)'', NULL, NULL, NULL, NULL),
+    (47, N''AR_CLAIM_BATCH_STATUS'', N''SENT'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 20, CAST(1 AS bit), CAST(1 AS bit), NULL, N''SENT'', N''ส่งแล้ว'', NULL, NULL, NULL, NULL),
+    (48, N''AR_CLAIM_BATCH_STATUS'', N''CANCELLED'', ''2025-01-01T00:00:00.0000000'', N''System'', NULL, 30, CAST(1 AS bit), CAST(1 AS bit), NULL, N''CANCELLED'', N''ยกเลิก'', NULL, NULL, NULL, NULL)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Category', N'Code', N'CreatedAt', N'CreatedBy', N'Description', N'DisplayOrder', N'IsActive', N'IsSystem', N'Metadata', N'NameEN', N'NameTH', N'ParentCategory', N'ParentId', N'UpdatedAt', N'UpdatedBy') AND [object_id] = OBJECT_ID(N'[ReferenceValues]'))
+        SET IDENTITY_INSERT [ReferenceValues] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_ArClaimBatches_BatchNo] ON [ArClaimBatches] ([BatchNo]) WHERE [IsActive] = 1');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    CREATE INDEX [IX_ArClaimBatches_SchemeCode_StatusCode] ON [ArClaimBatches] ([SchemeCode], [StatusCode]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_ArClaimBatchItems_ClaimBatchId_ReceivableId] ON [ArClaimBatchItems] ([ClaimBatchId], [ReceivableId]) WHERE [IsActive] = 1');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    CREATE INDEX [IX_ArClaimBatchItems_ReceivableId] ON [ArClaimBatchItems] ([ReceivableId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113040540_AddClaimBatchesAndReviewFlag'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261113040540_AddClaimBatchesAndReviewFlag', N'10.0.13');
 END;
 
 COMMIT;

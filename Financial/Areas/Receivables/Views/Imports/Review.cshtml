@@ -1,0 +1,176 @@
+@model ImportReview
+@{
+    var b = Model.Batch;
+    ViewData["Title"] = $"ตรวจผลจับคู่ — ไฟล์ #{b.Id}";
+    var showIdentity = ViewData["ShowIdentity"] is true;
+    var current = ViewData["Result"] as string;
+    var matchNames = (Dictionary<string, string>)ViewData["MatchNames"]!;
+    var importStatusNames = (Dictionary<string, string>)ViewData["ImportStatusNames"]!;
+    var editable = b.StatusCode == ArImportStatusCodes.VALIDATED;
+    var totalPages = Math.Max(1, (int)Math.Ceiling(Model.FilteredCount / (double)Model.PageSize));
+    string Name(string code) => matchNames.GetValueOrDefault(code, code);
+    string Badge(string code) => code switch
+    {
+        ArMatchResultCodes.MATCHED => "bg-emerald-50 text-emerald-700",
+        ArMatchResultCodes.AMOUNT_DIFF => "bg-amber-50 text-amber-700",
+        ArMatchResultCodes.DENIED => "bg-red-50 text-red-700",
+        ArMatchResultCodes.SUGGESTED or ArMatchResultCodes.MULTIPLE => "bg-sky-50 text-sky-700",
+        _ => "bg-sand-100 text-stone-600",
+    };
+    string? Vn(string? vn) => showIdentity ? vn : ReceivableQueryService.Mask(vn);
+}
+
+<div class="space-y-5">
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert-success" role="status">@message</div>
+    }
+
+    <!-- ================= ข้อมูลไฟล์ + ปุ่มยืนยัน ================= -->
+    <section class="card card-body flex flex-wrap items-start justify-between gap-4">
+        <div class="space-y-1 text-sm">
+            <div class="text-lg font-semibold text-stone-900">@ViewData["SchemeName"] · ไฟล์ #@b.Id <span class="badge ml-1 @(editable ? "bg-amber-50 text-amber-700" : b.StatusCode == ArImportStatusCodes.CONFIRMED ? "bg-emerald-50 text-emerald-700" : "bg-sand-100 text-stone-500")">@importStatusNames.GetValueOrDefault(b.StatusCode, b.StatusCode)</span></div>
+            <div class="text-stone-600">@b.FileName · @b.RowCount.ToString("N0") แถว · ยอดที่ได้รับในไฟล์ @b.TotalReceived.ToString("N2") บาท</div>
+            <div class="text-xs text-stone-500">
+                statement @(b.StatementNo ?? "-") · รับโอน @(b.TransferDate?.ToString("dd/MM/yyyy") ?? "-") · นำเข้าโดย @b.CreatedBy @b.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                @if (b.ConfirmedAt is DateTime confirmed) { <span>· ยืนยันโดย @b.ConfirmedBy @confirmed.ToString("dd/MM/yyyy HH:mm")</span> }
+                @if (b.CancelledAt is DateTime cancelled) { <span>· ยกเลิกโดย @b.CancelledBy @cancelled.ToString("dd/MM/yyyy HH:mm")</span> }
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            @if (editable)
+            {
+                <div class="mr-2 text-right text-sm">
+                    <div class="font-semibold text-stone-900">จะบันทึก @Model.AcceptedCount.ToString("N0") แถว</div>
+                    <div class="text-xs text-stone-500">ยอดที่ได้รับ @Model.AcceptedReceived.ToString("N2") บาท</div>
+                </div>
+                <form method="post" asp-action="Confirm" asp-route-id="@b.Id" data-confirm="บันทึกรับชำระ @Model.AcceptedCount.ToString("N0") แถว ยอด @Model.AcceptedReceived.ToString("N2") บาท?" data-loading="กำลังบันทึก...">
+                    <button type="submit" class="btn-primary" disabled="@(Model.AcceptedCount == 0)">ยืนยันบันทึกรับชำระ</button>
+                </form>
+            }
+            @if (b.StatusCode != ArImportStatusCodes.CANCELLED)
+            {
+                <form method="post" asp-action="Cancel" asp-route-id="@b.Id" data-confirm="@(editable ? "ยกเลิกไฟล์นี้?" : "ยกเลิกไฟล์นี้และย้อนรับชำระทั้งหมดที่บันทึกจากไฟล์?")">
+                    <button type="submit" class="btn-outline text-red-600">@(editable ? "ยกเลิกไฟล์" : "ยกเลิกและย้อนรับชำระ")</button>
+                </form>
+            }
+            <a asp-action="Index" asp-route-scheme="@b.SchemeCode" class="btn-ghost">กลับรายการไฟล์</a>
+        </div>
+    </section>
+
+    <!-- ================= สรุปผลจับคู่ (คลิกเพื่อกรอง) ================= -->
+    <nav class="flex flex-wrap gap-2" aria-label="กรองตามผลจับคู่">
+        <a asp-action="Review" asp-route-id="@b.Id" class="rounded-xl border px-3 py-2 text-sm @(current is null ? "border-brand-500 bg-brand-500 text-white" : "border-sand-300 bg-white text-stone-600")">ทั้งหมด @b.RowCount.ToString("N0")</a>
+        @foreach (var s in Model.Summary.Where(s => s.Count > 0))
+        {
+            var active = s.ResultCode == current;
+            <a asp-action="Review" asp-route-id="@b.Id" asp-route-result="@s.ResultCode" data-result="@s.ResultCode"
+               class="rounded-xl border px-3 py-2 text-sm @(active ? "border-brand-500 bg-brand-500 text-white" : "border-sand-300 bg-white text-stone-700")">
+                @Name(s.ResultCode) <span class="font-semibold">@s.Count.ToString("N0")</span> <span class="text-xs opacity-75">(@s.Received.ToString("N2"))</span>
+            </a>
+        }
+    </nav>
+
+    <section class="card card-body">
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>แถว</th>
+                        <th>VN/AN</th>
+                        @if (showIdentity) { <th>HN</th> }
+                        <th>วันที่ visit</th>
+                        <th class="text-right">ได้รับ</th>
+                        <th class="text-right">ปฏิเสธ</th>
+                        <th>ผล</th>
+                        <th>ลูกหนี้ที่จับคู่</th>
+                        <th class="text-right">คงค้าง</th>
+                        <th>รายละเอียด</th>
+                        @if (editable) { <th>จัดการ</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="11" class="py-10 text-center text-stone-500">ไม่มีแถว</td></tr>
+                    }
+                    @foreach (var r in Model.Rows)
+                    {
+                        var acceptable = ArMatchResultCodes.ACCEPTABLE.Contains(r.MatchResultCode);
+                        <tr class="@(r.IsAccepted ? "" : "opacity-80")" data-row="@r.RowNo">
+                            <td>@r.RowNo</td>
+                            <td class="font-mono text-xs">@Vn(r.VisitNumber)</td>
+                            @if (showIdentity) { <td class="font-mono text-xs">@r.Hn</td> }
+                            <td>@r.VisitDate?.ToString("dd/MM/yyyy")</td>
+                            <td class="num">@r.ReceivedAmount.ToString("N2")</td>
+                            <td class="num">@(r.DeniedAmount == 0 ? "" : r.DeniedAmount.ToString("N2"))</td>
+                            <td>
+                                <span class="badge @Badge(r.MatchResultCode)">@Name(r.MatchResultCode)</span>
+                                @if (r.MatchStep is not null) { <span class="ml-1 text-[11px] text-stone-400" title="ขั้นการจับคู่">@(r.MatchStep == "MANUAL" ? "ผูกเอง" : "ขั้น " + r.MatchStep)</span> }
+                            </td>
+                            <td class="font-mono text-xs">
+                                @if (r.Receivable is not null)
+                                {
+                                    <div>@r.Receivable.BillNumber</div>
+                                    <div class="text-stone-400">@Vn(r.Receivable.VisitNumber) · @r.Receivable.BillDate.ToString("dd/MM/yyyy")</div>
+                                }
+                                else if (r.CandidateIds is not null)
+                                {
+                                    <span>@r.Candidates().Count บิล (กระจายยอด)</span>
+                                }
+                            </td>
+                            <td class="num">@r.Receivable?.OutstandingAmount.ToString("N2")</td>
+                            <td class="max-w-72 whitespace-normal text-xs text-stone-600">
+                                @r.Message
+                                @if (!string.IsNullOrEmpty(r.ReasonCode) || !string.IsNullOrEmpty(r.ReasonText)) { <div class="text-red-700">@r.ReasonCode @r.ReasonText</div> }
+                            </td>
+                            @if (editable)
+                            {
+                                <td class="whitespace-nowrap">
+                                    @if (acceptable)
+                                    {
+                                        <form method="post" asp-action="Accept" asp-route-id="@b.Id" class="inline">
+                                            <input type="hidden" name="rowId" value="@r.Id" />
+                                            <input type="hidden" name="accepted" value="@(r.IsAccepted ? "false" : "true")" />
+                                            <input type="hidden" name="result" value="@current" />
+                                            <input type="hidden" name="page" value="@Model.Page" />
+                                            <button type="submit" class="rounded-lg border px-2 py-1 text-xs @(r.IsAccepted ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-sand-300 text-stone-600")"
+                                                    aria-pressed="@(r.IsAccepted ? "true" : "false")">@(r.IsAccepted ? "✓ รวม" : "ไม่รวม")</button>
+                                        </form>
+                                    }
+                                    @if (r.MatchResultCode != ArMatchResultCodes.INVALID)
+                                    {
+                                        <form method="post" asp-action="Match" asp-route-id="@b.Id" class="mt-1 flex gap-1">
+                                            <input type="hidden" name="rowId" value="@r.Id" />
+                                            <input type="hidden" name="result" value="@current" />
+                                            <input type="hidden" name="page" value="@Model.Page" />
+                                            <input type="text" name="billNumber" placeholder="เลขบิล" maxlength="30" class="input w-28 !py-1 text-xs" aria-label="ผูกกับเลขบิล แถว @r.RowNo" required />
+                                            <button type="submit" class="rounded-lg border border-sand-300 px-2 py-1 text-xs text-stone-600 hover:bg-sand-50">ผูก</button>
+                                        </form>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (totalPages > 1)
+        {
+            <nav class="mt-4 flex items-center justify-between text-sm" aria-label="หน้า">
+                <span class="text-stone-500">หน้า @Model.Page / @totalPages (@Model.FilteredCount.ToString("N0") แถว)</span>
+                <div class="flex gap-2">
+                    @if (Model.Page > 1) { <a asp-action="Review" asp-route-id="@b.Id" asp-route-result="@current" asp-route-page="@(Model.Page - 1)" class="btn-outline">ก่อนหน้า</a> }
+                    @if (Model.Page < totalPages) { <a asp-action="Review" asp-route-id="@b.Id" asp-route-result="@current" asp-route-page="@(Model.Page + 1)" class="btn-outline">ถัดไป</a> }
+                </div>
+            </nav>
+        }
+        <ul class="mt-3 list-disc space-y-0.5 pl-5 text-xs text-stone-500">
+            <li>จับคู่ตามลำดับ: ขั้น 1 VN/AN → ขั้น 2 HN + วันที่เปิด visit/จำหน่าย → ขั้น 3 HN + วันที่ใกล้เคียง + ยอดใกล้เคียง (ต้องยืนยันเอง) · เฉพาะลูกหนี้ของสิทธิ์นี้</li>
+            <li>จับคู่ได้ / ยอดต่าง / ปฏิเสธ = รวมอัตโนมัติ · แนะนำ / พบหลายรายการ = กด "ไม่รวม" เพื่อเปลี่ยนเป็น "รวม" · พบหลายรายการจะกระจายยอดตามสัดส่วนคงค้าง</li>
+            <li>ไม่พบ / ผิดคู่ — ใส่เลขบิลแล้วกด "ผูก" · ยอดปฏิเสธไม่หักออกจากคงค้าง (ยังต้องติดตาม/อุทธรณ์)</li>
+            <li>ยกเลิกไฟล์ที่ยืนยันแล้ว = ย้อนรับชำระทั้งหมดของไฟล์ และคำนวณยอดลูกหนี้ใหม่</li>
+        </ul>
+    </section>
+</div>

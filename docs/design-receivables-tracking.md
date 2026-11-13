@@ -277,7 +277,9 @@ ArReceivables 1──* ArClaimBatchItems *──1 ArClaimBatches
 
 **index**: `ArReceivables (SchemeCode, StatusCode, BillDate)`, `(SchemeCode, VisitNumber)`, `(SchemeCode, Hn, VisitStartDate)` — ใช้ตอนจับคู่
 
-**ยอดคงเหลือ** = `BilledAmount − PaidAmount − DeniedAmount(ที่ยอมรับ) − WriteOffAmount` — คำนวณใหม่จาก `ArPayments` ทุกครั้งที่ยืนยัน (ไม่บวกลบสะสม เพื่อกันยอดเพี้ยน), ใช้ `RowVersion` กันสองคนยืนยันพร้อมกัน
+**ยอดคงเหลือ** = `BilledAmount − PaidAmount − WriteOffAmount` — คำนวณใหม่จาก `ArPayments` ที่ยัง active ทุกครั้งที่ยืนยัน/ยกเลิก (ไม่บวกลบสะสม เพื่อกันยอดเพี้ยน) · ยืนยัน/ยกเลิกทำในทรานแซกชันเดียว และไฟล์ที่ยืนยันแล้วยืนยันซ้ำไม่ได้
+
+> **ตัดสินใจตอนพัฒนาระยะ 2:** ยอดปฏิเสธ (`DeniedAmount`) **ไม่หัก**ออกจากคงค้าง — ยังเป็นหนี้ที่ต้องติดตาม/อุทธรณ์ จนกว่าจะอนุมัติตัดหนี้ (ระยะ 4) · ถ้าฝ่ายการเงินต้องการให้ "ยอดหัก" บางประเภทปิดหนี้ทันที ต้องเพิ่มกติกาตามรหัสเหตุผล
 
 ---
 
